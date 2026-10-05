@@ -1877,8 +1877,8 @@ class CanSortRunner:
         if popup_btn:
             self.reward_popup_loop_count = getattr(self, 'reward_popup_loop_count', 0) + 1
             bx, by, desc = popup_btn
-            if self.reward_popup_loop_count >= 4:
-                print(f"{self.tag} [!] Tombol reward berulang ({self.reward_popup_loop_count}x). Menekan 'Tidak Perlu' / 'Skip' / BACK untuk keluar modal...", flush=True)
+            if self.reward_popup_loop_count >= 2:
+                print(f"{self.tag} [!] Tombol reward STUCK ({self.reward_popup_loop_count}x). Menekan 'Tidak Perlu' / 'Skip' / BACK untuk keluar modal...", flush=True)
                 dismissed = False
                 for it in ocr_items:
                     t_low = it.get('text', '').lower()
@@ -1887,10 +1887,14 @@ class CanSortRunner:
                         dismissed = True
                         break
                 if not dismissed:
-                    self.tap(int(360 * self.scale_x), int(1156 * self.scale_y))
+                    print(f"{self.tag} [!] Force BACK + restart game karena tombol klaim stuck...", flush=True)
                     self.press_back()
+                    time.sleep(0.5)
+                    self.press_back()
+                    time.sleep(0.5)
+                    # Force restart game jika masih stuck
+                    self.clean_restart_all_apps_and_game()
                 self.reward_popup_loop_count = 0
-                time.sleep(0.5)
                 return
 
             print(f"{self.tag} [★] MENEMUKAN {desc} di ({bx}, {by})! Marker hijau 5 detik, lalu KLIK CEPAT tombol klaim/reward...", flush=True)
