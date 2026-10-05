@@ -1,0 +1,49 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+*.egg-info/
+dist/
+build/
+
+# Log files
+*.log
+*.log.*
+
+# State files
+*_state.json
+*.session
+*.session-journal
+
+# Backup files
+*.bak
+*.bak_*
+
+# ADB & Android
+*.apk
+*.dex
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Compiled executables
+scrcpy_tap_marker
+*.out
+
+# Sensitive data
+telegram_config.py
+config_private.py
