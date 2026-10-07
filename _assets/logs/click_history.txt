@@ -1,0 +1,22 @@
+[2026-09-28 11:01:25] BACK | app=Juice | screenshot=/Users/macbookair/bot_screenshots/back_20260928_110123_792.png
+[2026-09-28 11:01:29] GOOGLE_PLAY | xy=(141, 134) | app=Juice | info=text/desc=Google Play | screenshot=/Users/macbookair/bot_screenshots/GOOGLE_PLAY_20260928_110128_756.png
+[2026-09-28 11:01:35] NEXT/GooglePlay | xy=(360, 776) | app=Google Play Store | info=rid=playable | screenshot=/Users/macbookair/bot_screenshots/NEXT/GooglePlay_20260928_110134_345.png
+[2026-09-28 11:01:46] NEXT/GooglePlay | xy=(360, 776) | app=Google Play Store | info=rid=playable | screenshot=/Users/macbookair/bot_screenshots/NEXT/GooglePlay_20260928_110145_653.png
+[2026-09-28 11:01:51] NEXT/GooglePlay | xy=(360, 776) | app=Google Play Store | info=rid=playable | screenshot=/Users/macbookair/bot_screenshots/NEXT/GooglePlay_20260928_110150_806.png
+[2026-09-28 11:02:01] NEXT/GooglePlay | xy=(360, 776) | app=Google Play Store | info=rid=playable | screenshot=/Users/macbookair/bot_screenshots/NEXT/GooglePlay_20260928_110201_083.png
+[2026-09-28 11:02:06] BACK | app=Juice | screenshot=/Users/macbookair/bot_screenshots/back_20260928_110205_960.png
+[2026-09-28 11:02:10] NEXT/GooglePlay | xy=(360, 776) | app=Juice | info=rid=playable | screenshot=/Users/macbookair/bot_screenshots/NEXT/GooglePlay_20260928_110210_299.png
+[11-30-44] BACK | Chrome
+[11-30-51] NEXT_RID | install_first_step | (600, 1450) | Chrome
+[11-33-07] BACK | Juice
+[11-33-11] NEXT_RID | install_first_step | (600, 1450) | Chrome
+[11-33-31] NEXT_RID | install_first_step | (600, 1450) | Chrome
+[11-33-40] NEXT_RID | install_first_step | (600, 1451) | Chrome
+[11-33-48] NEXT_RID | install_first_step | (600, 1450) | Chrome
+[11-33-57] NEXT_RID | install_first_step | (600, 1451) | Chrome
+[11-34-06] NEXT_RID | install_first_step | (600, 1452) | Chrome
+[11-34-14] NEXT_RID | install_first_step | (600, 1450) | Chrome
+[11-34-23] NEXT_RID | install_first_step | (600, 1452) | Chrome
+[11-34-34] NEXT_RID | install_first_step | (600, 1451) | Chrome
+[11-34-44] NEXT_RID | install_first_step | (600, 1450) | Chrome
+[11-34-48] NEXT_RID | install_first_step | (600, 1451) | Chrome

@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dragon Arrow Escape</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #1e3c72, #2a5298);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+            font-family: 'Arial', sans-serif;
+        }
+        canvas {
+            border: 3px solid #ffd700;
+            border-radius: 10px;
+            box-shadow: 0 0 30px rgba(255, 215, 0, 0.5);
+            background: #0a1929;
+        }
+        #game-over-screen {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 48px;
+            text-align: center;
+            display: none;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.8);
+            z-index: 100;
+        }
+        #score {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: #ffd700;
+            font-size: 24px;
+            font-weight: bold;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+        }
+        #instructions {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            color: #ffffff;
+            font-size: 16px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+        }
+    </style>
+</head>
+<body>
+    <div id="score">Skor: 0</div>
+    <div id="game-over-screen">Game Over!<br>Klik untuk memulai ulang</div>
+    <div id="instructions">WASD untuk kontrol, Space untuk menggunakan panah magis</div>
+    <canvas id="gameCanvas" width="800" height="600"></canvas>
+    
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        let score = 0;
+        let gameOver = false;
+        let gameLoopId;
+        
+        const player = {
+            x: canvas.width / 2,
+            y: canvas.height / 2,
+            width: 40,
+            height: 40,
+            vx: 0,
+            vy: 0,
+            speed: 5,
+            color: '#ff6b6b',
+            magicalArrowCooldown: 0,
+            magicalArrowRange: 300,
+        };
+        
+        const arrows = [];
+        const magicalArrows = [];
+        const obstacles = [];
+        
+        // Keyboard state
+        const keys = {};
+        
+        function spawnArrow() {
+            const side = Math.floor(Math.random() * 4);
+            let x, y;
+            switch(side) {
+                case 0: x = Math.random() * canvas.width; y = -20; break; // atas
+                case 1: x = canvas.width + 20; y = Math.random() * canvas.height; break; // kanan
+                case 2: x = Math.random() * canvas.width; y = canvas.height + 20; break; // bawah
+                case 3: x = -20; y = Math.random() * canvas.height; break; // kiri
+            }
+            const angle = Math.random() * Math.PI * 2;
+            arrows.push({
+                x: x,
+                y: y,
+                vx: Math.cos(angle) * 2,
+                vy: Math.sin(angle) * 2,
+                width: 30,
+                height: 15,
+                color: '#ffd700',
+                movingAway: side === 0 || side === 2 // panah yang menjauh
+            });
+        }
+        
+        function spawnMagicalArrow() {
+            const angle = Math.random() * Math.PI * 2;
+            const distance = Math.random() * player.magicalArrowRange;
+            const x = player.x + Math.cos(angle) * distance;
+            const y = player.y + Math.sin(angle) * distance;
+            magicalArrows.push({
+                x: x,
+                y: y,
+                vx: Math.cos(angle) * 4,
+                vy: Math.sin(angle) * 4,
+                width: 25,
+                height: 10,
+                color: '#00ffff',
+                distance: distance
+            });
+        }
+        
+        function spawnObstacle() {
+            const types = [
+                {w: 80, h: 60, color: '#8b4513'},
+                {w: 60, h: 80, color: '#228b22'},
+                {w: 50, h: 50, color: '#ff4444'},
+            ];
+            const type = types[Math.floor(Math.random() * types.length)];
+            obstacles.push({
+                x: Math.random() * (canvas.width - type.w),
+                y: Math.random() * (canvas.height - type.h),
+                width: type.w,
+                height: type.h,
+                color: type.color,
+                vx: Math.random() * 2 - 1,
+                vy: Math.random() * 2 - 1,
+            });
+        }
+        
+        function update() {
+            if (gameOver) return;
+            
+            // Player movement
+            if (keys['KeyW'] || keys['ArrowUp']) player.vy = -player.speed;
+            else if (keys['KeyS'] || keys['ArrowDown']) player.vy = player.speed;
+            else player.vy = 0;
+            
+            if (keys['KeyA'] || keys['ArrowLeft']) player.vx = -player.speed;
+            else if (keys['KeyD'] || keys['ArrowRight']) player.vx = player.speed;
+            else player.vx = 0;
+            
+            player.x += player.vx;
+            player.y += player.vy;
+            
+            // Player boundaries
+            player.x = Math.max(player.width/2, Math.min(canvas.width - player.width/2, player.x));
+            player.y = Math.max(player.height/2, Math.min(canvas.height - player.height/2, player.y));
+            
+            // Magical arrow cooldown
+            if (player.magicalArrowCooldown > 0) {
+                player.magicalArrowCooldown--;
+            }
+            
+            // Spawn arrows dan obstacles secara berkala
+            if (Math.random() < 0.02) spawnArrow();
+            if (Math.random() < 0.01) spawnObstacle();
+            
+            // Perbarui panah
+            for (let i = arrows.length - 1; i >= 0; i--) {
+                const arrow = arrows[i];
+                arrow.x += arrow.vx;
+                arrow.y += arrow.vy;
+                
+                // Hapus panah yang keluar layar
+                if (arrow.x < -50 || arrow.x > canvas.width + 50 || arrow.y < -50 || arrow.y > canvas.height + 50) {
+                    arrows.splice(i, 1);
+                }
+                
+                // Deteksi tabrakan dengan pemain
+                if (checkCollision(arrow, player) && !arrow.movingAway) {
+                    gameOver = true;
+                    showGameOver();
+                }
+            }
+            
+            // Perbarui panah magis
+            for (let i = magicalArrows.length - 1; i >= 0; i--) {
+                const arrow = magicalArrows[i];
+                arrow.x += arrow.vx;
+                arrow.y += arrow.vy;
+                arrow.distance -= Math.sqrt(arrow.vx*arrow.vx + arrow.vy*arrow.vy);
+                
+                if (arrow.distance <= 0) {
+                    magicalArrows.splice(i, 1);
+                }
+                
+                if (checkCollision(arrow, player)) {
+                    magicalArrows.splice(i, 1);
+                    player.magicalArrowCooldown = 60; // 1 detik cooldown (60 frame pada 60 FPS)
+                    spawnMagicalArrow(); // Generate new magical arrow
+                }
+            }
+            
+            // Perbarui obstacles
+            for (let i = obstacles.length - 1; i >= 0; i--) {
+                const obs = obstacles[i];
+                obs.x += obs.vx;
+                obs.y += obs.vy;
+                
+                // Bounce di batas
+                if (obs.x < 0) obs.vx = Math.abs(obs.vx);
+                if (obs.x > canvas.width - obs.width) obs.vx = -Math.abs(obs.vx);
+                if (obs.y < 0) obs.vy = Math.abs(obs.vy);
+                if (obs.y > canvas.height - obs.height) obs.vy = -Math.abs(obs.vy);
+                
+                // Deteksi tabrakan dengan pemain
+                if (checkCollision(obs, player)) {
+                    gameOver = true;
+                    showGameOver();
+                }
+            }
+            
+            score++;
+        }
+        
+        function checkCollision(a, b) {
+            return a.x < b.x + b.width &&
+                   a.x + a.width > b.x &&
+                   a.y < b.y + b.height &&
+                   a.y + a.height > b.y;
+        }
+        
+        function showGameOver() {
+            const screen = document.getElementById('game-over-screen');
+            screen.style.display = 'block';
+            stopGame();
+        }
+        
+        function hideGameOver() {
+            const screen = document.getElementById('game-over-screen');
+            screen.style.display = 'none';
+        }
+        
+        function resetGame() {
+            gameOver = false;
+            score = 0;
+            hideGameOver();
+            startGame();
+        }
+        
+        function startGame() {
+            // Reset objek
+            arrows.length = 0;
+            magicalArrows.length = 0;
+            obstacles.length = 0;
+            
+            player.x = canvas.width / 2;
+            player.y = canvas.height / 2;
+            
+            updateScore();
+            
+            // Mulai game loop
+            if (!gameLoopId) {
+                gameLoopId = requestAnimationFrame(gameLoop);
+            }
+        }
+        
+        function stopGame() {
+            if (gameLoopId) {
+                cancelAnimationFrame(gameLoopId);
+                gameLoopId = null;
+            }
+        }
+        
+        function updateScore() {
+            document.getElementById('score').textContent = `Skor: ${score}`;
+        }
+        
+        function gameLoop() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Gambar langit
+            const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            gradient.addColorStop(0, '#0a1929');
+            gradient.addColorStop(1, '#1e3c72');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Gambar bintang
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+            for (let i = 0; i < 100; i++) {
+                ctx.beginPath();
+                ctx.arc(
+                    Math.random() * canvas.width,
+                    Math.random() * canvas.height,
+                    Math.random() * 2,
+                    0,
+                    Math.PI * 2
+                );
+                ctx.fill();
+            }
+            
+            // Gambar panah
+            arrows.forEach(arrow => {
+                ctx.save();
+                ctx.translate(arrow.x + arrow.width/2, arrow.y + arrow.height/2);
+                ctx.rotate(Math.atan2(arrow.vy, arrow.vx));
+                ctx.fillStyle = arrow.color;
+                ctx.fillRect(-arrow.width/2, -arrow.height/2, arrow.width, arrow.height);
+                ctx.restore();
+            });
+            
+            // Gambar panah magis
+            magicalArrows.forEach(arrow => {
+                ctx.save();
+                ctx.translate(arrow.x + arrow.width/2, arrow.y + arrow.height/2);
+                ctx.rotate(Math.atan2(arrow.vy, arrow.vx));
+                ctx.fillStyle = arrow.color;
+                ctx.fillRect(-arrow.width/2, -arrow.height/2, arrow.width, arrow.height);
+                ctx.restore();
+            });
+            
+            // Gambar obstacles
+            obstacles.forEach(obs => {
+                ctx.fillStyle = obs.color;
+                ctx.fillRect(obs.x, obs.y, obs.width, obs.height);
+            });
+            
+            // Gambar pemain
+            ctx.save();
+            ctx.shadowBlur = 20;
+            ctx.shadowColor = '#ff6b6b';
+            ctx.fillStyle = player.color;
+            ctx.fillRect(player.x - player.width/2, player.y - player.height/2, player.width, player.height);
+            
+            // Gambar panah magis milik pemain (aktif)
+            if (player.magicalArrowCooldown === 0) {
+                ctx.fillStyle = '#00ffff';
+                ctx.fillRect(player.x - 2, player.y - player.magicalArrowRange, 4, player.magicalArrowRange);
+            }
+            
+            ctx.restore();
+            
+            update();
+            
+            if (!gameOver) {
+                gameLoopId = requestAnimationFrame(gameLoop);
+            }
+        }
+        
+        function init() {
+            // Event listeners untuk keyboard
+            document.addEventListener('keydown', (e) => {
+                keys[e.code] = true;
+                if (e.code === 'Space') {
+                    e.preventDefault();
+                    if (player.magicalArrowCooldown === 0) {
+                        spawnMagicalArrow();
+                    }
+                }
+            });
+            
+            document.addEventListener('keyup', (e) => {
+                keys[e.code] = false;
+            });
+            
+            // Klik layar untuk memulai ulang
+            document.getElementById('game-over-screen').addEventListener('click', resetGame);
+            
+            // Mulai game
+            startGame();
+        }
+        
+        // Mulai saat halaman siap
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>

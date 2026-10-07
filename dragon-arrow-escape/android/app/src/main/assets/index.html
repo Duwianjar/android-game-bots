@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0a1929">
+<title>Dragon Arrow Escape</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body { width:100%; height:100%; overflow:hidden; background:#0a1929;
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+    touch-action:none; user-select:none; -webkit-user-select:none; }
+  #wrap { position:fixed; inset:0; display:flex; align-items:center; justify-content:center; }
+  canvas { display:block; background:#0a1929; box-shadow:0 0 24px rgba(255,215,0,.35); }
+
+  #hud { position:fixed; top:calc(8px + env(safe-area-inset-top)); left:calc(10px + env(safe-area-inset-left));
+         color:#ffd700; font-weight:700; font-size:18px; text-shadow:0 2px 4px #000; pointer-events:none; z-index:5; }
+  #hint { position:fixed; top:calc(8px + env(safe-area-inset-top)); right:calc(10px + env(safe-area-inset-right));
+          color:#8ab4ff; font-size:12px; text-shadow:0 1px 3px #000; pointer-events:none; z-index:5; text-align:right; }
+
+  /* Joystick */
+  #stick { position:fixed; left:calc(22px + env(safe-area-inset-left)); bottom:calc(26px + env(safe-area-inset-bottom));
+           width:132px; height:132px; border-radius:50%;
+           background:rgba(255,255,255,.10); border:2px solid rgba(255,215,0,.45);
+           z-index:10; }
+  #knob { position:absolute; left:50%; top:50%; width:56px; height:56px; margin:-28px 0 0 -28px;
+          border-radius:50%; background:rgba(255,215,0,.75); box-shadow:0 0 14px rgba(255,215,0,.6); }
+
+  /* Tombol panah magis */
+  #fire { position:fixed; right:calc(24px + env(safe-area-inset-right)); bottom:calc(34px + env(safe-area-inset-bottom));
+          width:96px; height:96px; border-radius:50%;
+          background:rgba(0,255,255,.16); border:3px solid rgba(0,255,255,.6);
+          color:#00ffff; font-weight:800; font-size:15px; z-index:10; display:flex;
+          align-items:center; justify-content:center; text-align:center; line-height:1.15; }
+  #fire.cool { opacity:.35; }
+
+  #over { position:fixed; inset:0; display:none; align-items:center; justify-content:center;
+          background:rgba(5,10,25,.86); z-index:20; flex-direction:column; }
+  #over h1 { color:#ff5252; font-size:38px; margin-bottom:8px; text-shadow:0 3px 8px #000; }
+  #over p { color:#fff; font-size:16px; margin-bottom:22px; }
+  #over button { padding:14px 34px; font-size:17px; font-weight:700; border:none; border-radius:30px;
+          background:#ffd700; color:#222; box-shadow:0 4px 14px rgba(0,0,0,.5); }
+</style>
+</head>
+<body>
+<div id="wrap"><canvas id="gameCanvas" width="800" height="600"></canvas></div>
+<div id="hud">Skor: 0</div>
+<div id="hint">Joystick: gerak<br>Panah: tembak</div>
+
+<div id="stick"><div id="knob"></div></div>
+<div id="fire">PANAH<br>MAGIS</div>
+
+<div id="over">
+  <h1>GAME OVER</h1>
+  <p id="finalScore">Skor: 0</p>
+  <button id="restartBtn">Main Lagi</button>
+</div>
+
+<script>
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+const hud = document.getElementById('hud');
+const fireBtn = document.getElementById('fire');
+const over = document.getElementById('over');
+const finalScore = document.getElementById('finalScore');
+
+/* ---------- ukuran responsif ---------- */
+function fit() {
+  const maxW = window.innerWidth, maxH = window.innerHeight - 150;
+  const scale = Math.min(maxW / 800, maxH / 600, 1);
+  canvas.style.width = (800 * scale) + 'px';
+  canvas.style.height = (600 * scale) + 'px';
+}
+window.addEventListener('resize', fit); fit();
+
+/* ---------- state ---------- */
+let score = 0, gameOver = false, loopId = null;
+const player = { x: 400, y: 300, w: 40, h: 40, vx: 0, vy: 0, speed: 5, cd: 0, range: 300, color: '#ff6b6b' };
+let arrows = [], magical = [], obstacles = [];
+
+/* ---------- kontrol sentuh ---------- */
+const keys = {};
+let stickId = null, stickCx = 0, stickCy = 0;
+const stick = document.getElementById('stick');
+const knob = document.getElementById('knob');
+
+function stickStart(e) {
+  const t = e.changedTouches ? e.changedTouches[0] : e;
+  const r = stick.getBoundingClientRect();
+  stickCx = r.left + r.width / 2; stickCy = r.top + r.height / 2;
+  stickId = t.identifier !== undefined ? t.identifier : 'mouse';
+  e.preventDefault();
+}
+function stickMove(e) {
+  if (stickId === null) return;
+  const list = e.changedTouches ? Array.from(e.changedTouches) : [e];
+  for (const t of list) {
+    const id = t.identifier !== undefined ? t.identifier : 'mouse';
+    if (id !== stickId) continue;
+    let dx = t.clientX - stickCx, dy = t.clientY - stickCy;
+    const max = 44, d = Math.hypot(dx, dy);
+    if (d > max) { dx = dx / d * max; dy = dy / d * max; }
+    knob.style.transform = 'translate(' + dx + 'px,' + dy + 'px)';
+    const dead = 8;
+    keys['left']  = dx < -dead; keys['right'] = dx > dead;
+    keys['up']    = dy < -dead; keys['down']  = dy > dead;
+  }
+  e.preventDefault();
+}
+function stickEnd() {
+  stickId = null; knob.style.transform = 'translate(0,0)';
+  keys.left = keys.right = keys.up = keys.down = false;
+}
+stick.addEventListener('touchstart', stickStart, { passive: false });
+stick.addEventListener('touchmove', stickMove, { passive: false });
+stick.addEventListener('touchend', stickEnd);
+stick.addEventListener('touchcancel', stickEnd);
+stick.addEventListener('mousedown', stickStart);
+window.addEventListener('mousemove', stickMove);
+window.addEventListener('mouseup', stickEnd);
+
+fireBtn.addEventListener('touchstart', e => { e.preventDefault(); cast(); }, { passive: false });
+fireBtn.addEventListener('mousedown', e => { e.preventDefault(); cast(); });
+document.getElementById('restartBtn').addEventListener('click', resetGame);
+
+/* keyboard (untuk desktop) */
+document.addEventListener('keydown', e => {
+  if (e.code === 'Space') { e.preventDefault(); cast(); }
+  if (e.code === 'ArrowUp' || e.code === 'KeyW') keys.up = true;
+  if (e.code === 'ArrowDown' || e.code === 'KeyS') keys.down = true;
+  if (e.code === 'ArrowLeft' || e.code === 'KeyA') keys.left = true;
+  if (e.code === 'ArrowRight' || e.code === 'KeyD') keys.right = true;
+});
+document.addEventListener('keyup', e => {
+  if (e.code === 'ArrowUp' || e.code === 'KeyW') keys.up = false;
+  if (e.code === 'ArrowDown' || e.code === 'KeyS') keys.down = false;
+  if (e.code === 'ArrowLeft' || e.code === 'KeyA') keys.left = false;
+  if (e.code === 'ArrowRight' || e.code === 'KeyD') keys.right = false;
+});
+
+/* ---------- logika game ---------- */
+function cast() {
+  if (gameOver || player.cd > 0) return;
+  const a = Math.random() * Math.PI * 2, dist = 60 + Math.random() * 200;
+  magical.push({ x: player.x + Math.cos(a) * dist, y: player.y + Math.sin(a) * dist,
+                 vx: Math.cos(a) * 4, vy: Math.sin(a) * 4, dist: dist });
+}
+
+function spawnArrow() {
+  const side = Math.floor(Math.random() * 4);
+  let x, y, vx, vy;
+  const t = Math.random();
+  switch (side) {
+    case 0: x = t * 800; y = -25; vx = 0; vy = 2.4; break;
+    case 1: x = 825;  y = t * 600; vx = -2.4; vy = 0; break;
+    case 2: x = t * 800; y = 625; vx = 0; vy = -2.4; break;
+    default: x = -25; y = t * 600; vx = 2.4; vy = 0; break;
+  }
+  arrows.push({ x, y, vx, vy, w: 30, h: 15, color: '#ffd700' });
+}
+
+function spawnObstacle() {
+  const types = [[80,60,'#8b4513'],[60,80,'#2e8b22'],[50,50,'#ff4444']];
+  const [w,h,c] = types[Math.floor(Math.random() * types.length)];
+  obstacles.push({ x: Math.random()*(800-w), y: Math.random()*(600-h), w, h, color: c,
+                   vx: (Math.random()*2-1)*1.2, vy: (Math.random()*2-1)*1.2 });
+}
+
+function hit(a, b) {
+  return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
+}
+
+function update() {
+  if (gameOver) return;
+  player.vy = keys.up ? -player.speed : keys.down ? player.speed : 0;
+  player.vx = keys.left ? -player.speed : keys.right ? player.speed : 0;
+  player.x = Math.max(player.w/2, Math.min(800 - player.w/2, player.x + player.vx));
+  player.y = Math.max(player.h/2, Math.min(600 - player.h/2, player.y + player.vy));
+  if (player.cd > 0) { player.cd--; if (player.cd === 0) fireBtn.classList.remove('cool'); }
+
+  if (Math.random() < 0.03) spawnArrow();
+  if (Math.random() < 0.012) spawnObstacle();
+
+  for (let i = arrows.length - 1; i >= 0; i--) {
+    const a = arrows[i]; a.x += a.vx; a.y += a.vy;
+    if (a.x < -60 || a.x > 860 || a.y < -60 || a.y > 660) { arrows.splice(i,1); continue; }
+    if (hit(a, player)) { die(); return; }
+  }
+  for (let i = magical.length - 1; i >= 0; i--) {
+    const a = magical[i]; a.x += a.vx; a.y += a.vy;
+    a.dist -= Math.hypot(a.vx, a.vy);
+    if (a.dist <= 0) { magical.splice(i,1); continue; }
+    if (Math.hypot(player.x - a.x, player.y - a.y) < 26) {
+      magical.splice(i,1); player.cd = 60; fireBtn.classList.add('cool');
+    }
+  }
+  for (let i = obstacles.length - 1; i >= 0; i--) {
+    const o = obstacles[i]; o.x += o.vx; o.y += o.vy;
+    if (o.x < 0) { o.x = 0; o.vx = Math.abs(o.vx); }
+    if (o.x > 800 - o.w) { o.x = 800 - o.w; o.vx = -Math.abs(o.vx); }
+    if (o.y < 0) { o.y = 0; o.vy = Math.abs(o.vy); }
+    if (o.y > 600 - o.h) { o.y = 600 - o.h; o.vy = -Math.abs(o.vy); }
+    if (hit(o, player)) { die(); return; }
+  }
+  score += 1; hud.textContent = 'Skor: ' + score;
+}
+
+function die() {
+  gameOver = true;
+  if (loopId) { cancelAnimationFrame(loopId); loopId = null; }
+  finalScore.textContent = 'Skor: ' + score;
+  over.style.display = 'flex';
+}
+
+function resetGame() {
+  score = 0; gameOver = false;
+  arrows = []; magical = []; obstacles = [];
+  player.x = 400; player.y = 300; player.cd = 0;
+  fireBtn.classList.remove('cool');
+  hud.textContent = 'Skor: 0';
+  over.style.display = 'none';
+  start();
+}
+
+function draw() {
+  const g = ctx.createLinearGradient(0,0,0,600);
+  g.addColorStop(0,'#0a1929'); g.addColorStop(1,'#1e3c72');
+  ctx.fillStyle = g; ctx.fillRect(0,0,800,600);
+  ctx.fillStyle = 'rgba(255,255,255,.5)';
+  for (let i = 0; i < 90; i++) {
+    const sx = (i * 137) % 800, sy = (i * 271) % 600;
+    ctx.fillRect(sx, sy, 2, 2);
+  }
+  arrows.forEach(a => { ctx.save(); ctx.translate(a.x+a.w/2, a.y+a.h/2);
+    ctx.rotate(Math.atan2(a.vy,a.vx)); ctx.fillStyle = a.color;
+    ctx.fillRect(-a.w/2,-a.h/2,a.w,a.h); ctx.restore(); });
+  magical.forEach(a => { ctx.strokeStyle = '#00ffff'; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(a.x-a.vx*12, a.y-a.vy*12); ctx.stroke(); });
+  obstacles.forEach(o => { ctx.fillStyle = o.color; ctx.fillRect(o.x,o.y,o.w,o.h); });
+
+  ctx.save(); ctx.shadowBlur = 20; ctx.shadowColor = '#ff6b6b';
+  ctx.fillStyle = player.color; ctx.fillRect(player.x-player.w/2, player.y-player.h/2, player.w, player.h);
+  ctx.restore();
+  if (player.cd === 0) { ctx.fillStyle = '#00ffff';
+    ctx.fillRect(player.x-2, player.y-player.range, 4, player.range); }
+}
+
+function frame() { draw(); update(); if (!gameOver) loopId = requestAnimationFrame(frame); }
+function start() { if (!loopId) loopId = requestAnimationFrame(frame); }
+start();
+</script>
+</body>
+</html>

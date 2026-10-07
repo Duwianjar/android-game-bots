@@ -4,7 +4,7 @@ Koleksi bot otomatis untuk berbagai game Android yang menghasilkan saldo real mo
 
 ## 🎮 Daftar Bot
 
-### 1. Soda Pack Puzzle Bot
+### 1. Soda Pack Puzzle Bot (`soda-pack-puzzle/`)
 Bot otomatis untuk game Soda Pack Puzzle dengan fitur:
 - ✅ Auto play game (tap botol sesuai warna)
 - ✅ Auto klik bubble reward (Kado, Koin, Balon Iklan)
@@ -16,17 +16,44 @@ Bot otomatis untuk game Soda Pack Puzzle dengan fitur:
 
 **Performa:** ~Rp 100-200 per jam
 
-### 2. Lucky Mahjong Bot
-Bot otomatis untuk game Lucky Mahjong.
+### 2. Lucky Mahjong Bot (`lucky-mahjong/`)
+Bot otomatis untuk game Lucky Mahjong dengan auto-click dan reward collection.
 
-### 3. Juice Pack Bot
-Bot otomatis untuk game Juice Pack.
+### 3. Juice Pack Bot (`juice-pack/`)
+Bot otomatis untuk game Juice Pack dengan pattern recognition.
 
-### 4. Bus Jam Parking Bot
-Bot otomatis untuk game Bus Jam Parking.
+### 4. Coin Dash Shot Bot (`coin-dash-shot/`)
+Bot otomatis untuk game Coin Dash Shot dengan auto-aim.
 
-### 5. Can Sort Bot
-Bot otomatis untuk game Can Sort.
+### 5. Bus Parking Dash Bot (`bus-parking-dash/`)
+Bot otomatis untuk game Bus Parking Dash dengan path optimization.
+
+### 6. Bus Jam Parking Bot (`bus-jam-parking/`)
+Bot otomatis untuk game Bus Jam Parking dengan smart parking logic.
+
+### 7. Color Power Pop Bot (`color-power-pop/`)
+Bot otomatis untuk game Color Power Pop dengan color matching.
+
+### 8. Soda Jam Puzzle Bot (`soda-jam-puzzle/`)
+Bot otomatis untuk game Soda Jam Puzzle dengan puzzle solver.
+
+### 9. Can Sort Bot (`can-sort/`)
+Bot otomatis untuk game Can Sort dengan sorting algorithm.
+
+### 10. Jungle Animal Eliminate Bot (`jungle-animal-eliminate/`)
+Bot otomatis untuk game Jungle Animal Eliminate dengan pattern matching.
+
+### 11. Dragon Arrow Escape Bot (`dragon-arrow-escape/`)
+Bot otomatis untuk game Dragon Arrow Escape dengan obstacle detection.
+
+### 12. Candy Crush Bot (`candy-crush/`)
+Bot otomatis untuk game Candy Crush dengan advanced pattern recognition.
+
+### 13. Auto Click Bot (`auto-click/`)
+Bot universal untuk auto-clicking dengan customizable coordinates.
+
+### 14. Telegram Helper Bot (`telegram-helper/`)
+Helper bot untuk notifikasi Telegram dan monitoring saldo.
 
 ## 📋 Requirements
 
@@ -123,6 +150,34 @@ TELEGRAM_CHAT_ID = "your_chat_id"
 | Soda Pack Puzzle | Rp 100-200 | Rp 500 | DANA |
 | Lucky Mahjong | Rp 50-100 | Rp 300 | DANA |
 | Juice Pack | Rp 80-150 | Rp 500 | DANA |
+| Coin Dash Shot | Rp 70-120 | Rp 500 | DANA |
+| Bus Parking Dash | Rp 90-160 | Rp 500 | DANA |
+| Color Power Pop | Rp 60-110 | Rp 300 | DANA |
+| Jungle Animal Eliminate | Rp 100-180 | Rp 500 | DANA |
+
+## 📁 Struktur Folder
+
+```
+android-game-bots/
+├── _assets/                 # Aset bersama (logs, screenshots)
+│   ├── logs/               # Log dari semua bot
+│   └── screenshots/        # Screenshot debugging
+├── auto-click/             # Bot universal auto-click
+├── bus-jam-parking/        # Bot Bus Jam Parking
+├── bus-parking-dash/       # Bot Bus Parking Dash
+├── can-sort/               # Bot Can Sort
+├── candy-crush/            # Bot Candy Crush
+├── coin-dash-shot/         # Bot Coin Dash Shot
+├── color-power-pop/        # Bot Color Power Pop
+├── dragon-arrow-escape/    # Bot Dragon Arrow Escape
+├── juice-pack/             # Bot Juice Pack
+├── jungle-animal-eliminate/# Bot Jungle Animal Eliminate
+├── lucky-mahjong/          # Bot Lucky Mahjong
+├── soda-jam-puzzle/        # Bot Soda Jam Puzzle
+├── soda-pack-puzzle/       # Bot Soda Pack Puzzle
+├── telegram-helper/        # Bot helper Telegram
+└── README.md              # Dokumentasi lengkap
+```
 
 ## 🛡️ Anti-Ban Features
 
