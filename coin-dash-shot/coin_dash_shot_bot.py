@@ -12,6 +12,7 @@ import os
 from pathlib import Path
 import json
 import html
+import threading
 
 try:
     import cv2
@@ -22,48 +23,34 @@ except Exception:
 
 # ============= KONFIGURASI =============
 PACKAGE_NAME = "com.coin.sortdash.remove"
-MIN_WITHDRAW_RP = 20000  # Minimal saldo untuk klik ≈Rp / tarik dana
+MIN_WITHDRAW_RP = int(os.environ.get("MIN_WITHDRAW_RP", "200"))  # Minimal saldo untuk klik ≈Rp / tarik dana
 AD_WAIT_SECONDS = 6   # Tunggu iklan 6 detik lalu restart game
 OCR_HELPER_PATH = "/Users/macbookair/ocr_helper"
 
-# Telegram (opsional - akan diambil dari file jika ada)
-TELEGRAM_BOT_TOKEN = None
-TELEGRAM_CHAT_ID = None
+# Telegram Configuration
+TELEGRAM_BOT_TOKEN = os.environ.get("BOT_TOKEN", "8849203378:AAEmh0zmO6GoC1x2eb-s5yUVAUDSqremF44")
+TELEGRAM_CHAT_ID = os.environ.get("CHAT_ID", "-5421593398")
 
 # ============= FUNGSI HELPER =============
 
-def send_telegram_async(message):
-    """Kirim notifikasi ke Telegram (async, tidak blocking)"""
+def _send_tg_worker(message):
     try:
-        token = TELEGRAM_BOT_TOKEN
-        chat_id = TELEGRAM_CHAT_ID
-        
-        # Coba ambil dari file config jika tidak ada
-        if not token or not chat_id:
-            try:
-                import sys
-                sys.path.insert(0, '/Users/macbookair/telegram_venv/lib/python3.11/site-packages')
-                from telegram_bot_helper import get_telegram_config
-                token, chat_id = get_telegram_config()
-            except:
-                pass
-        
-        # Fallback: pakai tujuan Telegram yang sama seperti soda_pack_puzzle_bot.
-        if not token or not chat_id:
-            token = "8849203378:AAEmh0zmO6GoC1x2eb-s5yUVAUDSqremF44"
-            chat_id = "-5421593398"
-        
         import requests
-        url = f"https://api.telegram.org/bot{token}/sendMessage"
+        url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
         data = {
-            "chat_id": chat_id,
+            "chat_id": TELEGRAM_CHAT_ID,
             "text": message,
             "parse_mode": "HTML",
             "disable_web_page_preview": True
         }
-        requests.post(url, data=data, timeout=5)
+        requests.post(url, data=data, timeout=8)
     except Exception as e:
         print(f"[!] Telegram error: {e}", flush=True)
+
+def send_telegram_async(message):
+    """Kirim notifikasi ke Telegram via background thread (non-blocking)."""
+    t = threading.Thread(target=_send_tg_worker, args=(message,), daemon=True)
+    t.start()
 
 def log_event(event_type, description, data=None):
     """Log event ke file JSON"""
@@ -138,7 +125,32 @@ class CoinDashShotBot:
         self.withdraw_confirm_count = 0
         self.last_withdraw_success_restart_ts = 0
         self.stop_flag = False
+        self.start_periodic_tg_reporter()
         
+    def start_periodic_tg_reporter(self):
+        """Kirim laporan berkala saldo & status ke Telegram setiap 3 menit."""
+        def reporter_loop():
+            while not self.stop_flag:
+                time.sleep(180)
+                if self.stop_flag:
+                    break
+                try:
+                    saldo = self.last_recorded_rp or "-"
+                    now_str = time.strftime("%H:%M:%S WIB")
+                    msg = (
+                        "🪙 <b>COIN DASH SHOT - LAPORAN BERKALA</b>\n"
+                        f"📱 <b>Device:</b> <code>{self.serial}</code>\n"
+                        f"💰 <b>Saldo Terakhir:</b> <b>≈Rp {saldo}</b>\n"
+                        f"🕐 <b>Waktu:</b> <code>{now_str}</code>\n"
+                        "<i>Status: Bot sedang aktif bermain.</i>"
+                    )
+                    send_telegram_async(msg)
+                    print(f"{self.tag} [📱 TG] Laporan berkala terkirim ke Telegram: ≈Rp {saldo}", flush=True)
+                except Exception as e:
+                    print(f"{self.tag} [!] Error periodic TG: {e}", flush=True)
+        t = threading.Thread(target=reporter_loop, daemon=True, name=f"TG_Reporter_{self.serial}")
+        t.start()
+
     def run_adb(self, cmd, timeout=5.0):
         """Jalankan perintah ADB"""
         try:

@@ -2,9 +2,35 @@
 
 Koleksi bot otomatis untuk berbagai game Android yang menghasilkan saldo real money.
 
+## 🏆 Peringkat Game Rekomendasi
+
+> Catatan lapangan: peringkat ini berdasarkan pengamatan lokal dari log/bot yang sudah dicoba. Angka bisa berubah mengikuti reset harian, stok iklan, akun, device, dan kondisi jaringan.
+
+| Peringkat | Game | Status Bot | Catatan Utama |
+|-----------|------|------------|---------------|
+| 1 | **Magic Ocean Tile Crush** | **Paling direkomendasikan** | Reward iklan terlihat paling besar dan paling konsisten. Setelah reset harian biasanya peluang reward besar lebih bagus. Fitur **DOBEL** relatif mudah muncul dan lebih mudah diproses bot. Bot guardian sudah aman untuk: buka game, cari DOBEL, tap bubble, tutup iklan, balik ke game, dan kirim Telegram. |
+| 2 | **Woodland Tile Matcher** | Bagus, masih perlu tuning bubble | Satu keluarga pola dengan Magic Ocean dan punya reward DOBEL/bubble, tetapi deteksi/klik bubble masih lebih sensitif dan perlu pemantauan. Cocok sebagai alternatif/rotasi dengan Magic Ocean. |
+| 3 | **Soda Pack Puzzle** | Stabil untuk saldo kecil-menengah | Auto play dan laporan Telegram sudah ada. Cocok untuk jalan lama, tetapi reward per iklan tidak setinggi Magic Ocean. |
+| 4 | **Coin Dash Shot** | Sudah ada Telegram, kandidat test | Bot sudah punya notifikasi Telegram dan alur withdraw. Perlu uji lagi untuk memastikan reward iklan dan flow withdraw saat ini. |
+| 5 | **Bus Jam Parking** | Aman, tetapi reward kecil | Bot berjalan dan Telegram aktif, tapi penghasilan per iklan terpantau kecil sehingga bukan prioritas utama. |
+
+### Catatan Strategi
+
+- **Prioritas utama saat ini: Magic Ocean Tile Crush.**
+- Dugaan terbaik dari hasil pantauan: **setelah reset harian, reward cenderung lebih besar dan peluang DOBEL lebih menarik**, jadi Magic Ocean sebaiknya dicoba/diutamakan setelah reset harian.
+- Jangan jalankan banyak bot game sekaligus di satu HP. Pakai salah satu: Magic Ocean, Woodland, atau rotator.
+- Bot Magic Ocean saat ini sudah relatif aman untuk operasional: ada guardian foreground, penutup Play Store/Chrome redirect, deteksi iklan, fallback tombol BACK, log file, dan notifikasi Telegram.
+- Jika iklan mulai macet atau reward turun, hentikan bot lalu jalankan ulang game prioritas atau gunakan rotator Magic-Woodland.
+
+
 ## 🎮 Daftar Bot
 
-### 1. Soda Pack Puzzle Bot (`soda-pack-puzzle/`)
+### 1. Magic Ocean Tile Crush Guardian Bot (`magic-ocean-tile-crush/`)
+Bot prioritas utama saat ini. Guardian untuk Magic Ocean Tile Crush: buka game otomatis, cari reward DOBEL/bubble, tutup Chrome/Play Store jika ter-redirect, handle iklan, lalu kembali ke game.
+
+**Status:** paling direkomendasikan, bot sudah aman untuk dipakai dengan monitoring log dan Telegram.
+
+### 2. Soda Pack Puzzle Bot (`soda-pack-puzzle/`)
 Bot otomatis untuk game Soda Pack Puzzle dengan fitur:
 - ✅ Auto play game (tap botol sesuai warna)
 - ✅ Auto klik bubble reward (Kado, Koin, Balon Iklan)
@@ -16,44 +42,49 @@ Bot otomatis untuk game Soda Pack Puzzle dengan fitur:
 
 **Performa:** ~Rp 100-200 per jam
 
-### 2. Lucky Mahjong Bot (`lucky-mahjong/`)
+### 3. Lucky Mahjong Bot (`lucky-mahjong/`)
 Bot otomatis untuk game Lucky Mahjong dengan auto-click dan reward collection.
 
-### 3. Juice Pack Bot (`juice-pack/`)
+### 4. Juice Pack Bot (`juice-pack/`)
 Bot otomatis untuk game Juice Pack dengan pattern recognition.
 
-### 4. Coin Dash Shot Bot (`coin-dash-shot/`)
+### 5. Coin Dash Shot Bot (`coin-dash-shot/`)
 Bot otomatis untuk game Coin Dash Shot dengan auto-aim.
 
-### 5. Bus Parking Dash Bot (`bus-parking-dash/`)
+### 6. Bus Parking Dash Bot (`bus-parking-dash/`)
 Bot otomatis untuk game Bus Parking Dash dengan path optimization.
 
-### 6. Bus Jam Parking Bot (`bus-jam-parking/`)
+### 7. Bus Jam Parking Bot (`bus-jam-parking/`)
 Bot otomatis untuk game Bus Jam Parking dengan smart parking logic.
 
-### 7. Color Power Pop Bot (`color-power-pop/`)
+### 8. Color Power Pop Bot (`color-power-pop/`)
 Bot otomatis untuk game Color Power Pop dengan color matching.
 
-### 8. Soda Jam Puzzle Bot (`soda-jam-puzzle/`)
+### 9. Soda Jam Puzzle Bot (`soda-jam-puzzle/`)
 Bot otomatis untuk game Soda Jam Puzzle dengan puzzle solver.
 
-### 9. Can Sort Bot (`can-sort/`)
+### 10. Can Sort Bot (`can-sort/`)
 Bot otomatis untuk game Can Sort dengan sorting algorithm.
 
-### 10. Jungle Animal Eliminate Bot (`jungle-animal-eliminate/`)
+### 11. Jungle Animal Eliminate Bot (`jungle-animal-eliminate/`)
 Bot otomatis untuk game Jungle Animal Eliminate dengan pattern matching.
 
-### 11. Dragon Arrow Escape Bot (`dragon-arrow-escape/`)
+### 12. Dragon Arrow Escape Bot (`dragon-arrow-escape/`)
 Bot otomatis untuk game Dragon Arrow Escape dengan obstacle detection.
 
-### 12. Candy Crush Bot (`candy-crush/`)
+### 13. Candy Crush Bot (`candy-crush/`)
 Bot otomatis untuk game Candy Crush dengan advanced pattern recognition.
 
-### 13. Auto Click Bot (`auto-click/`)
+### 14. Auto Click Bot (`auto-click/`)
 Bot universal untuk auto-clicking dengan customizable coordinates.
 
-### 14. Telegram Helper Bot (`telegram-helper/`)
+### 15. Telegram Helper Bot (`telegram-helper/`)
 Helper bot untuk notifikasi Telegram dan monitoring saldo.
+
+### 16. Crazy Fruit Blade Winner Guardian Bot (`crazy-fruit-blade-winner/`)
+Clone dari Fruit Blade Pop Crush untuk game Crazy Fruit Blade Winner. Package: `com.starlightgame.crazyfruitbladewinner`.
+
+
 
 ## 📋 Requirements
 
@@ -145,15 +176,17 @@ TELEGRAM_CHAT_ID = "your_chat_id"
 
 ## 📊 Performa
 
-| Game | Penghasilan/Jam | Target Minimal | Metode Penarikan |
-|------|----------------|----------------|------------------|
-| Soda Pack Puzzle | Rp 100-200 | Rp 500 | DANA |
-| Lucky Mahjong | Rp 50-100 | Rp 300 | DANA |
-| Juice Pack | Rp 80-150 | Rp 500 | DANA |
-| Coin Dash Shot | Rp 70-120 | Rp 500 | DANA |
-| Bus Parking Dash | Rp 90-160 | Rp 500 | DANA |
-| Color Power Pop | Rp 60-110 | Rp 300 | DANA |
-| Jungle Animal Eliminate | Rp 100-180 | Rp 500 | DANA |
+| Game | Peringkat | Status Performa | Target Minimal | Metode Penarikan |
+|------|-----------|------------------|----------------|------------------|
+| Magic Ocean Tile Crush | 1 | Terbaik saat ini; reward iklan/DOBEL paling menarik dari hasil pantauan | fleksibel / sesuai bot | DANA / saldo game |
+| Woodland Tile Matcher | 2 | Potensial tinggi, tetapi klik bubble masih perlu tuning | fleksibel / sesuai bot | DANA / saldo game |
+| Soda Pack Puzzle | 3 | Stabil untuk saldo kecil-menengah | Rp 500 | DANA |
+| Coin Dash Shot | 4 | Sudah ada Telegram, perlu test ulang performa terbaru | Rp 200-500 | DANA |
+| Bus Jam Parking | 5 | Aman tetapi reward per iklan kecil | Rp 200 | DANA |
+| Lucky Mahjong | - | Belum jadi prioritas | Rp 300 | DANA |
+| Juice Pack | - | Belum jadi prioritas | Rp 500 | DANA |
+| Color Power Pop | - | Belum jadi prioritas | Rp 300 | DANA |
+| Jungle Animal Eliminate | - | Belum jadi prioritas | Rp 500 | DANA |
 
 ## 📁 Struktur Folder
 
@@ -169,6 +202,7 @@ android-game-bots/
 ├── candy-crush/            # Bot Candy Crush
 ├── coin-dash-shot/         # Bot Coin Dash Shot
 ├── color-power-pop/        # Bot Color Power Pop
+├── crazy-fruit-blade-winner/ # Guardian Crazy Fruit Blade Winner
 ├── dragon-arrow-escape/    # Bot Dragon Arrow Escape
 ├── juice-pack/             # Bot Juice Pack
 ├── jungle-animal-eliminate/# Bot Jungle Animal Eliminate
@@ -176,6 +210,7 @@ android-game-bots/
 ├── soda-jam-puzzle/        # Bot Soda Jam Puzzle
 ├── soda-pack-puzzle/       # Bot Soda Pack Puzzle
 ├── telegram-helper/        # Bot helper Telegram
+├── magic-ocean-tile-crush/ # Guardian Magic Ocean Tile Crush
 └── README.md              # Dokumentasi lengkap
 ```
 

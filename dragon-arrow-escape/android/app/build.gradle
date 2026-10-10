@@ -1,0 +1,41 @@
+plugins {
+    id 'com.android.application'
+    id 'com.google.gms.google-services'
+}
+
+android {
+    namespace 'com.dragonarrowescape.game'
+    compileSdk 35
+
+    defaultConfig {
+        applicationId "com.dragonarrowescape.game"
+        minSdk 21
+        targetSdk 35
+        versionCode 2
+        versionName "1.0.1"
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+}
+
+dependencies {
+    implementation 'androidx.appcompat:appcompat:1.7.0'
+    
+    // Google Mobile Ads SDK untuk monetisasi - versi terbaru Oktober 2026
+    implementation 'com.google.android.gms:play-services-ads:23.5.0'
+    
+    // Google Play Services
+    implementation 'com.google.android.gms:play-services-base:18.5.0'
+    
+    // Required untuk AdMob
+    implementation 'androidx.work:work-runtime:2.9.1'
+}

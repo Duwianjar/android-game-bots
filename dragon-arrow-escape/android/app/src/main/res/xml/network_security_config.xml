@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!-- Allow cleartext traffic untuk local development -->
+    <base-config cleartextTrafficPermitted="true">
+        <trust-anchors>
+            <!-- Trust system certificates -->
+            <certificates src="system" />
+            <!-- Trust user-added certificates (untuk debugging) -->
+            <certificates src="user" />
+        </trust-anchors>
+    </base-config>
+    
+    <!-- Domain-specific untuk production (optional) -->
+    <domain-config cleartextTrafficPermitted="false">
+        <domain includeSubdomains="true">admob.google.com</domain>
+        <domain includeSubdomains="true">googleads.g.doubleclick.net</domain>
+        <domain includeSubdomains="true">pagead2.googlesyndication.com</domain>
+        <domain includeSubdomains="true">firebase.google.com</domain>
+    </domain-config>
+</network-security-config>

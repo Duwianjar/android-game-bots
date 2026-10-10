@@ -53,7 +53,7 @@ LAUNCH_ACTIVITY = "com.busjam.parking.master/.LauncherAty"
 OCR_HELPER_PATH = "/Users/macbookair/ocr_helper"
 CLICK_REWARD_DURING_AD_WAIT = False  # Nonaktif: jangan klik Koleksi/Klaim/Unduh saat menunggu iklan
 AD_WAIT_SECONDS = 10         # Menonton iklan selama 10 detik
-MIN_WITHDRAWAL_RP = 20000      # Target saldo =Rp minimal 150 untuk penarikan
+MIN_WITHDRAWAL_RP = int(os.environ.get('MIN_WITHDRAWAL_RP', '200'))      # Target saldo =Rp minimal 200 untuk penarikan
 
 # Rentang Warna HSV Presisi untuk Bus & Penumpang (Floor-Masked & Anti-Keliru Orange/Red)
 COLOR_RANGES = {
@@ -1290,11 +1290,11 @@ class BusParkingDashRunner:
         all_text_lower = " ".join([it["text"].lower() for it in ocr_items])
         sx, sy = self.scale_x, self.scale_y
 
-        # 4. Deteksi tombol 'CONTINUE' / 'CONTINUI' / 'LANJUTKAN'
+        # 4. Deteksi tombol 'CONTINUE' / 'CONTINUI' / 'LANJUTKAN' (word boundary agar tidak false positive ke 'berkelanjutan')
         continue_keywords = ["continue", "continui", "continu", "lanjutkan", "lanjut", "teruskan"]
         for it in ocr_items:
             t = it["text"].lower()
-            if any(kw in t for kw in continue_keywords):
+            if any(re.search(rf"\b{re.escape(kw)}\b", t) for kw in continue_keywords):
                 print(f"{self.tag} [★] Menemukan tombol '{it['text']}' di ({it['cx']}, {it['cy']})! Mengeklik Continue...", flush=True)
                 self.tap(it["cx"], it["cy"])
                 time.sleep(1.0)
@@ -1344,9 +1344,10 @@ class BusParkingDashRunner:
             time.sleep(0.4)
             return
         elif "check-in" in all_text_lower or "login sehari" in all_text_lower:
-            px, py = int(640 * sx), int(470 * sy)
-            print(f"{self.tag} [★] Menemukan dialog modal! Mengeklik tombol X di ({px}, {py})...", flush=True)
-            self.tap(px, py)
+            px, py = int(642 * sx), int(410 * sy)
+            pts = [(px, py), (int(640 * sx), int(420 * sy)), (int(640 * sx), int(470 * sy))]
+            print(f"{self.tag} [★] Menemukan dialog modal Check-in! Mengeklik tombol X di ({px}, {py})...", flush=True)
+            self.tap_burst(pts, delay=0.03)
             time.sleep(0.4)
             return
 

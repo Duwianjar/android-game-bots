@@ -39,7 +39,18 @@
   #over h1 { color:#ff5252; font-size:38px; margin-bottom:8px; text-shadow:0 3px 8px #000; }
   #over p { color:#fff; font-size:16px; margin-bottom:22px; }
   #over button { padding:14px 34px; font-size:17px; font-weight:700; border:none; border-radius:30px;
-          background:#ffd700; color:#222; box-shadow:0 4px 14px rgba(0,0,0,.5); }
+          background:#ffd700; color:#222; box-shadow:0 4px 14px rgba(0,0,0,.5); margin:8px; cursor:pointer; }
+  #over .adBtn { background:#00d4ff; color:#000; }
+  #over .adBtn:disabled { opacity:0.5; cursor:not-allowed; }
+
+  /* Modal untuk reward ad info */
+  #rewardModal { position:fixed; inset:0; display:none; align-items:center; justify-content:center;
+                 background:rgba(5,10,25,.92); z-index:25; }
+  #rewardContent { background:#1a2642; border:2px solid #00d4ff; border-radius:12px; padding:28px;
+                   text-align:center; max-width:320px; box-shadow:0 8px 32px rgba(0,0,0,.8); }
+  #rewardContent h2 { color:#00d4ff; font-size:24px; margin-bottom:16px; }
+  #rewardContent p { color:#fff; font-size:14px; margin-bottom:20px; line-height:1.5; }
+  #rewardContent .reward-text { color:#ffd700; font-weight:800; font-size:18px; margin:16px 0; }
 </style>
 </head>
 <body>
@@ -53,7 +64,19 @@
 <div id="over">
   <h1>GAME OVER</h1>
   <p id="finalScore">Skor: 0</p>
+  <p id="highScoreDisplay" style="color:#ffd700;font-size:14px;margin-bottom:12px;">High Score: 0</p>
   <button id="restartBtn">Main Lagi</button>
+  <button id="watchAdBtn" class="adBtn">👀 Tonton Iklan & Dapatkan Bonus</button>
+  <button id="doubleCoinsBtn" class="adBtn" style="display:none;">💰 2x Coins - Tonton Iklan</button>
+</div>
+
+<div id="rewardModal">
+  <div id="rewardContent">
+    <h2>🎁 Reward!</h2>
+    <p>Terima kasih sudah menonton iklan!</p>
+    <div class="reward-text" id="rewardText">+500 Poin Bonus</div>
+    <button id="claimRewardBtn" style="padding:10px 20px; background:#00d4ff; border:none; border-radius:6px; font-weight:700; cursor:pointer;">Lanjutkan</button>
+  </div>
 </div>
 
 <script>
@@ -63,6 +86,126 @@ const hud = document.getElementById('hud');
 const fireBtn = document.getElementById('fire');
 const over = document.getElementById('over');
 const finalScore = document.getElementById('finalScore');
+const highScoreDisplay = document.getElementById('highScoreDisplay');
+const watchAdBtn = document.getElementById('watchAdBtn');
+const doubleCoinsBtn = document.getElementById('doubleCoinsBtn');
+const rewardModal = document.getElementById('rewardModal');
+const rewardText = document.getElementById('rewardText');
+const claimRewardBtn = document.getElementById('claimRewardBtn');
+
+/* ---------- Variabel global untuk Ads dan Reward ---------- */
+let currentScore = 0;
+let rewardPending = false;
+let consecutiveGamesWithoutAd = 0; // Track untuk interstitial frequency
+let highScore = parseInt(localStorage.getItem('dragonArrowHighScore') || '0');
+let totalGamesPlayed = parseInt(localStorage.getItem('dragonArrowGamesPlayed') || '0');
+
+/* ---------- Komunikasi dengan Native Ads Manager ---------- */
+// Callback untuk rewarded ad (dipanggil dari MainActivity)
+window.gameRewardCallback = function(rewardType, rewardAmount) {
+  console.log('Reward received: ' + rewardType + ' x' + rewardAmount);
+  rewardPending = true;
+  const bonus = rewardAmount * 500; // Setiap reward unit = 500 poin
+  rewardText.textContent = '+' + bonus + ' Poin Bonus!';
+  rewardModal.style.display = 'flex';
+};
+
+// Alias untuk kompatibilitas dengan bridge
+window.onAdRewardEarned = window.gameRewardCallback;
+
+/* ---------- Auto-show banner di menu ---------- */
+window.addEventListener('load', function() {
+  // Show banner saat app load (menu state)
+  if (typeof AndroidAds !== 'undefined' && AndroidAds !== null) {
+    try {
+      AndroidAds.showBannerAd();
+      console.log('Banner ad auto-shown on menu');
+    } catch (e) {
+      console.error('Error auto-showing banner: ' + e);
+    }
+  }
+});
+
+/* ---------- Tombol watch ad ---------- */
+watchAdBtn.addEventListener('click', function() {
+  watchAdBtn.disabled = true;
+  watchAdBtn.textContent = 'Memuat iklan...';
+  
+  // Cek apakah interface ads tersedia (AndroidAds dari MainActivity)
+  if (typeof AndroidAds !== 'undefined' && AndroidAds !== null) {
+    try {
+      AndroidAds.showRewardedAd();
+    } catch (e) {
+      console.error('Error showing ad: ' + e);
+      // Fallback untuk development/testing
+      setTimeout(() => {
+        rewardPending = true;
+        rewardText.textContent = '+500 Poin Bonus! (Test)';
+        rewardModal.style.display = 'flex';
+      }, 1000);
+      watchAdBtn.disabled = false;
+      watchAdBtn.textContent = '👀 Tonton Iklan & Dapatkan Bonus';
+    }
+  } else {
+    console.log('AndroidAds interface not available - running in browser?');
+    // Fallback untuk development/testing
+    setTimeout(() => {
+      rewardPending = true;
+      rewardText.textContent = '+500 Poin Bonus! (Test)';
+      rewardModal.style.display = 'flex';
+      watchAdBtn.disabled = false;
+      watchAdBtn.textContent = '👀 Tonton Iklan & Dapatkan Bonus';
+    }, 1000);
+  }
+});
+
+/* ---------- Tombol double coins ---------- */
+doubleCoinsBtn.addEventListener('click', function() {
+  doubleCoinsBtn.disabled = true;
+  doubleCoinsBtn.textContent = 'Memuat iklan...';
+  
+  if (typeof AndroidAds !== 'undefined' && AndroidAds !== null) {
+    try {
+      // Set callback untuk double coins
+      window.gameRewardCallback = function(rewardType, rewardAmount) {
+        const bonus = currentScore; // Double = tambah skor sekali lagi
+        rewardText.textContent = 'Double Coins! +' + bonus + ' Poin!';
+        currentScore = currentScore + bonus;
+        score = currentScore;
+        hud.textContent = 'Skor: ' + score;
+        rewardModal.style.display = 'flex';
+        rewardPending = true;
+      };
+      AndroidAds.showRewardedAd();
+    } catch (e) {
+      console.error('Error showing double coins ad: ' + e);
+      doubleCoinsBtn.disabled = false;
+      doubleCoinsBtn.textContent = '💰 2x Coins - Tonton Iklan';
+    }
+  }
+});
+
+claimRewardBtn.addEventListener('click', function() {
+  if (rewardPending) {
+    rewardPending = false;
+    rewardModal.style.display = 'none';
+    
+    // Update high score jika perlu
+    if (currentScore > highScore) {
+      highScore = currentScore;
+      localStorage.setItem('dragonArrowHighScore', highScore.toString());
+    }
+    
+    // Reset atau restart
+    if (gameOver) {
+      // Dari game over, show menu dengan updated score
+      finalScore.textContent = 'Skor: ' + currentScore;
+      highScoreDisplay.textContent = 'High Score: ' + highScore;
+    } else {
+      resetGame();
+    }
+  }
+});
 
 /* ---------- ukuran responsif ---------- */
 function fit() {
@@ -208,17 +351,73 @@ function update() {
 function die() {
   gameOver = true;
   if (loopId) { cancelAnimationFrame(loopId); loopId = null; }
+  currentScore = score;
+  totalGamesPlayed++;
+  localStorage.setItem('dragonArrowGamesPlayed', totalGamesPlayed.toString());
+  
+  // Update UI
   finalScore.textContent = 'Skor: ' + score;
+  highScoreDisplay.textContent = 'High Score: ' + highScore;
+  
+  // Reset button ads
+  watchAdBtn.disabled = false;
+  watchAdBtn.textContent = '👀 Tonton Iklan & Dapatkan Bonus';
+  
+  // Show double coins button jika skor > 0
+  if (score > 0) {
+    doubleCoinsBtn.style.display = 'inline-block';
+    doubleCoinsBtn.disabled = false;
+    doubleCoinsBtn.textContent = '💰 2x Coins - Tonton Iklan';
+  } else {
+    doubleCoinsBtn.style.display = 'none';
+  }
+  
+  // Show banner saat game over (menu state)
+  if (typeof AndroidAds !== 'undefined' && AndroidAds !== null) {
+    try {
+      AndroidAds.showBannerAd();
+    } catch (e) {}
+  }
+  
+  // Tampilkan interstitial ad setiap 2-3 game over (dengan cooldown 3 menit di native)
+  consecutiveGamesWithoutAd++;
+  if (consecutiveGamesWithoutAd >= 2 && typeof AndroidAds !== 'undefined' && AndroidAds !== null) {
+    try {
+      AndroidAds.showInterstitialAd();
+      consecutiveGamesWithoutAd = 0;
+      console.log('Interstitial ad requested on game over');
+    } catch (e) {
+      console.error('Error showing interstitial: ' + e);
+    }
+  }
+  
   over.style.display = 'flex';
 }
 
 function resetGame() {
-  score = 0; gameOver = false;
+  // Update high score
+  if (currentScore > highScore) {
+    highScore = currentScore;
+    localStorage.setItem('dragonArrowHighScore', highScore.toString());
+  }
+  
+  score = currentScore; // Mulai dari skor sebelumnya jika ada reward
+  gameOver = false;
   arrows = []; magical = []; obstacles = [];
   player.x = 400; player.y = 300; player.cd = 0;
   fireBtn.classList.remove('cool');
-  hud.textContent = 'Skor: 0';
+  hud.textContent = 'Skor: ' + score;
   over.style.display = 'none';
+  rewardModal.style.display = 'none';
+  
+  // Hide banner saat mulai gameplay
+  if (typeof AndroidAds !== 'undefined' && AndroidAds !== null) {
+    try {
+      AndroidAds.hideBannerAd();
+      console.log('Banner hidden during gameplay');
+    } catch (e) {}
+  }
+  
   start();
 }
 

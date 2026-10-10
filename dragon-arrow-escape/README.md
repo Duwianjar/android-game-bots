@@ -1,122 +1,248 @@
-# Dragon Arrow Escape Bot
+# 🐉 Dragon Arrow Escape
 
-Bot otomatis untuk game Dragon Arrow Escape. Script ini membuka game di browser web dan mengontrolnya secara otomatis dengan menggunakan keyboard dan mouse.
+Arcade survival game Android dengan sistem monetisasi AdMob lengkap.
 
-## Fitur
+## 🎮 Game Features
 
-- 🌐 Mengakses game lokal melalui browser web (folder: `dragon-arrow-escape/`) 
-- 🎮 Kontrol otomatis:
-  - Menggunakan keyboard (WASD/Arrow keys) untuk mengontrol pemain
-  - Menggunakan klik mouse acak untuk mengendalikan panah magis
-- ⏱️ Game terus berjalan hingga pengguna menekan Ctrl+C
-- 📊 Menampilkan skor di layar
+- **Joystick controls** - Kontrol sentuh responsif
+- **Obstacle avoidance** - Hindari panah dan rintangan
+- **Progressive difficulty** - Semakin lama semakin sulit
+- **High score tracking** - Simpan rekor terbaik Anda
+- **Arcade gameplay** - Simple, addictive, replayable
 
-## Prasyarat
+## 💰 Monetization (AdMob)
 
-- Python 3.8+
-- Chrome/Edge/Chromium browser (untuk Selenium)
-- ChromeDriver yang terinstal dan kompatibel
+### Implemented & Ready
 
-## Instalasi
+- ✅ **Rewarded Ads** ($10-$30 RPM)
+  - Continue game dengan bonus 500 poin
+  - Double coins setelah game over
+  - User-triggered, tidak mengganggu gameplay
+  
+- ✅ **Interstitial Ads** ($3-$8 RPM)
+  - Auto-show setiap 2-3 game over
+  - Built-in 3 menit cooldown
+  - Smart frequency control
+  
+- ✅ **Banner Ads** ($0.5-$2 RPM)
+  - Auto-show di menu dan game over
+  - Auto-hide saat gameplay
+  - Passive revenue stream
 
-### 1. Clone repository (jika diperlukan)
+### Revenue Tracking
+
+- Real-time impression tracking
+- Daily/total statistics
+- Performance analytics
+- JSON export untuk dashboard
+
+## 🚀 Quick Start
+
+### Development (Test Ads)
+
 ```bash
-git clone <URL-repository>
-cd dragon-arrow-escape-bot
+# Clone/navigate ke project
+cd android-game-bots/dragon-arrow-escape/android
+
+# Build debug APK
+./gradlew assembleDebug
+
+# Install ke device
+adb install app/build/outputs/apk/debug/app-debug.apk
+
+# Watch logs
+adb logcat -s DragonArrowEscape:V AdsManager:V
 ```
 
-### 2. Install Python packages
+### Production (Real Money)
+
+⚠️ **PENTING**: Aplikasi saat ini masih pakai TEST AD IDs!
+
+**Untuk menghasilkan uang nyata:**
+
+1. **Baca panduan lengkap**: [PRODUCTION_SETUP.md](./PRODUCTION_SETUP.md)
+2. Daftar AdMob & dapatkan Production Ad Unit IDs
+3. Ganti TEST IDs dengan PRODUCTION IDs
+4. Build signed release
+5. Upload ke Google Play Store
+6. Mulai dapat revenue! 💰
+
+## 📊 Revenue Estimation
+
+| Daily Active Users | Estimated Monthly Revenue |
+|-------------------|---------------------------|
+| 1,000 DAU | $2,000 - $3,000 |
+| 10,000 DAU | $20,000 - $30,000 |
+| 100,000 DAU | $200,000+ |
+
+*Tergantung geo, engagement, dan fill rate*
+
+## 📁 Project Structure
+
+```
+dragon-arrow-escape/
+├── android/                          # Android project
+│   ├── app/
+│   │   ├── src/main/
+│   │   │   ├── java/com/dragonarrowescape/game/
+│   │   │   │   ├── MainActivity.java         # Entry point
+│   │   │   │   ├── AdsManager.java          # Ad monetization
+│   │   │   │   └── AdRevenueTracker.java    # Analytics
+│   │   │   ├── assets/
+│   │   │   │   ├── index.html               # HTML5 game
+│   │   │   │   └── android-ads-bridge.js    # JS ↔ Android
+│   │   │   ├── AndroidManifest.xml          # ⚠️ Ganti App ID
+│   │   │   └── res/                         # Resources
+│   │   └── build.gradle                     # ⚠️ Dependencies
+│   └── build.gradle                         # Project config
+├── PRODUCTION_SETUP.md                      # 📖 Panduan lengkap
+├── CHANGELOG.md                             # Version history
+└── README.md                                # This file
+```
+
+## 🔧 Configuration
+
+### File yang WAJIB diganti untuk Production:
+
+1. **AndroidManifest.xml** (line 41)
+   ```xml
+   <meta-data
+       android:name="com.google.android.gms.ads.APPLICATION_ID"
+       android:value="ca-app-pub-XXXXXXXXXXXXXXXX~YYYYYYYYYY" />
+   ```
+
+2. **AdsManager.java** (line 42-50)
+   ```java
+   private static final String REWARDED_AD_UNIT_ID = "ca-app-pub-XXXXXXXXXXXXXXXX/1111111111";
+   private static final String INTERSTITIAL_AD_UNIT_ID = "ca-app-pub-XXXXXXXXXXXXXXXX/2222222222";
+   private static final String BANNER_AD_UNIT_ID = "ca-app-pub-XXXXXXXXXXXXXXXX/3333333333";
+   ```
+
+## 🧪 Testing
+
+### Test Ads (Development)
+
+Gunakan TEST Ad Unit IDs yang sudah ada (default) - **tidak menghasilkan uang**.
+
+### Real Ads (Production)
+
+⚠️ **JANGAN klik iklan sendiri!** Bisa banned dari AdMob.
+
+Gunakan test device:
+```java
+AdRequest adRequest = new AdRequest.Builder()
+    .addTestDevice("YOUR_DEVICE_ID")
+    .build();
+```
+
+## 📱 Build Commands
+
 ```bash
-pip install -r requirements.txt
+# Debug build (untuk testing)
+./gradlew assembleDebug
+
+# Release build (untuk Play Store)
+./gradlew assembleRelease
+
+# AAB bundle (recommended untuk Play Store)
+./gradlew bundleRelease
+
+# Install ke device
+./gradlew installDebug
+
+# Clean build
+./gradlew clean
 ```
 
-### 3. Install ChromeDriver
-- Ubuntu/Debian:
-  ```bash
-  sudo apt-get update
-  sudo apt-get install -y wget
-  wget https://chromedriver.storage.googleapis.com/$(curl -sS https://chromedriver.storage.googleapis.com/LATEST_RELEASE)_chromedriver_linux64.zip
-  sudo unzip -o chromedriver_linux64.zip -d /usr/local/bin/
-  sudo chmod +x /usr/local/bin/chromedriver
-  sudo ln -s /usr/local/bin/chromedriver /usr/bin/chromedriver
-  ```
+## 🐛 Troubleshooting
 
-- macOS:
-  ```bash
-  brew install --cask chromedriver
-  ```
+### "Ads tidak muncul"
 
-- Windows: Unduh dari [ChromeDriver Releases](https://chromedriver.storage.googleapis.com/index.html)
+1. Pastikan device punya internet
+2. Tunggu 1-2 jam setelah buat ad unit baru
+3. Check logcat untuk error messages
+4. Verify Ad Unit IDs benar
 
-## Penggunaan
+### "No fill" di production
 
-### Jalankan bot
+1. Enable "Optimize" di AdMob console
+2. Setup mediation (Meta, Unity Ads)
+3. Check geo targeting
+4. Normal di negara dengan low fill rate
+
+### "Build failed"
+
 ```bash
-python dragon-arrow-escape-bot.py
+./gradlew clean
+./gradlew assembleDebug --stacktrace
 ```
 
-### Kontrol manual tambahan
-- Game memberikan Anda kontrol manual:
-  - **WASD / Panah**: kontrol pemain
-  - **Space**: gunakan panah magis (jika sudah siap)
-  - **ESC**: keluar (di bot ini)
+## 📚 Documentation
 
-## Cara kerja
+- **[PRODUCTION_SETUP.md](./PRODUCTION_SETUP.md)** - Panduan lengkap 10 langkah untuk publish
+- **[CHANGELOG.md](./CHANGELOG.md)** - Version history & updates
+- [AdMob Documentation](https://developers.google.com/admob/android/quick-start)
+- [Google Play Console Help](https://support.google.com/googleplay/android-developer)
 
-1. Bot membuka browser web dan memuat halaman HTML game (`index.html`)
-2. Game dimulai secara otomatis
-3. Bot mengklik acak di layar untuk melakukan aksi (simulasi penggunaan panah magis)
-4. Script terus berjalan hingga Anda menekan Ctrl+C
+## 🎯 Monetization Best Practices
 
-## Struktur proyek
+### ✅ DO:
+- Show rewarded ads as user-triggered options
+- Respect interstitial cooldown (3 menit)
+- Hide banner ads during gameplay
+- Track metrics dan optimize
+- A/B test different ad placements
 
-- `dragon-arrow-escape-bot.py`: Bot utama
-- `dragon-arrow-escape/`: Folder HTML game lengkap (konten game)
-- `README.md`: File ini
+### ❌ DON'T:
+- Spam interstitial ads (user akan uninstall)
+- Show banner ads during gameplay
+- Click your own ads (ban!)
+- Force users to watch ads
+- Fake ad impressions (permanent ban!)
 
-## Kontrol manual dalam game
+## 🏆 Success Metrics
 
-Selama game berjalan, Anda dapat mengontrol:
-- **Posisi karakter** menggunakan WASD atau panah
-- **Panah magis** menggunakan Space (setelah cooldown 1 detik)
-- **Mulai ulang** setelah Game Over dengan mengklik layar
+Monitor di AdMob console:
 
-## Troubleshooting
+- **eCPM** (effective Cost Per Mille)
+  - Rewarded: target >$10
+  - Interstitial: target >$3
+  - Banner: target >$0.5
 
-### Masalah umum
+- **Fill Rate**: target >90%
+- **Impression Rate**: target >80%
+- **User Retention**:
+  - Day 1: target >40%
+  - Day 7: target >20%
+  - Day 30: target >10%
 
-1. **Kesalahan: "chromedriver not found"**
-   - Pastikan ChromeDriver ada di PATH:
-     ```bash
-     chromedriver --version
-     ```
+## 💳 Payment
 
-2. **Kesalahan: "ModuleNotFoundError: No module named selenium"**
-   - Install selenium: `pip install selenium`
+- **Minimum threshold**: $100 USD
+- **Payment schedule**: Monthly (around 21st)
+- **Setup**: AdMob Console → Payments → Add payment method
+- **Indonesia**: Gunakan bank transfer (recommended)
 
-3. **Game tidak terbuka**
-   - Pastikan tidak ada program lain yang menggunakan port yang sama
-   - Coba jalankan bot dengan layar "headless" jika diperlukan
+## 📞 Support
 
-### Mode headless (opsional)
+- **Issues**: Check [PRODUCTION_SETUP.md](./PRODUCTION_SETUP.md) troubleshooting section
+- **AdMob**: https://support.google.com/admob
+- **Play Console**: https://support.google.com/googleplay/android-developer
 
-Untuk menjalankan bot tanpa membuka browser window:
-```python
-# Ubah di open_browser():
-options.add_argument('--headless')
-```
+## 📄 License
 
-## Catatan pengembang
+Copyright © 2026. All rights reserved.
 
-Script ini menggunakan:
-- **Selenium** untuk otomatisasi browser
-- **ActionChains** untuk simulasi mouse
-- **Python threading** untuk operasi latar belakang (opsional)
+---
 
-Permasalahan:
-- Kontrol acak menggunakan klik mouse mungkin tidak optimal untuk semua pemain
-- Game menggunakan posisi absolut pixel; resolusi layar mungkin berpengaruh
+**🚀 Ready to make money from ads?**
 
-## Lisensi
+1. Read [PRODUCTION_SETUP.md](./PRODUCTION_SETUP.md)
+2. Setup AdMob & get Production IDs
+3. Replace TEST IDs
+4. Build & publish to Play Store
+5. Watch the revenue grow! 💰
 
-Dibuat untuk tujuan hiburan dan belajar
+**With 1,000 daily active users, you can earn $2,000-3,000/month.**
+
+Good luck! 🎮💰

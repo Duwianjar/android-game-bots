@@ -21,7 +21,7 @@ OCR_HELPER_PATH = "/Users/macbookair/ocr_helper"
 TAP_MARKER_PATH = "/Users/macbookair/scrcpy_tap_marker"
 CLICK_REWARD_DURING_AD_WAIT = False  # Nonaktif: jangan klik Koleksi/Klaim/Unduh saat menunggu iklan
 AD_WAIT_SECONDS = 6           # Menonton iklan selama 6 detik
-MIN_WITHDRAWAL_RP = 20000      # Target saldo =Rp minimal 150 untuk penarikan
+MIN_WITHDRAWAL_RP = int(os.environ.get('MIN_WITHDRAWAL_RP', '200'))      # Target saldo =Rp minimal 200 untuk penarikan
 
 # Koordinat 8 Kolom Rak Kaleng & Baris Slot Botol (Terkalibrasi 720x1640)
 SHELF_COLUMNS_X = [55, 140, 225, 310, 400, 490, 580, 665]
