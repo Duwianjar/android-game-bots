@@ -1,6 +1,7 @@
 # Python
 __pycache__/
 *.py[cod]
+*.bak*
 *$py.class
 *.so
 .Python
@@ -27,6 +28,13 @@ build/
 # ADB & Android
 *.apk
 *.dex
+**/.gradle/
+**/build/
+**/experimental-apk/
+**/google-services.json
+**/*.jks
+**/*.keystore
+*.idsig
 
 # IDE
 .vscode/

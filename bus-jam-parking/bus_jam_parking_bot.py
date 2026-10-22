@@ -51,9 +51,11 @@ def send_telegram_async(text):
 
 LAUNCH_ACTIVITY = "com.busjam.parking.master/.LauncherAty"
 OCR_HELPER_PATH = "/Users/macbookair/ocr_helper"
-CLICK_REWARD_DURING_AD_WAIT = False  # Nonaktif: jangan klik Koleksi/Klaim/Unduh saat menunggu iklan
+CLICK_REWARD_DURING_AD_WAIT = False  # Jangan klik OCR selama iklan; proses Koleksi dilakukan setelah kembali ke game
 AD_WAIT_SECONDS = 10         # Menonton iklan selama 10 detik
-MIN_WITHDRAWAL_RP = int(os.environ.get('MIN_WITHDRAWAL_RP', '200'))      # Target saldo =Rp minimal 200 untuk penarikan
+MIN_WITHDRAWAL_RP = int(os.environ.get('MIN_WITHDRAWAL_RP', '10000'))   # Target saldo =Rp di atas 10000 untuk penarikan
+FAILED_TAP_RESET_THRESHOLD = 6  # Reset jika 6 klik berturut-turut tidak mengubah layar
+FAILED_TAP_RESET_COOLDOWN = 120.0  # Hindari reset berulang dalam 2 menit
 
 # Rentang Warna HSV Presisi untuk Bus & Penumpang (Floor-Masked & Anti-Keliru Orange/Red)
 COLOR_RANGES = {
@@ -127,7 +129,7 @@ def detect_popup_reward_button_ocr(ocr_items, scale_y=1.0):
     has_reward_modal = any(k in all_text for k in modal_indicators)
 
     # 1. Deteksi langsung teks tombol klaim/reward
-    reward_keywords = ["bebas klik", "koleksi", "klaim", "claim", "collect", "gandakan", "dapatkan", "ambil", "terima"]
+    reward_keywords = ["bebas klik", "koleksi", "klaim", "claim", "collect", "gandakan"]
     for it in ocr_items:
         t = it["text"].lower()
         if any(kw in t for kw in reward_keywords) and it["cy"] > int(500 * scale_y):
@@ -179,6 +181,8 @@ class BusParkingDashRunner:
         self.withdrawn_pending_ad = False
         self.aggressive_ad_dismiss_count = 0
         self.recently_tapped_points = []
+        self.failed_tap_streak = 0
+        self.last_data_reset_ts = 0.0
         self.latest_game_data = self.load_cached_state()
         if not self.latest_game_data:
             self.latest_game_data = {
@@ -375,6 +379,27 @@ class BusParkingDashRunner:
         """Membawa aplikasi Bus Jam Parking kembali ke layar depan secara aman."""
         self.run_adb(["shell", "am", "start", "-n", f"{PACKAGE_NAME}/.LauncherAty"])
         self.run_adb(["shell", "monkey", "-p", PACKAGE_NAME, "-c", "android.intent.category.LAUNCHER", "1"])
+
+    def clear_game_data_and_restart(self, reason="klik bus tidak merespons"):
+        """Bersihkan data game dengan pm clear lalu buka ulang."""
+        now = time.time()
+        if now - self.last_data_reset_ts < FAILED_TAP_RESET_COOLDOWN:
+            return False
+        self.last_data_reset_ts = now
+        self.failed_tap_streak = 0
+        print(f"{self.tag} [⚠] {reason}. Menjalankan pm clear {PACKAGE_NAME} lalu membuka ulang game...", flush=True)
+        self.run_adb(["shell", "am", "force-stop", PACKAGE_NAME], timeout=8)
+        time.sleep(1.0)
+        clear_result = self.run_adb(["shell", "pm", "clear", PACKAGE_NAME], timeout=20)
+        print(f"{self.tag} [⚠] Hasil pm clear: {clear_result or 'selesai/tidak ada output'}", flush=True)
+        self.recently_tapped_points.clear()
+        self.ad_wait_done = False
+        self.aggressive_ad_dismiss_count = 0
+        time.sleep(1.5)
+        self.bring_game_to_foreground()
+        time.sleep(3.0)
+        print(f"{self.tag} [✔] Game dibuka ulang setelah reset data.", flush=True)
+        return True
 
     def tap(self, x, y):
         subprocess.run(["adb", "-s", self.serial, "shell", f"input tap {int(x)} {int(y)}"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -1356,9 +1381,9 @@ class BusParkingDashRunner:
             return
 
         # 8. Periksa Tombol Reward Modal Nyata Berbasis OCR ('Bebas Klik', 'Koleksi', 'Klaim', 'Menarik')
-        # DISABLED: Skip Koleksi untuk hindari loop iklan, fokus main game
-        popup_btn = None  # detect_popup_reward_button_ocr(ocr_items, self.scale_y)
-        if False and popup_btn:
+        # Aktif dengan cooldown agar tombol Koleksi tidak dispam dan tidak memicu loop iklan.
+        popup_btn = detect_popup_reward_button_ocr(ocr_items, self.scale_y)
+        if popup_btn:
             bx, by, desc = popup_btn
             # Cooldown untuk Koleksi (jangan spam iklan)
             if "koleksi" in desc.lower():
@@ -1376,8 +1401,21 @@ class BusParkingDashRunner:
             img_after = self.get_screenshot()
             if img_after is not None:
                 ocr_after = self.run_full_ocr(img_after)
-                if not any("tingkat" in it["text"].lower() for it in ocr_after):
+                reward_still_visible = detect_popup_reward_button_ocr(ocr_after, self.scale_y)
+                if reward_still_visible:
+                    print(f"{self.tag} [⚠] Setelah klik Koleksi, popup reward masih terlihat ({reward_still_visible[2]}). Bukan iklan: jalankan pm clear dan buka ulang game...", flush=True)
+                    self.clear_game_data_and_restart("popup Koleksi tetap terbuka setelah klik")
+                    return
+
+                focus_after = self.get_foreground_focus().lower()
+                ad_markers = [
+                    "rewardvideo", "adactivity", "applovin", "mbridge", "mintegral",
+                    "unity3d", "adcolony", "vungle", "ironsource", "pangle", "bytedance",
+                ]
+                if any(marker in focus_after for marker in ad_markers):
                     self.wait_ad_and_close_ad("Iklan Terbuka Setelah Klik Reward / Koleksi")
+                else:
+                    print(f"{self.tag} [.] Setelah klik reward tidak ada activity iklan dan popup sudah hilang; lanjut cek game.", flush=True)
             return
 
         # 8b. Deteksi Tombol 'Buka Kunci' Slot Halte Bus
@@ -1482,8 +1520,13 @@ class BusParkingDashRunner:
                 changed_pixels = np.sum(diff_gray > 25)
 
                 if changed_pixels < 800:
-                    print(f"{self.tag} [!] Bus di ({tcx}, {tcy}) terhalang. Berganti ke posisi bus lain di langkah berikutnya...", flush=True)
+                    self.failed_tap_streak += 1
+                    print(f"{self.tag} [!] Bus di ({tcx}, {tcy}) tidak berubah/terhalang ({self.failed_tap_streak}/{FAILED_TAP_RESET_THRESHOLD}).", flush=True)
+                    if self.failed_tap_streak >= FAILED_TAP_RESET_THRESHOLD:
+                        if self.clear_game_data_and_restart("semua klik bus berturut-turut tidak merespons"):
+                            return
                 else:
+                    self.failed_tap_streak = 0
                     print(f"{self.tag} [✔] Bus bergerak melaju ke halte!", flush=True)
         else:
             # Jika tidak ada bus sama sekali terdeteksi di area parkir

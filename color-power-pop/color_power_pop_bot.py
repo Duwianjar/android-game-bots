@@ -13,6 +13,9 @@ import re
 import signal
 import cv2
 import numpy as np
+import xml.etree.ElementTree as ET
+import urllib.parse
+import random
 
 GAME_DISPLAY_NAME = "Color Power Pop"
 PACKAGE_NAME = os.environ.get("COLOR_POWER_POP_PACKAGE", "com.giraffeeapp.power")  # Color Power Pop
@@ -25,6 +28,8 @@ CLICK_REWARD_DURING_AD_WAIT = False  # Nonaktif: jangan klik Koleksi/Klaim/Unduh
 AD_WAIT_SECONDS = 6           # Menonton iklan selama 6 detik
 AD_TIMER_STUCK_REPEAT_LIMIT = 4  # Jika OCR timer sama terus, anggap bukan countdown valid
 MIN_WITHDRAWAL_RP = 200        # Target saldo =Rp minimal untuk penarikan
+ENABLE_AUTO_WITHDRAWAL = False  # Nonaktif: jangan klik =Rp atau Menarik
+ENABLE_SLOT_SEEDING_AFTER_AD = False  # Nonaktif sementara: search web slot & buka aplikasi slot setelah iklan
 ENABLE_FLOATING_REWARD_DETECTION = False  # Color Power Pop tidak pakai reward/bubble melayang
 ENABLE_AUTO_CLOSE_UNKNOWN_MODAL = False    # Matikan spam klik X modal palsu
 DEBUG_COLOR_MARKERS_ONLY = False           # False = klik kartu atas sesuai warna kotak/wadah bawah
@@ -103,8 +108,9 @@ def detect_popup_reward_button_ocr(ocr_items, scale_y=1.0):
         if any(kw in t for kw in reward_keywords) and it["cy"] > int(500 * scale_y):
             return it["cx"], it["cy"], f"Tombol Reward '{it['text']}'"
 
-    # 2. Jika modal hadiah terbuka dan ada tombol 'Menarik' di bagian bawah (y > 900)
-    if has_reward_modal and ("menarik" in all_text):
+    # 2. Tombol Menarik adalah alur penarikan, bukan tombol reward.
+    # Jangan masukkan ke kandidat saat penarikan otomatis dinonaktifkan.
+    if ENABLE_AUTO_WITHDRAWAL and has_reward_modal and ("menarik" in all_text):
         for it in ocr_items:
             t = it["text"].lower()
             if "menarik" in t and it["cy"] > int(900 * scale_y):
@@ -279,6 +285,20 @@ def colors_match(card_color, target_colors):
         return True
     return False
 
+def is_right_chevron(cnt, bw, bh):
+    pts = cnt[:, 0, :]
+    by = pts[:, 1].min()
+    bx = pts[:, 0].min()
+    mid_mask = (pts[:, 1] >= by + int(0.28 * bh)) & (pts[:, 1] <= by + int(0.72 * bh))
+    top_mask = pts[:, 1] <= by + int(0.25 * bh)
+    bot_mask = pts[:, 1] >= by + int(0.75 * bh)
+    if not np.any(mid_mask) or not np.any(top_mask) or not np.any(bot_mask):
+        return False
+    mid_max_x = pts[mid_mask, 0].max()
+    top_max_x = pts[top_mask, 0].max()
+    bot_max_x = pts[bot_mask, 0].max()
+    return (mid_max_x - top_max_x >= 2) and (mid_max_x - bot_max_x >= 2)
+
 class CanSortRunner:
     def __init__(self, serial):
         self.serial = serial
@@ -303,6 +323,9 @@ class CanSortRunner:
         self.external_redirect_loop_count = 0
         self.feedback_false_loop_count = 0
         self.last_external_redirect_at = 0.0
+        self.completed_ads_count = 0
+        self.last_chrome_seed_ts = 0.0
+        self.seeding_slot_routine = False
 
     def is_coord_recent(self, cx, cy, threshold_dist=35):
         """True bila titik ini baru saja disentuh dalam radius cooldown."""
@@ -633,7 +656,15 @@ class CanSortRunner:
             img = self.get_screenshot()
         if img is None:
             return None
+        has_bottom, has_top = self.get_board_presence(img)
+        if has_bottom or has_top:
+            return None
         ocr_items = self.run_full_ocr(img)
+        # Jangan anggap layar game normal (ada Level/Tingkat/Rp/Menarik/Saldo/Skor) sebagai countdown iklan
+        all_screen_text = " ".join(it["text"].lower() for it in ocr_items if it["cy"] < int(400 * self.scale_y))
+        game_keywords = ["level", "rp", "tingkat", "menarik", "tarik", "saldo", "skor", "score", "koin", "coin"]
+        if any(kw in all_screen_text for kw in game_keywords):
+            return None
         candidates = []
         for it in ocr_items:
             cx, cy = it["cx"], it["cy"]
@@ -642,7 +673,7 @@ class CanSortRunner:
 
             t = it["text"].lower().strip()
             # Jangan ambil saldo / level / angka reward yang bukan timer.
-            if any(skip in t for skip in ["rp", "level", "tingkat", "coin", "koin", "%", "+"]):
+            if any(skip in t for skip in ["rp", "level", "tingkat", "coin", "koin", "%", "+", "iklan", "dari", "of", "/3", "/2", "stage"]):
                 continue
 
             # Format jelas: 6s, 6 s left, 12 detik, 10 remaining, dst.
@@ -676,10 +707,29 @@ class CanSortRunner:
     def handle_external_redirect_during_ad(self):
         """Saat sedang tunggu iklan, jika dilempar ke Play Store/Chrome, segera balik ke game."""
         focus = self.get_foreground_focus().lower()
+        browser_ui = False
         if "com.android.vending" not in focus and "com.android.chrome" not in focus:
-            return False
+            # Beberapa InMobi/WebView menampilkan Chrome di layar tetapi
+            # dumpsys masih melaporkan InMobiAdActivity sebagai focused window.
+            # Kenali halaman Chrome dari OCR agar tidak terjebak klik X berulang.
+            img = self.get_screenshot()
+            if img is not None:
+                browser_markers = (
+                    "tab baru", "tab samaran", "hapus data penjelajahan",
+                    "kontrol situs", "cari di halaman", "bookmark",
+                    "download", "chrome", "://"
+                )
+                browser_text = " ".join(
+                    item["text"].lower() for item in self.run_full_ocr(img)
+                )
+                browser_ui = any(marker in browser_text for marker in browser_markers)
+            if not browser_ui:
+                return False
 
-        app_name = "Play Store" if "com.android.vending" in focus else "Chrome"
+        if browser_ui:
+            app_name = "Chrome/WebView"
+        else:
+            app_name = "Play Store" if "com.android.vending" in focus else "Chrome"
         now = time.time()
         if now - self.last_external_redirect_at > 20:
             self.external_redirect_loop_count = 0
@@ -698,7 +748,7 @@ class CanSortRunner:
             time.sleep(0.25)
         if "com.android.vending" in focus:
             self.run_adb(["shell", "am", "force-stop", "com.android.vending"])
-        if "com.android.chrome" in focus:
+        if "com.android.chrome" in focus or browser_ui:
             self.run_adb(["shell", "am", "force-stop", "com.android.chrome"])
         self.bring_game_to_foreground()
         time.sleep(0.8)
@@ -820,6 +870,95 @@ class CanSortRunner:
                 return True
         return False
 
+    def detect_chevron_skip_button(self, img=None):
+        """Mendeteksi tombol >> (sepasang chevron mengarah ke kanan) di pojok kanan atau kiri atas."""
+        if img is None:
+            img = self.get_screenshot()
+        if img is None:
+            return None
+
+        sx, sy = self.scale_x, self.scale_y
+        y1, y2 = int(30 * sy), int(280 * sy)
+        regions = [
+            ("kanan", int(520 * sx), int(710 * sx)),
+            ("kiri", int(10 * sx), int(200 * sx)),
+        ]
+        for side, x1, x2 in regions:
+            crop = img[y1:y2, x1:x2]
+            if crop.size <= 0:
+                continue
+            gray = cv2.cvtColor(crop, cv2.COLOR_BGR2GRAY)
+            for thresh_val in [170, 200]:
+                _, bin_img = cv2.threshold(gray, thresh_val, 255, cv2.THRESH_BINARY)
+                cnts, _ = cv2.findContours(bin_img, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+                chevrons = []
+                for c in cnts:
+                    bx, by, bw, bh = cv2.boundingRect(c)
+                    if int(6 * sx) <= bw <= int(40 * sx) and int(12 * sy) <= bh <= int(55 * sy):
+                        aspect = bw / float(bh)
+                        if 0.25 <= aspect <= 0.95 and is_right_chevron(c, bw, bh):
+                            chevrons.append((bx, by, bw, bh))
+                for i in range(len(chevrons)):
+                    for j in range(i + 1, len(chevrons)):
+                        c1, c2 = chevrons[i], chevrons[j]
+                        if abs(c1[1] - c2[1]) <= int(8 * sy) and abs(c1[3] - c2[3]) <= int(8 * sy):
+                            left_c, right_c = (c1, c2) if c1[0] < c2[0] else (c2, c1)
+                            gap = right_c[0] - (left_c[0] + left_c[2])
+                            if -int(3 * sx) <= gap <= int(30 * sx):
+                                cx = x1 + (left_c[0] + right_c[0] + right_c[2]) // 2
+                                cy = y1 + (left_c[1] + left_c[3] // 2)
+                                return cx, cy, side
+        return None
+
+    def detect_and_click_ad_fast_forward_or_skip_button(self, img=None):
+        """Mendeteksi tombol >> / skip di pojok atas (CV chevron atau OCR skip/>>) dan mengekliknya."""
+        if img is None:
+            img = self.get_screenshot()
+        if img is None:
+            return False
+
+        sx, sy = self.scale_x, self.scale_y
+        # 1. Cek visual chevron >> (sangat presisi, independen dari OCR)
+        chevron_res = self.detect_chevron_skip_button(img)
+        if chevron_res:
+            cx, cy, side = chevron_res
+            print(f"{self.tag} [★] Menemukan tombol '>>' (fast-forward/skip) via CV di {side} atas ({cx}, {cy})! Mengeklik burst naik...", flush=True)
+            # Klik koordinat visual tepat DAN burst naik (hingga 55px lebih tinggi) agar mengenai area tombol >> dan bulatan tombol
+            skip_burst_pts = [
+                (cx, cy),
+                (cx, max(int(45 * sy), cy - int(20 * sy))),
+                (cx, max(int(45 * sy), cy - int(38 * sy))),
+                (cx, max(int(45 * sy), cy - int(55 * sy))),
+            ]
+            self.tap_burst(skip_burst_pts, delay=0.05)
+            time.sleep(0.35)
+            return True
+
+        # 2. Cek via OCR di area atas
+        ocr_items = self.run_full_ocr(img)
+        for it in ocr_items:
+            if it["cy"] < int(350 * sy):
+                t = it["text"].strip().lower()
+                compact = re.sub(r"\s+", "", t)
+                if (
+                    compact in [">>", "››", "»", "》", ">", "›", "skip", "lewati", "next"]
+                    or ">>" in compact
+                    or "skip" in compact
+                    or "lewati" in compact
+                ):
+                    side = "kiri atas" if it["cx"] < int(360 * sx) else "kanan atas"
+                    print(f"{self.tag} [★] Menemukan tombol skip '{it['text']}' via OCR di {side} ({it['cx']}, {it['cy']})! Mengeklik burst naik...", flush=True)
+                    ocr_burst_pts = [
+                        (it["cx"], it["cy"]),
+                        (it["cx"], max(int(45 * sy), it["cy"] - int(20 * sy))),
+                        (it["cx"], max(int(45 * sy), it["cy"] - int(38 * sy))),
+                    ]
+                    self.tap_burst(ocr_burst_pts, delay=0.05)
+                    time.sleep(0.35)
+                    return True
+
+        return False
+
     def detect_and_click_ad_sequence_button(self, img=None):
         """Klik tombol tahap iklan bertingkat: Iklan 1/3, 2/3, 3/3.
 
@@ -834,6 +973,9 @@ class CanSortRunner:
             return False
 
         sx, sy = self.scale_x, self.scale_y
+        if self.detect_and_click_ad_fast_forward_or_skip_button(img):
+            return True
+
         ocr_items = self.run_full_ocr(img)
 
         # 1. Prioritas See Next di tengah/bawah.
@@ -863,13 +1005,18 @@ class CanSortRunner:
             stage = None
             total = None
             patterns = [
-                r'(?:iklan|ilan|ad|ads)?\s*(\d)\s*(?:dari|of|/)\s*(\d)',
-                r'(\d)\s*/\s*(\d)',
+                r'(?:iklan|ilan|ad|ads)?\s*(\d)\s*(?:dari|of|/)\s*(\d|s|3)?',
+                r'(\d)\s*/\s*(\d|s|3)?',
             ]
             for pat in patterns:
                 m = re.search(pat, norm)
                 if m:
-                    stage, total = int(m.group(1)), int(m.group(2))
+                    raw_total = m.group(2)
+                    try:
+                        total = int(raw_total) if raw_total and raw_total != 's' else 3
+                    except Exception:
+                        total = 3
+                    stage = int(m.group(1))
                     break
             # Kadang OCR memecah teks, fallback dari gabungan teks atas.
             if stage is None:
@@ -889,7 +1036,7 @@ class CanSortRunner:
                             else:
                                 right_score += 1
                     cx = int(95 * sx) if left_score > right_score else int(620 * sx)
-                    cy = int(145 * sy)
+                    cy = int(220 * sy)
 
             if stage in [1, 2, 3] and total == 3:
                 seq_hits.append((stage, cx, cy, raw))
@@ -929,11 +1076,15 @@ class CanSortRunner:
             return True
 
         # 4. Fallback jika OCR tombol >>/X tidak terbaca: tap titik umum di atas label kiri/kanan.
-        # Untuk tahap 1/2 diarahkan ke >>; tahap 3 diarahkan ke X/>> di area yang sama.
         fallback_x = int(60 * sx) if seq_x < int(360 * sx) else int(660 * sx)
-        fallback_y = max(int(55 * sy), int(seq_y - 62 * sy))
-        print(f"{self.tag} [+] Terdeteksi '{raw or f'Iklan {stage} dari 3'}' tapi tombol >>/X tidak terbaca OCR. Fallback klik atas label di ({fallback_x}, {fallback_y})...", flush=True)
-        self.tap(fallback_x, fallback_y)
+        fallback_pts = [
+            (fallback_x, max(int(55 * sy), int(seq_y - 60 * sy))),
+            (fallback_x, int(160 * sy)),
+            (fallback_x, int(140 * sy)),
+            (fallback_x, int(85 * sy))
+        ]
+        print(f"{self.tag} [+] Terdeteksi '{raw or f'Iklan {stage} dari 3'}' tapi tombol >>/X tidak terbaca OCR. Fallback burst klik di x={fallback_x} y=[{seq_y-60}, 160, 140, 85]...", flush=True)
+        self.tap_burst(fallback_pts, delay=0.03)
         time.sleep(0.35)
         return True
 
@@ -947,21 +1098,30 @@ class CanSortRunner:
         sx, sy = self.scale_x, self.scale_y
         ocr_items = self.run_full_ocr(img)
 
-        # 1. Cek via OCR untuk karakter X / Tutup / Close / Skip di area atas (cy < 350 * sy)
+        # 1. Cek via OCR untuk karakter X / Tutup / Close / Skip di area atas.
+        # Prioritaskan kandidat kiri atas karena beberapa SDK menaruh X di sana.
+        ocr_close_candidates = []
         for it in ocr_items:
-            if it["cy"] < int(350 * sy):
+            if it["cy"] < int(220 * sy):
                 t = it["text"].strip().lower()
                 if t in ["x", "✕", "✖", "×", ">>", "skip", "close", "tutup"] or (len(t) == 1 and t in "xX+"):
-                    print(f"{self.tag} [★] Menemukan tombol Tutup Iklan '{it['text']}' via OCR di ({it['cx']}, {it['cy']})! Mengeklik...", flush=True)
-                    self.tap(it["cx"], it["cy"])
-                    time.sleep(0.12)
-                    return True
+                    ocr_close_candidates.append(it)
+        if ocr_close_candidates:
+            ocr_close_candidates.sort(key=lambda item: (0 if item["cx"] < int(360 * sx) else 1, item["cy"]))
+            it = ocr_close_candidates[0]
+            side = "kiri atas" if it["cx"] < int(360 * sx) else "kanan atas"
+            print(f"{self.tag} [★] Menemukan tombol Tutup Iklan '{it['text']}' via OCR di {side} ({it['cx']}, {it['cy']})! Mengeklik...", flush=True)
+            self.tap(it["cx"], it["cy"])
+            time.sleep(0.06)
+            self.tap(it["cx"], max(int(45 * sy), it["cy"] - int(15 * sy)))
+            time.sleep(0.12)
+            return True
 
-        # 2. Cek via deteksi kontur tombol X di pojok kanan ATAU kiri atas.
-        y1, y2 = int(30 * sy), int(300 * sy)
+        # 2. Cek via deteksi kontur tombol X di pojok kanan ATAU kiri atas (dibatasi header y<=135 agar tidak salah klik banner/info di y=148).
+        y1, y2 = int(40 * sy), int(135 * sy)
         corner_regions = [
-            ("kanan", int(580 * sx), int(710 * sx)),
             ("kiri", int(10 * sx), int(145 * sx)),
+            ("kanan", int(580 * sx), int(710 * sx)),
         ]
         all_candidates = []
         for side, x1, x2 in corner_regions:
@@ -979,26 +1139,31 @@ class CanSortRunner:
                     if patch.std() > 20:
                         all_candidates.append((side, x1 + x + w // 2, y1 + y + h // 2))
         if all_candidates:
-            # Prioritas kanan dulu, tapi kiri tetap bisa dipilih kalau hanya itu yang ada.
-            all_candidates.sort(key=lambda item: (0 if item[0] == "kanan" else 1, item[2]))
+            # Prioritaskan X kiri atas jika SDK menaruh tombol di sana.
+            all_candidates.sort(key=lambda item: (0 if item[0] == "kiri" else 1, item[2]))
             side, best_x, best_y = all_candidates[0]
-            print(f"{self.tag} [★] Menemukan tombol X iklan di pojok {side} atas di ({best_x}, {best_y})! Mengeklik...", flush=True)
-            self.tap(best_x, best_y)
+            target_y = min(int(115 * sy), best_y)
+            upper_y = max(int(45 * sy), target_y - int(18 * sy))
+            print(f"{self.tag} [★] Menemukan tombol X iklan di pojok {side} atas di ({best_x}, {target_y})! Mengeklik burst naik...", flush=True)
+            self.tap(best_x, target_y)
+            time.sleep(0.06)
+            self.tap(best_x, upper_y)
             time.sleep(0.12)
             return True
 
-        # 3. Fallback tap burst semua titik X umum di kanan atas & letterbox
+        # 3. Fallback tap burst semua titik X umum di kanan & kiri atas (hanya area header aman)
         top_right_x_pts = [
-            (int(665 * sx), int(70 * sy)),
-            (int(665 * sx), int(115 * sy)),
-            (int(665 * sx), int(160 * sy)),
-            (int(665 * sx), int(250 * sy)),
-            (int(640 * sx), int(80 * sy)),
-            (int(675 * sx), int(85 * sy)),
-            (int(650 * sx), int(240 * sy)),
-            (int(55 * sx), int(70 * sy)),
+            (int(665 * sx), int(75 * sy)),
+            (int(665 * sx), int(105 * sy)),
+            (int(665 * sx), int(120 * sy)),
+            (int(635 * sx), int(80 * sy)),
+            (int(635 * sx), int(110 * sy)),
+            (int(25 * sx), int(75 * sy)),
+            (int(25 * sx), int(105 * sy)),
+            (int(25 * sx), int(115 * sy)),
+            (int(55 * sx), int(75 * sy)),
+            (int(55 * sx), int(105 * sy)),
             (int(55 * sx), int(115 * sy)),
-            (int(55 * sx), int(250 * sy))
         ]
         self.tap_burst(top_right_x_pts, delay=0.03)
         return True
@@ -1030,11 +1195,17 @@ class CanSortRunner:
 
         # 2. Tap titik tombol X pojok kanan atas & kiri atas (posisi umum endcard / banner close)
         close_points = [
-            (int(665 * sx), int(70 * sy)),
-            (int(665 * sx), int(115 * sy)),
-            (int(635 * sx), int(75 * sy)),
-            (int(55 * sx), int(70 * sy)),
-            (int(55 * sx), int(115 * sy))
+            (int(665 * sx), int(75 * sy)),
+            (int(665 * sx), int(105 * sy)),
+            (int(665 * sx), int(120 * sy)),
+            (int(635 * sx), int(80 * sy)),
+            (int(635 * sx), int(110 * sy)),
+            (int(25 * sx), int(75 * sy)),
+            (int(25 * sx), int(105 * sy)),
+            (int(25 * sx), int(115 * sy)),
+            (int(55 * sx), int(75 * sy)),
+            (int(55 * sx), int(105 * sy)),
+            (int(55 * sx), int(115 * sy)),
         ]
         self.detect_and_click_ad_x_button(img)
         # Close dipercepat: semua kandidat X diklik burst dan semua titik diberi marker biru.
@@ -1085,8 +1256,13 @@ class CanSortRunner:
 
             img_wait = self.get_screenshot()
 
-            # 1. Sinkronkan waktu tunggu dengan timer iklan di pojok kiri atas jika terlihat.
             if img_wait is not None:
+                has_bottom, has_top = self.get_board_presence(img_wait)
+                if has_bottom or has_top:
+                    print(f"{self.tag} [✔] Board game sudah kembali (iklan sudah ditutup)! Selesai tunggu iklan.", flush=True)
+                    self.on_ad_finished()
+                    return
+
                 if self.detect_and_close_feedback_modal(img_wait):
                     print(f"{self.tag} [✔] Feedback ditutup saat menunggu iklan. Lanjut cek kembali ke game...", flush=True)
                     self.ensure_back_to_card_board()
@@ -1116,7 +1292,18 @@ class CanSortRunner:
                     remaining = detected_timer
                     last_timer_seen = detected_timer
 
-                # Kalau iklan menampilkan tahap berikutnya:
+                # Kalau iklan menampilkan tahap berikutnya atau tombol >> / skip:
+                if self.detect_and_click_ad_fast_forward_or_skip_button(img_wait):
+                    time.sleep(0.5)
+                    img_wait = self.get_screenshot()
+                    if img_wait is not None:
+                        has_b, has_t = self.get_board_presence(img_wait)
+                        if has_b or has_t:
+                            print(f"{self.tag} [✔] Board game langsung kembali setelah klik >>! Selesai tunggu iklan.", flush=True)
+                            self.on_ad_finished()
+                            return
+                    remaining = min(remaining, 3)
+
                 # See Next di tengah/bawah, atau >>/X di atas teks Iklan 1/3, 2/3, 3/3.
                 if self.detect_and_click_ad_sequence_button(img_wait):
                     remaining = max(remaining, AD_WAIT_SECONDS)
@@ -1142,6 +1329,7 @@ class CanSortRunner:
                 if self.handle_external_redirect_during_ad():
                     print(f"{self.tag} [✔] Redirect iklan eksternal sudah ditutup. Mengakhiri tunggu iklan.", flush=True)
                     self.ensure_back_to_card_board()
+                    self.on_ad_finished()
                     return
 
         if clicked_reward_during_wait:
@@ -1151,6 +1339,8 @@ class CanSortRunner:
         if self.withdrawn_pending_ad:
             self.withdrawn_pending_ad = False
             print(f"{self.tag} [✔] Selesai 1x menonton iklan! Fitur penarikan saldo =Rp kini aktif kembali.", flush=True)
+        self.ensure_back_to_card_board()
+        self.on_ad_finished()
 
     def get_board_presence(self, img=None):
         """Mengembalikan status elemen board Color Power Pop: kotak bawah dan kartu slot atas."""
@@ -1210,6 +1400,8 @@ class CanSortRunner:
 
     def recover_when_board_missing(self, img=None):
         """Jika kartu/kotak game hilang total, anggap halaman iklan/luar lalu tutup dan balik ke game."""
+        if getattr(self, "seeding_slot_routine", False):
+            return True
         focus = self.get_foreground_focus().lower()
         pkg = self.auto_detect_game_package()
 
@@ -1253,6 +1445,8 @@ class CanSortRunner:
 
 
     def handle_app_focus_and_ads(self):
+        if getattr(self, "seeding_slot_routine", False):
+            return True
         focus = self.get_foreground_focus()
         focus_lower = focus.lower()
 
@@ -1317,6 +1511,9 @@ class CanSortRunner:
             has_konfirmasi = any(any(k in it["text"].lower() for k in ["konfirmasi", "confirm", "setuju"]) and it["cy"] > int(450 * self.scale_y) for it in ocr_quick)
             has_withdr_text = any(k in quick_text for k in ["informasi sudah benar", "pastikan informasi", "periksa akun", "nomor rekening", "nomor akun", "pilih metode"])
             if has_konfirmasi or has_withdr_text:
+                if not ENABLE_AUTO_WITHDRAWAL:
+                    print(f"{self.tag} [BLOCK] Dialog penarikan terdeteksi; tidak klik konfirmasi/Menarik.", flush=True)
+                    return False
                 print(f"{self.tag} [★] Terdeteksi dialog Konfirmasi Penarikan di layar (Bukan Iklan)! Melanjutkan alur penarikan...", flush=True)
                 self.handle_withdrawal_modal_flow()
                 return False
@@ -1333,9 +1530,15 @@ class CanSortRunner:
             else:
                 self.aggressive_ad_dismiss_count += 1
                 if self.aggressive_ad_dismiss_count >= 3:
-                    print(f"\n{self.tag} [!] Layar iklan masih aktif berulang ({self.aggressive_ad_dismiss_count}x). Kembali menunggu iklan 10 detik sampai selesai...", flush=True)
-                    self.wait_ad_and_close_ad("Iklan Masih Berjalan (Re-wait 10s)")
+                    print(
+                        f"\n{self.tag} [!] Layar iklan masih aktif berulang "
+                        f"({self.aggressive_ad_dismiss_count}x). Reset paksa activity "
+                        "iklan/game agar tidak stuck...",
+                        flush=True,
+                    )
+                    self.aggressive_reset_to_game()
                     self.aggressive_ad_dismiss_count = 0
+                    self.ad_wait_done = False
                     return False
 
                 print(f"{self.tag} [!] Layar iklan masih aktif ({self.aggressive_ad_dismiss_count}x). Memeriksa timer & tombol X kanan atas...", flush=True)
@@ -1354,6 +1557,10 @@ class CanSortRunner:
                         time.sleep(2)
                     time.sleep(1.0)
                     self.aggressive_ad_dismiss_count = 0
+
+                if self.detect_and_click_ad_fast_forward_or_skip_button(img):
+                    print(f"{self.tag} [✔] Tombol >> diklik saat layar iklan aktif berulang.", flush=True)
+                    time.sleep(0.5)
 
                 # Periksa dan klik tombol X di kanan atas
                 self.detect_and_click_ad_x_button(img)
@@ -1374,6 +1581,431 @@ class CanSortRunner:
             return False
 
         return True
+
+    @staticmethod
+    def normalize_text(text: str) -> str:
+        return re.sub(r"[^a-z0-9]+", "", text.lower())
+
+    def adb_type_text(self, text: str) -> None:
+        """Ketik teks via ADB input text dengan penanganan karakter khusus seperti * dan @."""
+        if not text:
+            return
+        special = " *?&$()[]{}|;<>`\"'\\"
+        if "*" in text:
+            parts = text.split("*")
+            for i, part in enumerate(parts):
+                if part:
+                    safe = "".join(("\\" + ch) if ch in special else ch for ch in part)
+                    self.run_adb(["shell", "input", "text", safe], timeout=4)
+                if i < len(parts) - 1:
+                    self.run_adb(["shell", "input", "keyevent", "17"], timeout=3)
+        else:
+            safe = "".join(("\\" + ch) if ch in special else ch for ch in text)
+            self.run_adb(["shell", "input", "text", safe], timeout=4)
+
+    def hide_keyboard_if_shown(self) -> None:
+        """Tutup virtual keyboard jika sedang aktif agar tidak menutupi form atau mengganggu swipe."""
+        try:
+            res = self.run_adb(["shell", "dumpsys", "input_method"], timeout=3)
+            if "mInputShown=true" in res:
+                self.run_adb(["shell", "input", "keyevent", "BACK"], timeout=2)
+                time.sleep(0.25)
+        except Exception:
+            pass
+
+    def match_registration_field(self, text: str):
+        """Cocokkan label teks OCR / accessibility dengan jenis field formulir pendaftaran."""
+        norm = self.normalize_text(text)
+        if not norm or len(norm) < 2:
+            return None
+
+        # 1. Konfirmasi Kata Sandi / Password (harus diperiksa SEBELUM password)
+        if (
+            any(k in norm for k in [
+                "konfirmasikatasandi", "konfirmasisandi", "konfirmasipassword",
+                "ulangikatasandi", "ulangisandi", "ulangipassword",
+                "confirmpassword", "repeatpassword", "ketikulangkatasandi",
+                "masukkankembalikatasandi", "verifikasikatasandi"
+            ])
+            or (("konfirmasi" in norm or "ulangi" in norm or "confirm" in norm or "repeat" in norm)
+                and ("sandi" in norm or "password" in norm or "pass" in norm or "pwd" in norm))
+        ):
+            return "confirm_password"
+
+        # 2. Kata Sandi / Password
+        if any(k in norm for k in ["katasandi", "password", "sandi", "katakunci", "passw", "passwd", "pwd"]):
+            if not any(neg in norm for neg in ["konfirmasi", "ulangi", "confirm", "repeat", "kembali", "ketikulang"]):
+                return "password"
+
+        # 3. Nomor Rekening (harus diperiksa SEBELUM nomor telepon)
+        if (
+            any(k in norm for k in [
+                "nomorrekening", "norekening", "norek", "nomorakun",
+                "nomorewallet", "noewallet", "nomordompet", "nodompet",
+                "rekeningtujuan", "rekeningbank"
+            ])
+            or ("rekening" in norm and "nomor" in norm)
+        ):
+            return "rek"
+
+        # 4. Nama Pemilik Rekening
+        if (
+            any(k in norm for k in [
+                "namarekening", "namapemilik", "namasesuairekening",
+                "namapadarekening", "pemilikrekening", "namalengkapsesuai"
+            ])
+            or ("rekening" in norm and ("nama" in norm or "pemilik" in norm))
+        ):
+            return "nama_rek"
+
+        # 5. Bank / Metode Pembayaran / E-Wallet
+        if (
+            any(k in norm for k in [
+                "pilihbank", "namabank", "jenisbank", "metodepembayaran",
+                "jenisrekening", "akunbank", "ewallet", "pilihpembayaran",
+                "pilihmetode", "jenispembayaran"
+            ])
+            or norm == "bank"
+            or ("pilih" in norm and ("bank" in norm or "pembayaran" in norm or "metode" in norm))
+        ):
+            return "bank"
+
+        # 6. Nomor Telepon / HP / WhatsApp
+        if any(k in norm for k in [
+            "nomortelepon", "notelepon", "nomorhp", "nohp", "telepon",
+            "whatsapp", "nowa", "nomorkontak", "kontak", "nohandphone",
+            "handphone", "nomorponsel", "ponsel", "wa"
+        ]):
+            return "phone"
+
+        # 7. Email / Alamat Email
+        if any(k in norm for k in ["email", "alamatemail", "surel", "mail"]) or "@" in norm:
+            return "email"
+
+        # 8. Nama Pengguna / Username
+        if (
+            any(k in norm for k in [
+                "namapengguna", "username", "userid", "namaakun",
+                "idpengguna", "loginid", "idakun", "pengguna", "user"
+            ])
+            or norm in ("nama", "user", "id")
+        ):
+            return "username"
+
+        return None
+
+    def select_ovo_option_if_present(self) -> bool:
+        """Cari teks 'OVO' di layar (setelah klik dropdown bank/metode pembayaran), lalu klik."""
+        img = self.get_screenshot()
+        if img is None:
+            return False
+        ocr_items = self.run_full_ocr(img)
+        for it in ocr_items:
+            norm = self.normalize_text(it["text"])
+            if "ovo" in norm:
+                cx, cy = it["cx"], it["cy"]
+                if int(180 * self.scale_y) <= cy <= int(1580 * self.scale_y):
+                    print(f"{self.tag} [+] Opsi OVO terdeteksi di ({cx},{cy}), memilih OVO!", flush=True)
+                    self.tap(cx, cy)
+                    time.sleep(0.8)
+                    return True
+        return False
+
+    def get_registration_input_fields(self):
+        """Baca input form dari accessibility tree Chrome; lebih akurat dari OCR label saja."""
+        remote = f"/sdcard/can_sort_form_{self.serial}.xml"
+        try:
+            self.run_adb(["shell", "uiautomator", "dump", remote], timeout=5)
+            xml = self.run_adb(["exec-out", "cat", remote], timeout=5)
+            root = ET.fromstring(xml)
+        except Exception:
+            return []
+
+        text_nodes = []
+        for node in root.iter("node"):
+            bounds = node.attrib.get("bounds", "")
+            nums = [int(n) for n in re.findall(r"\d+", bounds)]
+            text = " ".join(filter(None, (
+                node.attrib.get("text", ""),
+                node.attrib.get("content-desc", ""),
+                node.attrib.get("hint", ""),
+                node.attrib.get("resource-id", ""),
+            ))).strip()
+            if text and len(nums) == 4:
+                text_nodes.append((text, nums))
+
+        fields = []
+        for node in root.iter("node"):
+            klass = node.attrib.get("class", "")
+            if "EditText" not in klass and "AutoCompleteTextView" not in klass:
+                continue
+            label = " ".join(filter(None, (
+                node.attrib.get("text", ""), node.attrib.get("content-desc", ""),
+                node.attrib.get("hint", ""),
+                node.attrib.get("resource-id", ""),
+            )))
+            bounds = node.attrib.get("bounds", "")
+            nums = [int(n) for n in re.findall(r"\d+", bounds)]
+            if len(nums) != 4:
+                continue
+            x1, y1, x2, y2 = nums
+            nearby = []
+            for candidate, (tx1, ty1, tx2, ty2) in text_nodes:
+                if candidate == label:
+                    continue
+                vertical_gap = y1 - ty2
+                horizontal_gap = min(abs(tx1 - x1), abs(tx2 - x2))
+                if -20 <= vertical_gap <= 180 and horizontal_gap <= 260:
+                    nearby.append((max(0, vertical_gap) + horizontal_gap * 0.15, candidate))
+            if nearby:
+                nearby.sort(key=lambda item: item[0])
+                label = f"{label} {nearby[0][1]}".strip()
+            field_type = self.match_registration_field(label)
+            if not field_type:
+                continue
+            fields.append((field_type, (x1 + x2) // 2, (y1 + y2) // 2))
+        return fields
+
+    def fill_registration_form(self, search_label="WEB SLOT"):
+        """Isi form dari posisi sekarang, lalu turun perlahan tanpa scroll balik ke atas."""
+        print(f"{self.tag} [{search_label}]: Memulai pengisian formulir pendaftaran akun...", flush=True)
+        self.hide_keyboard_if_shown()
+
+        field_values = {
+            "username": "Wahyu91123",
+            "password": "Wahyu123*",
+            "confirm_password": "Wahyu123*",
+            "email": "wahyu91123@gmail.com",
+            "phone": "085157993801",
+            "bank": "OVO",
+            "rek": "085157993801",
+            "nama_rek": "Wahyu",
+        }
+        all_required = ["username", "password", "confirm_password", "email", "phone", "bank", "rek", "nama_rek"]
+        filled_fields = set()
+
+        def fill(field_type, label, tap_x, tap_y):
+            if field_type in filled_fields:
+                return
+            val = field_values.get(field_type)
+            if not val:
+                return
+            if field_type == "bank":
+                print(f"{self.tag} [{search_label}]: FIELD bank ditemukan '{label}' di ({tap_x},{tap_y}); pilih OVO", flush=True)
+                self.tap(tap_x, tap_y)
+                time.sleep(0.5)
+                if not self.select_ovo_option_if_present():
+                    self.adb_type_text(val)
+            else:
+                print(f"{self.tag} [{search_label}]: FIELD {field_type} ditemukan '{label}' di ({tap_x},{tap_y}); isi '{val}'", flush=True)
+                self.tap(tap_x, tap_y)
+                time.sleep(0.3)
+                self.adb_type_text(val)
+            filled_fields.add(field_type)
+            time.sleep(0.25)
+            self.hide_keyboard_if_shown()
+
+        def scan_current_viewport():
+            for field_type, x, y in self.get_registration_input_fields():
+                fill(field_type, "accessibility", x, y)
+
+            img = self.get_screenshot()
+            if img is not None:
+                entries = self.run_full_ocr(img)
+                entries.sort(key=lambda item: item["cy"])
+                for it in entries:
+                    cy = it["cy"]
+                    if cy < int(160 * self.scale_y) or cy > int(1580 * self.scale_y):
+                        continue
+                    field_type = self.match_registration_field(it["text"])
+                    if field_type and field_type not in filled_fields:
+                        tap_x = int(360 * self.scale_x) if it["cx"] < int(250 * self.scale_x) else it["cx"]
+                        tap_y = min(cy + int(48 * self.scale_y), int(1550 * self.scale_y))
+                        fill(field_type, it["text"], tap_x, tap_y)
+
+        print(f"{self.tag} [{search_label}]: Scan posisi form saat ini, lalu scroll turun sedikit-sedikit...", flush=True)
+        last_filled_count = -1
+        unchanged_scans = 0
+        for pass_num in range(12):
+            scan_current_viewport()
+            if len(filled_fields) == len(all_required):
+                break
+            if len(filled_fields) == last_filled_count:
+                unchanged_scans += 1
+            else:
+                unchanged_scans = 0
+            last_filled_count = len(filled_fields)
+            self.run_adb(["shell", "input", "swipe", "360", "1180", "360", "900", "420"], timeout=4)
+            time.sleep(0.55)
+            self.hide_keyboard_if_shown()
+            if unchanged_scans >= 3 and pass_num >= 7:
+                break
+
+        for field_type in all_required:
+            if field_type not in filled_fields:
+                print(f"{self.tag} [{search_label}]: FIELD {field_type} tidak ditemukan dari posisi form sampai bawah; lewati.", flush=True)
+        print(f"{self.tag} [{search_label}]: Formulir selesai. Field terisi: {sorted(filled_fields)}", flush=True)
+
+    def find_web_daftar_button(self):
+        """Mendeteksi tombol/link DAFTAR, REGISTER, SIGN UP, REGISTRASI pada halaman web yang dibuka."""
+        img = self.get_screenshot()
+        if img is None:
+            return None
+        ocr_items = self.run_full_ocr(img)
+        register_keywords = [
+            "daftar", "register", "registrasi", "signup", "sign up",
+            "gabung", "buka akun", "buat akun", "klaim bonus", "claim bonus", "join now"
+        ]
+        exclude_words = ["cara", "mengklik", "syarat", "ketentuan", "panduan", "adalah", "tentang", "about", "hasil"]
+        candidates = []
+        for it in ocr_items:
+            text = it["text"].strip()
+            cx, cy = it["cx"], it["cy"]
+            if cy < int(180 * self.scale_y) or cy > int(1580 * self.scale_y):
+                continue
+            words = text.split()
+            if len(words) > 4 or len(text) > 25:
+                continue
+            lower_text = text.lower()
+            if any(ex in lower_text for ex in exclude_words):
+                continue
+            norm = self.normalize_text(text)
+            for kw in register_keywords:
+                kw_norm = self.normalize_text(kw)
+                if kw_norm in norm:
+                    priority = 0 if ("daftar" in norm or "register" in norm) else 1
+                    candidates.append((priority, text, cx, cy))
+                    break
+        if not candidates:
+            return None
+        candidates.sort(key=lambda c: (c[0], c[3]))
+        _, best_text, best_x, best_y = candidates[0]
+        return best_text, best_x, best_y
+
+    def browse_google_and_click_sites(self, query: str, search_label: str = "WEB SLOT 1/2"):
+        """Buka Google Search di Chrome, scroll hasil pencarian, klik beberapa situs, dan klik tombol daftar jika ada."""
+        url = f"https://www.google.com/search?q={urllib.parse.quote_plus(query)}"
+        print(f"{self.tag} [{search_label}]: Google Search '{query}'", flush=True)
+        self.run_adb([
+            "shell", "am", "start",
+            "-a", "android.intent.action.VIEW",
+            "-d", url,
+            "com.android.chrome"
+        ], timeout=6)
+        time.sleep(1.8)
+
+        for site_idx in (1, 2):
+            if site_idx == 1:
+                self.run_adb(["shell", "input", "swipe", "360", "950", "360", "550", "250"], timeout=4)
+                time.sleep(0.4)
+                tap_x, tap_y = int(360 * self.scale_x), int(680 * self.scale_y)
+            else:
+                self.run_adb(["shell", "input", "swipe", "360", "1100", "360", "450", "300"], timeout=4)
+                time.sleep(0.4)
+                tap_x, tap_y = int(360 * self.scale_x), int(780 * self.scale_y)
+
+            print(f"{self.tag} [{search_label} - SITUS {site_idx}]: Klik link situs hasil pencarian Google di ({tap_x},{tap_y})", flush=True)
+            self.tap(tap_x, tap_y)
+            time.sleep(2.2)
+
+            self.run_adb(["shell", "input", "swipe", "360", "1000", "360", "550", "300"], timeout=4)
+            time.sleep(0.6)
+
+            daftar_btn = self.find_web_daftar_button()
+            if not daftar_btn:
+                self.run_adb(["shell", "input", "swipe", "360", "900", "360", "450", "300"], timeout=4)
+                time.sleep(0.6)
+                daftar_btn = self.find_web_daftar_button()
+
+            if daftar_btn:
+                dtext, dx, dy = daftar_btn
+                print(f"{self.tag} [{search_label} - SITUS {site_idx}]: Menemukan tombol DAFTAR '{dtext}' di ({dx},{dy}) -> KLIK TOMBOL DAFTAR!", flush=True)
+                self.tap(dx, dy)
+                time.sleep(1.8)
+                self.fill_registration_form(search_label=f"{search_label} - SITUS {site_idx}")
+                time.sleep(0.5)
+            else:
+                print(f"{self.tag} [{search_label} - SITUS {site_idx}]: Tombol DAFTAR tidak terdeteksi di situs ini, selesai jelajah situs.", flush=True)
+
+            if site_idx < 2:
+                print(f"{self.tag} [{search_label}]: Kembali ke halaman pencarian Google...", flush=True)
+                self.run_adb(["shell", "input", "keyevent", "BACK"], timeout=3)
+                time.sleep(0.6)
+                focus = self.get_foreground_focus().lower()
+                if "chrome" not in focus:
+                    self.run_adb([
+                        "shell", "am", "start",
+                        "-a", "android.intent.action.VIEW",
+                        "-d", url,
+                        "com.android.chrome"
+                    ], timeout=6)
+                    time.sleep(1.2)
+
+    def run_slot_seeding_and_app_routine(self):
+        """Setelah iklan: buka web slot di Chrome, scroll & klik beberapa situs, klik tombol daftar jika ada, buka 1 aplikasi slot acak (rr33, k68, fj99), lalu kembali ke game."""
+        if not ENABLE_SLOT_SEEDING_AFTER_AD:
+            return
+        self.seeding_slot_routine = True
+        print(); print(f"{self.tag} === MEMULAI SIKLUS INJEKSI SLOT: GOOGLE SEARCH + SCROLL BEBERAPA SITUS + KLIK DAFTAR + 1 APLIKASI SLOT ACAK ===", flush=True)
+        try:
+            keyword_groups = [
+                ["toto", "slot", "judi", "casino"],
+                ["gacor", "maxwin", "rtp live", "bonus", "rollingan"],
+                ["zeus", "pragmatic", "spaceman", "gates of olympus", "mahjong"],
+                ["deposit dana", "resmi indonesia", "bonus member", "terpercaya", "hari ini"],
+            ]
+            slot_keywords = [" ".join(random.sample(group, 1)[0] for group in keyword_groups) for _ in range(8)]
+            slot_keywords = list(dict.fromkeys(slot_keywords))
+            if len(slot_keywords) < 2:
+                slot_keywords += ["slot gacor pragmatic", "judi zeus bonus"]
+
+            kw1 = random.choice(slot_keywords)
+            self.browse_google_and_click_sites(kw1, search_label="WEB SLOT 1/2")
+
+            remaining_kws = [k for k in slot_keywords if k != kw1]
+            kw2 = random.choice(remaining_kws) if remaining_kws else "slot online terpercaya"
+            self.browse_google_and_click_sites(kw2, search_label="WEB SLOT 2/2")
+
+            self.run_adb(["shell", "am", "force-stop", "com.android.chrome"], timeout=4)
+            time.sleep(0.4)
+
+            slot_apps = [
+                {"name": "RR33", "pkg": "RR33.COM"},
+                {"name": "K68", "pkg": "com.k68.id.xulsfy"},
+                {"name": "FJ99", "pkg": "org.chromium.webapk.a1ffa4016fb2cda0c_v2"},
+            ]
+            chosen_app = random.choice(slot_apps)
+            app_name = chosen_app["name"]
+            app_pkg = chosen_app["pkg"]
+            print(f"{self.tag} [APLIKASI SLOT ACAK]: Membuka aplikasi {app_name} ({app_pkg})...", flush=True)
+            self.run_adb([
+                "shell", "monkey", "-p", app_pkg,
+                "-c", "android.intent.category.LAUNCHER", "1"
+            ], timeout=6)
+            time.sleep(2.2)
+            self.run_adb(["shell", "input", "swipe", "360", "900", "360", "650", "250"], timeout=4)
+            time.sleep(0.4)
+            print(f"{self.tag} [APLIKASI SLOT ACAK]: {app_name} selesai dibuka, menutup aplikasi", flush=True)
+            self.run_adb(["shell", "am", "force-stop", app_pkg], timeout=4)
+
+        except Exception as e:
+            print(f"{self.tag} ERROR SIKLUS SLOT: {e}", flush=True)
+        finally:
+            self.seeding_slot_routine = False
+            print(f"{self.tag} === SIKLUS SLOT SELESAI: Kembali ke game {GAME_DISPLAY_NAME} ===", flush=True)
+            self.bring_game_to_foreground()
+            time.sleep(1.5)
+            self.ensure_back_to_card_board()
+
+    def on_ad_finished(self):
+        self.completed_ads_count += 1
+        now = time.time()
+        print(f"{self.tag} [✔] Iklan selesai ditonton (Total iklan: {self.completed_ads_count}).", flush=True)
+        if not ENABLE_SLOT_SEEDING_AFTER_AD:
+            return
+        if now - self.last_chrome_seed_ts >= 25.0:
+            self.last_chrome_seed_ts = now
+            self.run_slot_seeding_and_app_routine()
 
     def run_full_ocr(self, img, crop=None):
         if not os.path.exists(OCR_HELPER_PATH) or img is None:
@@ -1466,6 +2098,9 @@ class CanSortRunner:
 
     def handle_withdrawal_modal_flow(self):
         """Alur penarikan saldo ke DANA saat =Rp >= MIN_WITHDRAWAL_RP."""
+        if not ENABLE_AUTO_WITHDRAWAL:
+            print(f"{self.tag} [BLOCK] Penarikan dinonaktifkan: tidak klik =Rp/Menarik.", flush=True)
+            return False
         print(f"\n{self.tag} =======================================================", flush=True)
         print(f"{self.tag}       [★] MEMULAI ALUR PENARIKAN DANA OTOMATIS        ", flush=True)
         print(f"{self.tag} =======================================================", flush=True)
@@ -1599,7 +2234,11 @@ class CanSortRunner:
 
 
     def check_and_handle_top_rp(self, ocr_items):
-        """Mengecek saldo =Rp KIRI di header atas. Jika >= MIN_WITHDRAWAL_RP, langsung tarik saldo."""
+        """Mengecek saldo =Rp KIRI tanpa mengekliknya saat WD dinonaktifkan."""
+        if not ENABLE_AUTO_WITHDRAWAL:
+            if self.step_counter % 20 == 1:
+                print(f"{self.tag} [BLOCK] Auto-withdrawal OFF: lewati klik =Rp dan tombol Menarik.", flush=True)
+            return False
         if not ocr_items:
             return False
 

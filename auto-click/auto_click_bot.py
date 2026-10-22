@@ -17,6 +17,21 @@ HISTORY_FILE = os.path.join(LOG_DIR, "click_history.txt")
 os.makedirs(LOG_DIR, exist_ok=True)
 os.makedirs(SHOT_DIR, exist_ok=True)
 
+# Mode cepat: logging UI lengkap dan screenshot setiap klik membuat loop lambat.
+VERBOSE_UI = os.environ.get("AUTO_CLICK_VERBOSE_UI", "0") == "1"
+SAVE_SCREENSHOT = os.environ.get("AUTO_CLICK_SCREENSHOT", "0") == "1"
+LOOP_SLEEP = float(os.environ.get("AUTO_CLICK_LOOP_SLEEP", "0.08"))
+AFTER_CLICK_SLEEP = float(os.environ.get("AUTO_CLICK_AFTER_CLICK_SLEEP", "0.18"))
+AFTER_BACK_SLEEP = float(os.environ.get("AUTO_CLICK_AFTER_BACK_SLEEP", "0.35"))
+HEARTBEAT_INTERVAL = float(os.environ.get("AUTO_CLICK_HEARTBEAT_INTERVAL", "2.0"))
+
+# Mode turbo 3x: jangan tunggu dump UI untuk tombol close iklan yang posisinya umum.
+# Bisa dimatikan: AUTO_CLICK_TURBO=0
+TURBO_MODE = os.environ.get("AUTO_CLICK_TURBO", "1") != "0"
+TURBO_PROBE_INTERVAL = float(os.environ.get("AUTO_CLICK_TURBO_PROBE_INTERVAL", "0.35"))
+TURBO_MIN_AD_AGE = float(os.environ.get("AUTO_CLICK_TURBO_MIN_AD_AGE", "0.7"))
+TURBO_DUMP_EVERY_PROBES = int(os.environ.get("AUTO_CLICK_TURBO_DUMP_EVERY_PROBES", "3"))
+
 APP_NAMES = {
     "com.android.chrome": "Chrome",
     "com.apnabankshop.juice": "Juice",
@@ -51,19 +66,51 @@ def adb(args, timeout=10):
         return ""
 
 
+def parse_component(line):
+    # Format dumpsys bisa berubah, contoh:
+    #   com.game/.AppActivity
+    #   com.game/com.vendor.ads.FullscreenActivity
+    #   ActivityRecord{... u0 com.game/.AppActivity t123}
+    m = re.search(r'([a-z0-9_]+(?:\.[a-z0-9_]+)+)/(?:[a-zA-Z0-9_.$]+(?:\.[a-zA-Z0-9_.$]+)*|\.[a-zA-Z0-9_.$]+)', line)
+    return m.group(1) if m else ""
+
+
+def parse_component_full(line):
+    m = re.search(r'(([a-z0-9_]+(?:\.[a-z0-9_]+)+)/(?:[a-zA-Z0-9_.$]+(?:\.[a-zA-Z0-9_.$]+)*|\.[a-zA-Z0-9_.$]+))', line)
+    if not m:
+        return "", ""
+    return m.group(2), m.group(1)
+
+
+def get_foreground_detail():
+    checks = (
+        (["shell", "dumpsys", "window"], ("mCurrentFocus", "mFocusedApp")),
+        (["shell", "dumpsys", "activity", "activities"], ("mResumedActivity", "topResumedActivity", "ResumedActivity")),
+        (["shell", "dumpsys", "activity", "top"], ("ACTIVITY",)),
+    )
+    for cmd, markers in checks:
+        out = adb(cmd, timeout=6)
+        for line in out.splitlines():
+            if any(marker in line for marker in markers):
+                pkg, comp = parse_component_full(line)
+                if pkg:
+                    return pkg, comp
+    return "", ""
+
+
 def get_foreground():
-    out = adb(["shell", "dumpsys", "activity", "activities"])
-    for line in out.splitlines():
-        if "mResumedActivity" in line or "topResumedActivity" in line:
-            m = re.search(r'([a-z0-9._]+)/[a-zA-Z0-9._]+', line)
-            if m:
-                return m.group(1)
-    out = adb(["shell", "dumpsys", "window"])
-    for line in out.splitlines():
-        if "mCurrentFocus" in line or "mFocusedApp" in line:
-            m = re.search(r'([a-z0-9._]+)/[a-zA-Z0-9._]+', line)
-            if m:
-                return m.group(1)
+    checks = (
+        (["shell", "dumpsys", "window"], ("mCurrentFocus", "mFocusedApp")),
+        (["shell", "dumpsys", "activity", "activities"], ("mResumedActivity", "topResumedActivity", "ResumedActivity")),
+        (["shell", "dumpsys", "activity", "top"], ("ACTIVITY",)),
+    )
+    for cmd, markers in checks:
+        out = adb(cmd, timeout=6)
+        for line in out.splitlines():
+            if any(marker in line for marker in markers):
+                pkg = parse_component(line)
+                if pkg:
+                    return pkg
     return ""
 
 
@@ -145,6 +192,18 @@ def detect(nodes, sw, sh):
                 results.append(("X", n["label"], c, b))
                 continue
 
+        # X popup/dialog iklan (contoh MBridge feedback).
+        # Tombol ini sering berada di kanan atas dialog, bukan kanan atas layar,
+        # sehingga rule is_top_right() lama melewatkannya.
+        if n["click"] == "true" and label in ('x', 'close', 'tutup'):
+            if c[0] > sw * 0.65 and c[1] < sh * 0.45:
+                results.append(("X", n["label"] or n["rid"], c, b))
+                continue
+
+        if 'mbridge_video_common_alertview_confirm_button' in rid and c[0] > sw * 0.65:
+            results.append(("X", n["label"] or n["rid"], c, b))
+            continue
+
         # >| Google Play
         if 'google play' in label or 'google play' in desc:
             results.append(("GOOGLE_PLAY", n["label"], c, b))
@@ -164,6 +223,21 @@ def detect(nodes, sw, sh):
     priority = {"X": 0, "GOOGLE_PLAY": 1, "NEXT": 2, "NEXT_RID": 3}
     results.sort(key=lambda r: priority.get(r[0], 9))
     return results
+
+
+def is_ad_activity(component):
+    c = (component or "").lower()
+    ad_keywords = (
+        "mbridge", "mintegral", "reward", "interstitial", "adactivity",
+        "google.android.gms.ads", "applovin", "unity", "vungle",
+        "bytedance", "ironsource", "chartboost", "facebook.ads",
+    )
+    return any(k in c for k in ad_keywords)
+
+
+def turbo_close_point(sw, sh):
+    # Koordinat close paling umum di iklan portrait 720x1612: sekitar (676,136).
+    return (int(sw * 0.94), int(sh * 0.085))
 
 
 def tap(xy):
@@ -187,22 +261,35 @@ def main():
     last_click_xy = None
     no_click_count = 0
     last_hb = 0.0
+    prev_component = ""
+    ad_started_at = 0.0
+    last_turbo_probe = 0.0
+    turbo_probe_count = 0
 
     while True:
-        # === Heartbeat log setiap detik ===
+        # === Heartbeat log berkala ===
         now_ts = time.time()
-        if now_ts - last_hb >= 1.0:
+        if now_ts - last_hb >= HEARTBEAT_INTERVAL:
             last_hb = now_ts
             hb_app = APP_NAMES.get(prev_app, prev_app) if prev_app else "(menunggu)"
             log(f"HEARTBEAT | app={hb_app} | last_click={last_click_xy}")
 
-        fg = get_foreground()
+        fg, component = get_foreground_detail()
         name = APP_NAMES.get(fg, fg)
 
-        if fg != prev_app:
-            log(f"APP -> {name} ({fg})")
+        if not fg:
+            # Jangan reset prev_app saat dumpsys gagal sebentar (sering terjadi ketika iklan/Play Store transisi).
+            time.sleep(LOOP_SLEEP)
+            continue
+
+        if fg != prev_app or component != prev_component:
+            log(f"APP -> {name} ({fg}) {component}")
             prev_app = fg
-            last_click_xy = None  # reset dedup saat ganti app
+            prev_component = component
+            last_click_xy = None  # reset dedup saat ganti app/activity
+            if is_ad_activity(component):
+                ad_started_at = time.time()
+                turbo_probe_count = 0
 
         # Chrome/Juice: back sekali saat buka
         if fg in ("com.android.chrome", "com.apnabankshop.juice"):
@@ -211,21 +298,36 @@ def main():
                 back()
                 back_done.add(fg)
                 history(f"BACK | {name}")
-                screenshot("back")
-                time.sleep(1)
+                if SAVE_SCREENSHOT:
+                    screenshot("back")
+                time.sleep(AFTER_BACK_SLEEP)
                 continue
         else:
             back_done.discard("com.android.chrome")
             back_done.discard("com.apnabankshop.juice")
 
+        if TURBO_MODE and is_ad_activity(component):
+            now_turbo = time.time()
+            if (now_turbo - ad_started_at) >= TURBO_MIN_AD_AGE and (now_turbo - last_turbo_probe) >= TURBO_PROBE_INTERVAL:
+                txy = turbo_close_point(sw, sh)
+                log(f"  >>> TURBO TAP close-probe di {txy}")
+                tap(txy)
+                history(f"TURBO_X | close-probe | {txy} | {name}")
+                last_turbo_probe = now_turbo
+                turbo_probe_count += 1
+                # Tetap dump UI tiap beberapa probe untuk menangani popup feedback/X non-standar.
+                if TURBO_DUMP_EVERY_PROBES <= 0 or (turbo_probe_count % TURBO_DUMP_EVERY_PROBES) != 0:
+                    time.sleep(AFTER_CLICK_SLEEP)
+                    continue
+
         root = dump_ui()
         if not root:
-            time.sleep(0.3)
+            time.sleep(LOOP_SLEEP)
             continue
 
         nodes = find_nodes(root)
         labeled = [n for n in nodes if n["label"]]
-        if labeled:
+        if VERBOSE_UI and labeled:
             log(f"  UI nodes ({len(labeled)}):")
             for n in labeled:
                 log(f"    '{n['label']}' rid={n['rid']} b={n['bounds']} click={n['click']}")
@@ -236,7 +338,7 @@ def main():
             no_click_count += 1
             if no_click_count <= 2:
                 log("  -> Tidak ada tombol. GAK KLIK APA-APA.")
-            time.sleep(0.3)
+            time.sleep(LOOP_SLEEP)
             continue
 
         no_click_count = 0
@@ -246,15 +348,16 @@ def main():
         # Dedup: jangan klik koordinat yang sama 2x berturut-turut
         if txy == last_click_xy:
             log(f"  -> {ttype} sudah diklik di {txy}. SKIP (dedup).")
-            time.sleep(0.3)
+            time.sleep(LOOP_SLEEP)
             continue
 
         log(f"  >>> KLIK {ttype} '{tinfo}' di {txy}")
         tap(txy)
         last_click_xy = txy
         history(f"{ttype} | {tinfo} | {txy} | {name}")
-        screenshot(ttype)
-        time.sleep(0.5)
+        if SAVE_SCREENSHOT:
+            screenshot(ttype)
+        time.sleep(AFTER_CLICK_SLEEP)
 
 
 if __name__ == "__main__":

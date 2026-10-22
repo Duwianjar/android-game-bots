@@ -36,24 +36,28 @@ BLOCKED_PACKAGES = {
     "com.chrome.dev": "Chrome Dev",
     "com.google.android.apps.chrome": "Chrome",
     "com.android.vending": "Play Store",
-    "com.starlightgame.woodlandtilematcher": "Woodland Tile Matcher redirect",
     "com.bubble.crush.stick.magicgames": "Bubble Crush redirect",
+    "com.starlightgame.woodlandtilematcher": "Woodland Tile Matcher redirect",
 }
 
 LOG_FILE = os.path.expanduser("~/magic_ocean_guardian_bot.log")
 SALDO_STATE_FILE = os.path.expanduser("~/magic_ocean_saldo_state.json")
 TELEGRAM_SENDER = "/Users/macbookair/telegram_sender.py"
-DEFAULT_INTERVAL = 2.0
+DEFAULT_INTERVAL = 0.35
 OCR_HELPER = "/Users/macbookair/ocr_helper"
 TAP_MARKER = "/Users/macbookair/scrcpy_tap_marker"
-DOBEL_CHECK_INTERVAL = 3.0
-DOBEL_TAP_RETRY_SECONDS = 4.0
-AD_CLOSE_CHECK_INTERVAL = 2.0
-AD_CLOSE_MIN_SECONDS = 5.0
+DOBEL_CHECK_INTERVAL = 0.8
+DOBEL_TAP_RETRY_SECONDS = 1.8
+AD_CLOSE_CHECK_INTERVAL = 0.8
+AD_CLOSE_MIN_SECONDS = 30.0
 AD_STUCK_RESTART_SECONDS = 120.0
 BUBBLE_CHECK_INTERVAL = 0.0
-BUBBLE_TIMEOUT_SECONDS = 30.0  # Ditingkatkan dari 16 detik agar lebih sabar
+BUBBLE_TIMEOUT_SECONDS = 300.0  # 5 menit (hanya restart jika 5 menit tidak menemukan gelembung)
 BUBBLE_TAP_COOLDOWN = 0.0
+# Area scan/tap gelembung Magic Ocean:
+# mulai dari bawah tombol menu garis-3 kiri atas sampai hampir dasar layar.
+BUBBLE_SCAN_TOP_RATIO = 0.235
+BUBBLE_SCAN_BOTTOM_RATIO = 0.985
 AD_ACTIVITY_KEYWORDS = (
     "ads",
     "adplayer",
@@ -81,9 +85,7 @@ AD_ACTIVITY_KEYWORDS = (
 
 # Iklan yang terbukti berulang/tidak menambah hadiah. Kalau activity ini muncul,
 # langsung bersihkan semua app dan buka ulang game.
-BAD_AD_ACTIVITIES = {
-    "com.applovin.adview.applovinfullscreenactivity",
-}
+BAD_AD_ACTIVITIES = set()
 
 
 @dataclass
@@ -109,16 +111,16 @@ class MagicOceanGuardian:
         self.not_now_visible = False
         self.last_dobel_check_ts = 0.0
         self.last_dobel_tap_ts = 0.0
+        self.last_buka_tap_ts = 0.0
         self.last_ad_close_check_ts = 0.0
         self.last_ad_close_tap_ts = 0.0
+        self.ad_close_same_btn_count = 0
+        self.ad_close_last_btn_key = ""
         self.bubble_watch_active = False
         self.bubble_watch_start_ts = 0.0
         self.bubble_search_notified = False
-        self.last_wallet_restart_ts = 0.0
         self.last_bubble_check_ts = 0.0
         self.last_bubble_tap_ts = 0.0
-        self.last_home_bubble_spam_ts = 0.0
-        self.last_bubble_screen_is_game = False
         self.last_bubble_restart_ts = 0.0
         self.last_ad_open_telegram_ts = 0.0
         self.last_ad_stuck_restart_ts = 0.0
@@ -132,7 +134,22 @@ class MagicOceanGuardian:
         self.last_duplicate_dobel_restart_ts = 0.0
         self.last_bad_ad_restart_ts = 0.0
         self.last_wallet_check_ts = 0.0
+        self.last_confirm_close_check_ts = 0.0
+        self.last_confirm_close_tap_ts = 0.0
         self.prev_bubble_detection: Optional[Tuple[float, int, int]] = None
+        self.seeding_slot_routine = False
+        self.last_chrome_seed_ts = 0.0
+        self.last_tile_tap_ts = 0.0
+        self.last_gagal_check_ts = 0.0
+        self.last_gagal_tap_ts = 0.0
+        self._ocr_cache_ts = 0.0
+        self._ocr_cache_entries = None
+        self.tile_tap_index = 0
+        self.completed_ads_count = 0
+        self.pending_slot_seeding_after_ad = False
+        self._penarikan_cache: Optional[Tuple[float, bool]] = None
+        self.current_ad_slot_detected: bool = False
+        self.last_ad_slot_check_ts: float = 0.0
 
     def log(self, message: str) -> None:
         ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -178,8 +195,10 @@ class MagicOceanGuardian:
         except Exception:
             return b""
 
-    def tap(self, x: int, y: int) -> None:
-        self.show_tap_marker([(int(x), int(y), "blue", 1.3, 58)])
+    def tap(self, x: int, y: int, color: str = "blue") -> None:
+        self.show_tap_marker([(int(x), int(y), color, 1.3, 58)])
+        self._ocr_cache_entries = None
+        self._ocr_cache_ts = 0.0
         if self.dry_run:
             self.log(f"DRY RUN: tap {x},{y}")
             return
@@ -233,6 +252,8 @@ class MagicOceanGuardian:
         if not points:
             return
         unique_points: list[Tuple[int, int]] = []
+        self._ocr_cache_entries = None
+        self._ocr_cache_ts = 0.0
         for x, y in points:
             point = (int(x), int(y))
             if point not in unique_points:
@@ -251,26 +272,32 @@ class MagicOceanGuardian:
         self.monkey_burst(unique_points, delay_ms=delay_ms, timeout=timeout)
 
     def tap_bubble_until_ad(self, points: list[Tuple[int, int]]) -> bool:
-        """Tap gelembung cepat presisi via monkey burst; cek transisi singkat agar rescan tidak lama."""
+        """Tap gelembung SUPER BRUTAL via monkey burst; wave 1 + wave 2 + triple-check."""
         if not points:
             return False
-        # OPTIMASI: Kurangi 420→120 titik untuk mengurangi lag Android touch system
-        batch = points[:120]
-        self.log(f"TAP BATCH GELEMBUNG FOKUS: {len(batch)} titik presisi")
-        self.tap_many(batch, timeout=6, color="red")
+        batch = points[:800]
+        self.log(f"TAP BATCH GELEMBUNG SUPER BRUTAL: {len(batch)} titik presisi cepat")
+        self.tap_many(batch, timeout=8, color="red")
         self.last_dobel_check_ts = 0.0
-        # Triple-check dengan total window 1.3s untuk catch slow ads
-        time.sleep(0.50)
+        # Cek cepat; kalau belum buka iklan, tembak wave kedua.
+        time.sleep(0.30)
         app = self.get_foreground_app()
         if app and (self.is_game_ad(app) or app.package != TARGET_PACKAGE):
             self.log(f"STOP TAP GELEMBUNG: foreground berubah ({app.package}/{app.activity})")
             return True
-        time.sleep(0.40)
+
+        second_wave = list(reversed(points[:700]))
+        if second_wave:
+            self.log(f"TAP GELEMBUNG WAVE 2 BRUTAL: {len(second_wave)} titik tambahan")
+            self.tap_many(second_wave, timeout=7, color="red")
+
+        # Triple-check: catch slow ads.
+        time.sleep(0.30)
         app = self.get_foreground_app()
         if app and (self.is_game_ad(app) or app.package != TARGET_PACKAGE):
             self.log(f"STOP TAP GELEMBUNG (check2): foreground berubah ({app.package}/{app.activity})")
             return True
-        time.sleep(0.40)
+        time.sleep(0.30)
         app = self.get_foreground_app()
         if app and (self.is_game_ad(app) or app.package != TARGET_PACKAGE):
             self.log(f"STOP TAP GELEMBUNG (check3): foreground berubah ({app.package}/{app.activity})")
@@ -374,6 +401,8 @@ class MagicOceanGuardian:
         ], timeout=12)
 
     def close_blocked_app_and_return(self, package: str) -> None:
+        if getattr(self, "seeding_slot_routine", False):
+            return
         now = time.time()
         if now - self.last_block_close_ts < 2:
             return
@@ -482,15 +511,10 @@ class MagicOceanGuardian:
 
         # Penting: jangan tutup app hanya karena activity iklan sama. Kalau nominal DOBEL berubah/naik,
         # itu reward baru dan iklannya harus tetap dijalankan. Tutup hanya jika iklan sama DAN reward sama.
-        if same_ad and same_reward and now - self.last_duplicate_dobel_restart_ts >= 20:
-            self.last_duplicate_dobel_restart_ts = now
-            self.clear_apps_and_reopen_game(
-                f"iklan DOBEL sama dan reward tidak berubah ({activity}); "
-                f"reward sekarang={current_reward_raw}, sebelumnya={previous_reward_raw}"
+        if same_ad and same_reward:
+            self.log(
+                "IKLAN DOBEL SAMA DAN REWARD SAMA: tetap jalankan tonton iklan tanpa restart"
             )
-            self.pending_dobel_reward_value = None
-            self.pending_dobel_reward_raw = ""
-            return True
 
         if same_ad and reward_changed:
             self.log(
@@ -522,16 +546,750 @@ class MagicOceanGuardian:
         return f"{sec} detik"
 
     def is_game_ad(self, app: ForegroundApp) -> bool:
-        if app.package != TARGET_PACKAGE:
+        if not app:
             return False
-        activity = app.activity.lower()
+
+        activity = (app.activity or "").lower()
+        if activity and activity == "application not responding":
+            return False
+
+        # Activity SDK iklan sudah definitif. Jangan screenshot/OCR tombol Penarikan
+        # setiap loop; logging durasi harus tetap maksimal berselang 3 detik.
         if any(keyword in activity for keyword in AD_ACTIVITY_KEYWORDS):
             return True
-        # Fail-safe: game utama hanya UnityPlayerActivity. Kalau package game membuka
-        # activity lain, biasanya itu fullscreen/interstitial ad. Jangan diam scan bubble.
-        if activity and activity not in {"application not responding"} and "unityplayeractivity" not in activity:
-            return True
+
+        # UnityPlayerActivity dapat berarti halaman game atau playable ad. Hanya
+        # kasus ambigu ini yang memerlukan validasi tombol Penarikan.
+        if app.package == TARGET_PACKAGE:
+            return not self.has_top_right_penarikan()
         return False
+
+    def has_top_right_penarikan(self, screenshot_data: Optional[Tuple[bytes, int, int]] = None) -> bool:
+        """Cek apakah ada tombol atau teks 'Penarikan' di kanan atas layar.
+        Jika ada, layar ini adalah HALAMAN UTAMA game, bukan halaman iklan, dan tidak boleh diklik."""
+        now = time.time()
+        cached = getattr(self, "_penarikan_cache", None)
+        if cached is not None:
+            ts, val = cached
+            if now - ts < 0.8:
+                return val
+
+        if screenshot_data is None:
+            screenshot_data = self.capture_screenshot()
+        if not screenshot_data:
+            return False
+
+        png_data, width, height = screenshot_data
+        try:
+            import cv2
+            import numpy as np
+            arr = np.frombuffer(png_data, dtype=np.uint8)
+            img = cv2.imdecode(arr, cv2.IMREAD_COLOR)
+            if img is None:
+                return False
+
+            # Crop area kanan atas tombol Penarikan
+            x1, x2 = int(0.48 * width), width
+            y1, y2 = int(0.04 * height), int(0.19 * height)
+            roi = img[y1:y2, x1:x2]
+            if roi.size == 0:
+                return False
+
+            # 1. Deteksi teks OCR pada ROI kanan atas (harus mengandung 'penarikan' atau 'tarik')
+            has_amount = False
+            if os.path.exists(OCR_HELPER):
+                safe_serial = re.sub(r"[^a-zA-Z0-9_.-]+", "_", self.serial or "default")
+                roi_path = f"/tmp/magic_ocean_top_right_penarikan_{safe_serial}.png"
+                cv2.imwrite(roi_path, roi)
+                res = subprocess.run([OCR_HELPER, roi_path], capture_output=True, text=True, timeout=5)
+                for line in (res.stdout or "").splitlines():
+                    t, _, _ = line.partition("|")
+                    norm = self.normalize_text(t)
+                    if any(k in norm for k in ["penarikan", "tarik", "narik"]):
+                        self._penarikan_cache = (now, True)
+                        return True
+                    if "rp" in norm or any(ch.isdigit() for ch in norm):
+                        has_amount = True
+
+            # 2. Deteksi warna kuning/oranye tombol Penarikan (hanya jika ada teks saldo/Rp di ROI)
+            hsv = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
+            mask = cv2.inRange(hsv, (10, 100, 140), (35, 255, 255))
+            yellow_ratio = cv2.countNonZero(mask) / float(roi.shape[0] * roi.shape[1])
+            if has_amount and yellow_ratio >= 0.16:
+                self._penarikan_cache = (now, True)
+                return True
+
+            self._penarikan_cache = (now, False)
+            return False
+        except Exception:
+            return False
+
+    @staticmethod
+    def get_ad_info(activity: str) -> Tuple[str, str, str]:
+        act_lower = (activity or "").lower()
+        if "unityplayeractivity" in act_lower:
+            network = "Unity Ads / Game Ad"
+            ad_type = "Fullscreen Ad"
+        elif "applovin" in act_lower:
+            network = "AppLovin"
+            ad_type = "Fullscreen / Rewarded"
+        elif "mbridge" in act_lower or "mintegral" in act_lower:
+            network = "Mintegral (MBridge)"
+            ad_type = "Rewarded Video" if "reward" in act_lower else "Interstitial"
+        elif "unity3d.services" in act_lower or ("unity" in act_lower and "ads" in act_lower):
+            network = "Unity Ads"
+            ad_type = "FullScreen WebView Display" if "fullscreenwebview" in act_lower else "AdUnit"
+        elif "bytedance" in act_lower or "openadsdk" in act_lower or "pangle" in act_lower:
+            network = "Pangle (ByteDance)"
+            ad_type = "Rewarded / Interstitial"
+        elif "kwad" in act_lower or "kwai" in act_lower or "ksad" in act_lower:
+            network = "Kwai Ads"
+            ad_type = "Rewarded Video"
+        elif "gms.ads" in act_lower or "admob" in act_lower or "google" in act_lower:
+            network = "Google AdMob"
+            ad_type = "AdActivity"
+        elif "ironsource" in act_lower:
+            network = "ironSource"
+            ad_type = "Rewarded / Interstitial"
+        elif "vungle" in act_lower:
+            network = "Vungle (Liftoff)"
+            ad_type = "Fullscreen Ad"
+        else:
+            network = "Game Ad Network"
+            ad_type = "Fullscreen Activity"
+
+        short_id = activity.split(".")[-1] if "." in activity else activity
+        return network, ad_type, short_id
+
+    def on_ad_finished(self, activity: str, duration: float) -> None:
+        self.completed_ads_count += 1
+        self.log(f"Iklan selesai ({activity}), durasi {duration:.1f}s. Total selesai: {self.completed_ads_count}")
+        # Jangan langsung search setelah iklan selesai. Tunggu halaman game menampilkan
+        # tombol DOBEL atau BUKA, jalankan rutinitas tepat sebelum tombol itu diklik.
+        self.pending_slot_seeding_after_ad = True
+        self.log("VALIDASI PASCA-IKLAN: menunggu tombol DOBEL/BUKA sebelum siklus Google + DAFTAR")
+
+    def adb_type_text(self, text: str) -> None:
+        """Ketik teks via ADB input text dengan penanganan karakter khusus seperti * dan @."""
+        if not text:
+            return
+        special = " *?&$()[]{}|;<>`\"'\\"
+        if "*" in text:
+            parts = text.split("*")
+            for i, part in enumerate(parts):
+                if part:
+                    safe = "".join(("\\" + ch) if ch in special else ch for ch in part)
+                    self.adb_out(["shell", "input", "text", safe], timeout=4)
+                if i < len(parts) - 1:
+                    # KEYCODE_STAR = 17
+                    self.adb_out(["shell", "input", "keyevent", "17"], timeout=3)
+        else:
+            safe = "".join(("\\" + ch) if ch in special else ch for ch in text)
+            self.adb_out(["shell", "input", "text", safe], timeout=4)
+
+    def hide_keyboard_if_shown(self) -> None:
+        """Tutup virtual keyboard jika sedang aktif agar tidak menutupi form atau mengganggu swipe."""
+        try:
+            res = self.adb_out(["shell", "dumpsys", "input_method"], timeout=3)
+            if "mInputShown=true" in res:
+                self.adb_out(["shell", "input", "keyevent", "BACK"], timeout=2)
+                time.sleep(0.25)
+        except Exception:
+            pass
+
+    def match_registration_field(self, text: str) -> Optional[str]:
+        """Cocokkan label teks OCR / accessibility dengan jenis field formulir pendaftaran."""
+        norm = self.normalize_text(text)
+        if not norm or len(norm) < 2:
+            return None
+
+        # 1. Konfirmasi Kata Sandi / Password (harus diperiksa SEBELUM password)
+        if (
+            any(k in norm for k in [
+                "konfirmasikatasandi", "konfirmasisandi", "konfirmasipassword",
+                "ulangikatasandi", "ulangisandi", "ulangipassword",
+                "confirmpassword", "repeatpassword", "ketikulangkatasandi",
+                "masukkankembalikatasandi", "verifikasikatasandi"
+            ])
+            or (("konfirmasi" in norm or "ulangi" in norm or "confirm" in norm or "repeat" in norm)
+                and ("sandi" in norm or "password" in norm or "pass" in norm or "pwd" in norm))
+        ):
+            return "confirm_password"
+
+        # 2. Kata Sandi / Password
+        if any(k in norm for k in ["katasandi", "password", "sandi", "katakunci", "passw", "passwd", "pwd"]):
+            if not any(neg in norm for neg in ["konfirmasi", "ulangi", "confirm", "repeat", "kembali", "ketikulang"]):
+                return "password"
+
+        # 3. Nomor Rekening (harus diperiksa SEBELUM nomor telepon)
+        if (
+            any(k in norm for k in [
+                "nomorrekening", "norekening", "norek", "nomorakun",
+                "nomorewallet", "noewallet", "nomordompet", "nodompet",
+                "rekeningtujuan", "rekeningbank"
+            ])
+            or ("rekening" in norm and "nomor" in norm)
+        ):
+            return "rek"
+
+        # 4. Nama Pemilik Rekening
+        if (
+            any(k in norm for k in [
+                "namarekening", "namapemilik", "namasesuairekening",
+                "namapadarekening", "pemilikrekening", "namalengkapsesuai"
+            ])
+            or ("rekening" in norm and ("nama" in norm or "pemilik" in norm))
+        ):
+            return "nama_rek"
+
+        # 5. Bank / Metode Pembayaran / E-Wallet
+        if (
+            any(k in norm for k in [
+                "pilihbank", "namabank", "jenisbank", "metodepembayaran",
+                "jenisrekening", "akunbank", "ewallet", "pilihpembayaran",
+                "pilihmetode", "jenispembayaran"
+            ])
+            or norm == "bank"
+            or ("pilih" in norm and ("bank" in norm or "pembayaran" in norm or "metode" in norm))
+        ):
+            return "bank"
+
+        # 6. Nomor Telepon / HP / WhatsApp
+        if any(k in norm for k in [
+            "nomortelepon", "notelepon", "nomorhp", "nohp", "telepon",
+            "whatsapp", "nowa", "nomorkontak", "kontak", "nohandphone",
+            "handphone", "nomorponsel", "ponsel", "wa"
+        ]):
+            return "phone"
+
+        # 7. Email / Alamat Email
+        if any(k in norm for k in ["email", "alamatemail", "surel", "mail"]) or "@" in norm:
+            return "email"
+
+        # 8. Nama Pengguna / Username
+        if (
+            any(k in norm for k in [
+                "namapengguna", "username", "userid", "namaakun",
+                "idpengguna", "loginid", "idakun", "pengguna", "user"
+            ])
+            or norm in ("nama", "user", "id")
+        ):
+            return "username"
+
+        return None
+
+    def select_ovo_option_if_present(self) -> bool:
+        """Cari teks 'OVO' di layar (setelah klik dropdown bank/metode pembayaran), lalu klik."""
+        screenshot = self.capture_screenshot()
+        if not screenshot:
+            return False
+        png_data, width, height = screenshot
+        safe_serial = re.sub(r"[^a-zA-Z0-9_.-]+", "_", self.serial or "default")
+        screenshot_path = f"/tmp/magic_ocean_bank_drop_{safe_serial}.png"
+        try:
+            with open(screenshot_path, "wb") as f:
+                f.write(png_data)
+            result = subprocess.run(
+                [OCR_HELPER, screenshot_path],
+                capture_output=True,
+                text=True,
+                timeout=8,
+            )
+        except Exception:
+            return False
+
+        for line in (result.stdout or "").splitlines():
+            text, _, bbox = line.partition("|")
+            text = text.strip()
+            norm = self.normalize_text(text)
+            if "ovo" in norm:
+                try:
+                    bx, by, bw, bh = [float(p) for p in bbox.split(",")]
+                    cx = int((bx + bw / 2) * width)
+                    cy = int((1 - by - bh / 2) * height)
+                    if 180 <= cy <= 1580:
+                        self.log(f"Opsi OVO terdeteksi di ({cx},{cy}), memilih OVO!")
+                        self.tap(cx, cy, color="green")
+                        time.sleep(0.8)
+                        return True
+                except Exception:
+                    pass
+        return False
+
+    def get_registration_input_fields(self) -> list[Tuple[str, int, int]]:
+        """Baca input form dari accessibility tree Chrome; lebih akurat dari OCR label saja."""
+        remote = "/sdcard/magic_ocean_form.xml"
+        try:
+            self.adb_out(["shell", "uiautomator", "dump", remote], timeout=5)
+            xml = self.adb_out(["exec-out", "cat", remote], timeout=5)
+            root = ET.fromstring(xml)
+        except Exception:
+            return []
+
+        fields = []
+        # Pada beberapa form Chrome, label berada pada node TextView terpisah
+        # sehingga EditText sendiri tidak mempunyai text/content-desc. Simpan
+        # semua teks terlebih dahulu agar label terdekat dapat dipasangkan.
+        text_nodes = []
+        for node in root.iter("node"):
+            bounds = node.attrib.get("bounds", "")
+            nums = [int(n) for n in re.findall(r"\d+", bounds)]
+            text = " ".join(filter(None, (
+                node.attrib.get("text", ""),
+                node.attrib.get("content-desc", ""),
+                node.attrib.get("hint", ""),
+                node.attrib.get("resource-id", ""),
+            ))).strip()
+            if text and len(nums) == 4:
+                text_nodes.append((text, nums))
+
+        for node in root.iter("node"):
+            klass = node.attrib.get("class", "")
+            if "EditText" not in klass and "AutoCompleteTextView" not in klass:
+                continue
+            label = " ".join(filter(None, (
+                node.attrib.get("text", ""), node.attrib.get("content-desc", ""),
+                node.attrib.get("hint", ""),
+                node.attrib.get("resource-id", ""),
+            )))
+            bounds = node.attrib.get("bounds", "")
+            nums = [int(n) for n in re.findall(r"\d+", bounds)]
+            if len(nums) != 4:
+                continue
+            x1, y1, x2, y2 = nums
+            # Cari label yang paling dekat di atas/kiri input ini.
+            nearby = []
+            for candidate, (tx1, ty1, tx2, ty2) in text_nodes:
+                if candidate == label:
+                    continue
+                vertical_gap = y1 - ty2
+                horizontal_gap = min(abs(tx1 - x1), abs(tx2 - x2))
+                if -20 <= vertical_gap <= 180 and horizontal_gap <= 260:
+                    nearby.append((max(0, vertical_gap) + horizontal_gap * 0.15, candidate))
+            if nearby:
+                nearby.sort(key=lambda item: item[0])
+                label = f"{label} {nearby[0][1]}".strip()
+            field_type = self.match_registration_field(label)
+            if not field_type:
+                continue
+            fields.append((field_type, (x1 + x2) // 2, (y1 + y2) // 2))
+        return fields
+
+    def fill_registration_form(self, search_label: str = "WEB SLOT") -> None:
+        """Isi form dari posisi sekarang, lalu turun perlahan tanpa scroll balik ke atas."""
+        self.log(f"[{search_label}]: Memulai pengisian formulir pendaftaran akun...")
+        self.hide_keyboard_if_shown()
+
+        field_values = {
+            "username": "Wahyu91123",
+            "password": "Wahyu123*",
+            "confirm_password": "Wahyu123*",
+            "email": "wahyu91123@gmail.com",
+            "phone": "085157993801",
+            "bank": "OVO",
+            "rek": "085157993801",
+            "nama_rek": "Wahyu",
+        }
+        all_required = ["username", "password", "confirm_password", "email", "phone", "bank", "rek", "nama_rek"]
+        filled_fields: set[str] = set()
+
+        def fill(field_type: str, label: str, tap_x: int, tap_y: int) -> None:
+            if field_type in filled_fields:
+                return
+            val = field_values.get(field_type)
+            if not val:
+                return
+            if field_type == "bank":
+                self.log(f"[{search_label}]: FIELD bank ditemukan '{label}' di ({tap_x},{tap_y}); pilih OVO")
+                self.tap(tap_x, tap_y, color="yellow")
+                time.sleep(0.5)
+                if not self.select_ovo_option_if_present():
+                    self.adb_type_text(val)
+            else:
+                self.log(f"[{search_label}]: FIELD {field_type} ditemukan '{label}' di ({tap_x},{tap_y}); isi '{val}'")
+                self.tap(tap_x, tap_y, color="yellow")
+                time.sleep(0.3)
+                self.adb_type_text(val)
+            filled_fields.add(field_type)
+            time.sleep(0.25)
+            # Selalu tutup keyboard setelah mengetik agar layar tidak tertutupi saat scan/swipe berikutnya
+            self.hide_keyboard_if_shown()
+
+        def scan_current_viewport() -> None:
+            self._ocr_cache_entries = None
+            self._ocr_cache_ts = 0.0
+
+            # 1. Coba lewat accessibility input box
+            for field_type, x, y in self.get_registration_input_fields():
+                fill(field_type, "accessibility", x, y)
+
+            # 2. Coba lewat OCR teks label
+            entries = self.ocr_current_screen("reg_form")
+            entries.sort(key=lambda item: item[3])  # Urutkan dari atas ke bawah
+            for text, _bbox, cx, cy in entries:
+                if cy < 160 or cy > 1580:
+                    continue
+                field_type = self.match_registration_field(text)
+                if field_type and field_type not in filled_fields:
+                    tap_x = 360 if cx < 250 else cx
+                    tap_y = min(cy + 48, 1550)
+                    fill(field_type, text, tap_x, tap_y)
+
+        # Mulai dari posisi form saat ini. Jangan menggeser ke atas karena
+        # beberapa situs membuka form pada field pertama yang sudah terlihat.
+        self.log(f"[{search_label}]: Scan posisi form saat ini, lalu scroll turun sedikit-sedikit...")
+        last_filled_count = -1
+        unchanged_scans = 0
+        # Jarak geser kecil supaya setiap input sempat terlihat dan tidak terlewati.
+        for pass_num in range(12):
+            scan_current_viewport()
+            if len(filled_fields) == len(all_required):
+                break
+            if len(filled_fields) == last_filled_count:
+                unchanged_scans += 1
+            else:
+                unchanged_scans = 0
+            last_filled_count = len(filled_fields)
+            # Swipe hanya sekitar 220-260 px: jangan langsung melewati field.
+            self.adb_out(["shell", "input", "swipe", "360", "1180", "360", "900", "420"], timeout=4)
+            self._ocr_cache_entries = None
+            self._ocr_cache_ts = 0.0
+            time.sleep(0.55)
+            self.hide_keyboard_if_shown()
+
+            # Dua viewport tanpa field baru belum berarti field tidak ada:
+            # tetap beri kesempatan beberapa swipe kecil lagi sampai bawah.
+            if unchanged_scans >= 3 and pass_num >= 7:
+                break
+
+        # Field yang benar-benar tidak ada setelah posisi sekarang sampai bawah.
+        for field_type in all_required:
+            if field_type not in filled_fields:
+                self.log(f"[{search_label}]: FIELD {field_type} tidak ditemukan dari posisi form sampai bawah; lewati.")
+        self.log(f"[{search_label}]: Formulir selesai. Field terisi: {sorted(filled_fields)}")
+
+    def find_web_daftar_button(self) -> Optional[Tuple[str, str, int, int]]:
+        """Mendeteksi tombol/link DAFTAR, REGISTER, SIGN UP, REGISTRASI pada halaman web yang dibuka."""
+        screenshot = self.capture_screenshot()
+        if not screenshot:
+            return None
+        png_data, width, height = screenshot
+
+        safe_serial = re.sub(r"[^a-zA-Z0-9_.-]+", "_", self.serial or "default")
+        screenshot_path = f"/tmp/magic_ocean_web_daftar_{safe_serial}.png"
+        try:
+            with open(screenshot_path, "wb") as f:
+                f.write(png_data)
+            result = subprocess.run(
+                [OCR_HELPER, screenshot_path],
+                capture_output=True,
+                text=True,
+                timeout=10,
+            )
+        except Exception:
+            return None
+
+        register_keywords = [
+            "daftar", "register", "registrasi", "signup", "sign up",
+            "gabung", "buka akun", "buat akun", "klaim bonus", "claim bonus", "join now"
+        ]
+        exclude_words = ["cara", "mengklik", "syarat", "ketentuan", "panduan", "adalah", "tentang", "about", "hasil"]
+
+        candidates: list[Tuple[int, str, str, int, int]] = []
+        for line in (result.stdout or "").splitlines():
+            text, _, bbox = line.partition("|")
+            text = text.strip()
+            bbox = bbox.strip()
+            if not text or not bbox:
+                continue
+            try:
+                bx, by, bw, bh = [float(p) for p in bbox.split(",")]
+                cx = int((bx + bw / 2) * width)
+                cy = int((1 - by - bh / 2) * height)
+            except Exception:
+                continue
+
+            # Abaikan status bar / URL bar atas (cy < 180) dan navbar Android bawah (cy > 1580)
+            if cy < 180 or cy > 1580:
+                continue
+
+            words = text.split()
+            # Tombol biasanya singkat (1 - 4 kata, <= 25 karakter)
+            if len(words) > 4 or len(text) > 25:
+                continue
+
+            lower_text = text.lower()
+            if any(ex in lower_text for ex in exclude_words):
+                continue
+
+            norm = self.normalize_text(text)
+            for kw in register_keywords:
+                kw_norm = self.normalize_text(kw)
+                if kw_norm in norm:
+                    # Prioritaskan kata 'daftar' dan 'register' di atas yang lain
+                    priority = 0 if ("daftar" in norm or "register" in norm) else 1
+                    candidates.append((priority, text, bbox, cx, cy))
+                    break
+
+        if not candidates:
+            return None
+
+        candidates.sort(key=lambda c: (c[0], c[4]))  # prioritas, lalu y
+        _, best_text, best_bbox, best_x, best_y = candidates[0]
+        return best_text, best_bbox, best_x, best_y
+
+    def browse_google_and_click_sites(self, query: str, search_label: str = "WEB SLOT 1/2") -> None:
+        """Buka Google Search di Chrome, scroll hasil pencarian, klik beberapa situs, dan klik tombol daftar jika ada."""
+        import urllib.parse
+
+        url = f"https://www.google.com/search?q={urllib.parse.quote_plus(query)}"
+        self.log(f"[{search_label}]: Google Search '{query}'")
+        self.adb_out([
+            "shell", "am", "start",
+            "-a", "android.intent.action.VIEW",
+            "-d", url,
+            "com.android.chrome"
+        ], timeout=6)
+        time.sleep(1.8)
+
+        for site_idx in (1, 2):
+            if site_idx == 1:
+                # Scroll Google hasil pencarian awal
+                self.adb_out(["shell", "input", "swipe", "360", "950", "360", "550", "250"], timeout=4)
+                time.sleep(0.4)
+                tap_x, tap_y = 360, 680
+            else:
+                # Scroll Google lebih ke bawah untuk mendapatkan situs berbeda
+                self.adb_out(["shell", "input", "swipe", "360", "1100", "360", "450", "300"], timeout=4)
+                time.sleep(0.4)
+                tap_x, tap_y = 360, 780
+
+            self.log(f"[{search_label} - SITUS {site_idx}]: Klik link situs hasil pencarian Google di ({tap_x},{tap_y})")
+            self.tap(tap_x, tap_y, color="green")
+            time.sleep(2.2)
+
+            # Scroll ke bawah di dalam situs untuk memicu pemuatan aset & tracking
+            self.adb_out(["shell", "input", "swipe", "360", "1000", "360", "550", "300"], timeout=4)
+            time.sleep(0.6)
+
+            # Cari tombol DAFTAR / REGISTER
+            daftar_btn = self.find_web_daftar_button()
+            if not daftar_btn:
+                # Coba scroll sekali lagi jika tombol ada di posisi lebih bawah
+                self.adb_out(["shell", "input", "swipe", "360", "900", "360", "450", "300"], timeout=4)
+                time.sleep(0.6)
+                daftar_btn = self.find_web_daftar_button()
+
+            if daftar_btn:
+                dtext, _dbbox, dx, dy = daftar_btn
+                self.log(f"[{search_label} - SITUS {site_idx}]: Menemukan tombol DAFTAR '{dtext}' di ({dx},{dy}) -> KLIK TOMBOL DAFTAR!")
+                self.tap(dx, dy, color="green")
+                # Waktu muat modal formulir pendaftaran
+                time.sleep(1.8)
+                # Isi formulir pendaftaran dengan data akun (Wahyu91123, 085157993801, OVO, wahyu91123@gmail.com, Wahyu123*)
+                self.fill_registration_form(search_label=f"{search_label} - SITUS {site_idx}")
+                time.sleep(0.5)
+            else:
+                self.log(f"[{search_label} - SITUS {site_idx}]: Tombol DAFTAR tidak terdeteksi di situs ini, selesai jelajah situs.")
+
+            # Jika masih ada situs berikutnya di pencarian ini, kembali ke Google Search
+            if site_idx < 2:
+                self.log(f"[{search_label}]: Kembali ke halaman pencarian Google...")
+                self.adb_out(["shell", "input", "keyevent", "BACK"], timeout=3)
+                time.sleep(0.6)
+                app = self.get_foreground_app()
+                if not app or "chrome" not in app.package:
+                    self.adb_out([
+                        "shell", "am", "start",
+                        "-a", "android.intent.action.VIEW",
+                        "-d", url,
+                        "com.android.chrome"
+                    ], timeout=6)
+                    time.sleep(1.2)
+
+    def run_slot_seeding_and_app_routine(self) -> None:
+        """Setelah iklan: buka web slot di Chrome, scroll & klik beberapa situs, klik tombol daftar jika ada, buka 1 aplikasi slot acak (rr33, k68, fj99), lalu kembali ke game."""
+        self.seeding_slot_routine = True
+        self.log("=== MEMULAI SIKLUS INJEKSI SLOT: GOOGLE SEARCH + SCROLL BEBERAPA SITUS + KLIK DAFTAR + 1 APLIKASI SLOT ACAK ===")
+        try:
+            import random
+
+            # Kombinasi acak, dua frasa per siklus selalu berbeda.
+            keyword_groups = [
+                ["toto", "slot", "judi", "casino"],
+                ["gacor", "maxwin", "rtp live", "bonus", "rollingan"],
+                ["zeus", "pragmatic", "spaceman", "gates of olympus", "mahjong"],
+                ["deposit dana", "resmi indonesia", "bonus member", "terpercaya", "hari ini"],
+            ]
+            slot_keywords = [" ".join(random.sample(group, 1)[0] for group in keyword_groups) for _ in range(8)]
+            slot_keywords = list(dict.fromkeys(slot_keywords))
+            if len(slot_keywords) < 2:
+                slot_keywords += ["slot gacor pragmatic", "judi zeus bonus"]
+
+            # 1. Buka Google Search Pertama & jelajahi beberapa situs + tombol daftar
+            kw1 = random.choice(slot_keywords)
+            self.browse_google_and_click_sites(kw1, search_label="WEB SLOT 1/2")
+
+            # 2. Buka Google Search Kedua & jelajahi beberapa situs + tombol daftar
+            remaining_kws = [k for k in slot_keywords if k != kw1]
+            kw2 = random.choice(remaining_kws) if remaining_kws else "slot online terpercaya"
+            self.browse_google_and_click_sites(kw2, search_label="WEB SLOT 2/2")
+
+            # Tutup Chrome setelah kedua web slot dibuka
+            self.adb_out(["shell", "am", "force-stop", "com.android.chrome"], timeout=4)
+            time.sleep(0.4)
+
+            # 3. Buka salah satu aplikasi slot acak: RR33, K68, atau FJ99
+            slot_apps = [
+                {"name": "RR33", "pkg": "RR33.COM"},
+                {"name": "K68", "pkg": "com.k68.id.xulsfy"},
+                {"name": "FJ99", "pkg": "org.chromium.webapk.a1ffa4016fb2cda0c_v2"},
+            ]
+            chosen_app = random.choice(slot_apps)
+            app_name = chosen_app["name"]
+            app_pkg = chosen_app["pkg"]
+            self.log(f"[APLIKASI SLOT ACAK]: Membuka aplikasi {app_name} ({app_pkg})...")
+            self.adb_out([
+                "shell", "monkey", "-p", app_pkg,
+                "-c", "android.intent.category.LAUNCHER", "1"
+            ], timeout=6)
+            # Sesi aktif di OS & SDK iklan
+            time.sleep(2.2)
+            self.adb_out(["shell", "input", "swipe", "360", "900", "360", "650", "250"], timeout=4)
+            time.sleep(0.4)
+            self.log(f"[APLIKASI SLOT ACAK]: {app_name} selesai dibuka, menutup aplikasi")
+            self.adb_out(["shell", "am", "force-stop", app_pkg], timeout=4)
+
+        except Exception as e:
+            self.log(f"ERROR SIKLUS SLOT: {e}")
+        finally:
+            self.seeding_slot_routine = False
+            self.log("=== SIKLUS SLOT SELESAI: Kembali ke game Magic Ocean Tile Crush ===")
+            self.adb_out([
+                "shell", "am", "start",
+                "-n", f"{TARGET_PACKAGE}/com.unity3d.player.UnityPlayerActivity"
+            ], timeout=6)
+            time.sleep(0.8)
+
+    def check_if_current_ad_is_slot(self) -> bool:
+        """Cek apakah iklan yang sedang tayang adalah iklan slot atau bukan slot menggunakan regex batas kata (word boundaries)."""
+        if getattr(self, "current_ad_slot_detected", False):
+            return True
+
+        now = time.time()
+        # Periksa berkala tiap 2.5 detik selama iklan berlangsung agar tidak memberatkan CPU
+        if now - getattr(self, "last_ad_slot_check_ts", 0.0) < 2.5:
+            return getattr(self, "current_ad_slot_detected", False)
+        self.last_ad_slot_check_ts = now
+
+        entries = self.ocr_current_screen("ad_classify")
+        if not entries:
+            return False
+
+        # Gabungkan semua teks OCR di layar menjadi satu string terpisah spasi
+        raw_text = " " + " ".join(t.lower() for t, _, _, _ in entries) + " "
+        clean_text = " " + re.sub(r"[^a-z0-9]+", " ", raw_text) + " "
+
+        # Pola kata kunci khusus judi/slot dengan batas kata utuh (...)
+        # agar tidak salah mendeteksi kata umum (contoh: 'Fruit Blade Pop Crush' tidak boleh dianggap 'depo')
+        slot_regex_patterns = [
+            r"\bslot\b", r"\bslots\b",
+            r"\bgacor\b",
+            r"\bpragmatic\b",
+            r"\bmaxwin\b",
+            r"\bscatter\b",
+            r"\bolympus\b",
+            r"\bzeus\b",
+            r"\bkakek\s*zeus\b",
+            r"\bmahjong\b",
+            r"\bpg\s*soft\b", r"\bpgsoft\b",
+            r"\bhabanero\b",
+            r"\bspadegaming\b",
+            r"\bjoker123\b",
+            r"\bsweet\s*bonanza\b",
+            r"\bjudi\b",
+            r"\bcasino\b",
+            r"\bfreespin\b", r"\bfree\s*spin\b",
+            r"\brtp\s*live\b", r"\brtp\s*slot\b",
+            r"\bdepo\s*\d+", r"\bdeposit\s*pulsa\b", r"\bminimal\s*depo\b",
+            r"\bbonus\s*new\s*member\b",
+            r"\brollingan\b",
+            r"\brungkad\b",
+            r"\banti\s*rungkad\b",
+            r"\btoto\b",
+            r"\btogel\b",
+            r"\btaruhan\s*bola\b",
+            r"\blive\s*casino\b",
+        ]
+
+        for pat in slot_regex_patterns:
+            m = re.search(pat, clean_text)
+            if m:
+                matched_kw = m.group(0).strip()
+                self.current_ad_slot_detected = True
+                self.log(f"DETEKSI IKLAN: teridentifikasi sebagai IKLAN SLOT (kata kunci: '{matched_kw}')")
+                return True
+        return False
+
+    def get_ad_slot_label(self) -> str:
+        is_slot = getattr(self, "current_ad_slot_detected", False) or self.check_if_current_ad_is_slot()
+        return "IKLAN SLOT" if is_slot else "BUKAN SLOT"
+
+    def save_non_slot_ad_review(self, activity: str) -> None:
+        """Simpan bukti iklan non-slot untuk pemeriksaan manual.
+
+        Tidak menekan Report/Block otomatis karena klasifikasi OCR bisa keliru
+        dan pelaporan massal dapat salah melaporkan iklan yang sah.
+        """
+        try:
+            screenshot = self.capture_screenshot()
+            if not screenshot:
+                return
+            png_data, _width, _height = screenshot
+            review_dir = os.path.expanduser("~/magic_ocean_non_slot_ads")
+            os.makedirs(review_dir, exist_ok=True)
+            stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            activity_id = re.sub(r"[^a-zA-Z0-9_.-]+", "_", activity or "unknown")
+            image_path = os.path.join(review_dir, f"{stamp}_{activity_id}.png")
+            text_path = os.path.join(review_dir, f"{stamp}_{activity_id}.txt")
+            with open(image_path, "wb") as image_file:
+                image_file.write(png_data)
+            entries = self.ocr_current_screen("non_slot_review")
+            detected_text = " | ".join(text for text, _bbox, _x, _y in entries)
+            with open(text_path, "w", encoding="utf-8") as text_file:
+                text_file.write(f"activity={activity}\n")
+                text_file.write(f"category=BUKAN SLOT\n")
+                text_file.write(f"ocr={detected_text}\n")
+                text_file.write("action=tidak auto-report/auto-block; review manual\n")
+            self.log(
+                f"REVIEW IKLAN NON-SLOT: bukti disimpan di {image_path}; "
+                "tidak auto-report/auto-block"
+            )
+        except Exception as exc:
+            self.log(f"GAGAL SIMPAN REVIEW IKLAN NON-SLOT: {exc}")
+
+    def detect_ad_report_controls(self) -> None:
+        """Deteksi kontrol report secara pasif dan log koordinat untuk tindakan manual."""
+        report_words = (
+            "adchoices", "why this ad", "about this ad", "report ad",
+            "laporkan iklan", "jangan tampilkan", "stop seeing this ad",
+            "mengapa iklan ini", "tentang iklan ini",
+        )
+        try:
+            for text, _bbox, x, y in self.ocr_current_screen("ad_report_controls"):
+                normalized = self.normalize_text(text)
+                if any(self.normalize_text(word) in normalized for word in report_words):
+                    self.log(
+                        f"KONTROL REPORT TERDETEKSI: '{text}' di ({x},{y}). "
+                        "Menunggu tindakan manual; bot tidak menekan Report."
+                    )
+                    return
+            self.log(
+                "KONTROL REPORT BELUM TERDETEKSI: buka ikon AdChoices/ⓘ/⋮ secara manual "
+                "saat iklan masih tampil."
+            )
+        except Exception as exc:
+            self.log(f"GAGAL DETEKSI KONTROL REPORT: {exc}")
 
     def is_bad_ad_activity(self, activity: str) -> bool:
         return activity.lower() in BAD_AD_ACTIVITIES
@@ -558,9 +1316,19 @@ class MagicOceanGuardian:
 
             if self.ad_start_ts is None or self.ad_activity != app.activity:
                 self.ad_start_ts = now
+                self.ad_close_same_btn_count = 0
+                self.ad_close_last_btn_key = ""
                 self.ad_activity = app.activity
                 self.last_ad_log_second = 0
-                self.log(f"IKLAN TERBUKA: {app.activity} | durasi {self.format_duration(0)}")
+                self.current_ad_slot_detected = False
+                self.last_ad_slot_check_ts = 0.0
+                net, ad_type, short_id = self.get_ad_info(app.activity)
+                slot_tag = self.get_ad_slot_label()
+                if slot_tag == "BUKAN SLOT":
+                    self.save_non_slot_ad_review(app.activity)
+                    self.detect_ad_report_controls()
+                target_str = " | target 30s"
+                self.log(f"IKLAN TERBUKA [DETEKSI: {slot_tag} | NETWORK: {net} | TIPE: {ad_type} | ID: {short_id}]: {app.activity} | durasi {self.format_duration(0)}{target_str}")
                 source = "DOBEL" if self.dobel_visible else ("GELEMBUNG" if self.bubble_watch_active else "DETEKSI GAME")
                 if source == "DOBEL" and self.handle_dobel_ad_opened(app.activity):
                     return
@@ -574,19 +1342,27 @@ class MagicOceanGuardian:
                 return
 
             elapsed_second = int(elapsed)
-            # Log durasi setiap interval cek, tapi tidak dobel dalam detik yang sama.
-            if elapsed_second != self.last_ad_log_second:
+            # Laporan progres maksimal tiap 3 detik; jangan ada jeda lebih panjang.
+            if elapsed_second - self.last_ad_log_second >= 3:
                 self.last_ad_log_second = elapsed_second
-                self.log(f"IKLAN MASIH TERBUKA: {app.activity} | durasi {self.format_duration(elapsed)}")
+                net, ad_type, short_id = self.get_ad_info(app.activity)
+                slot_tag = self.get_ad_slot_label()
+                target_str = " / target 30s"
+                self.log(f"IKLAN DITONTON [DETEKSI: {slot_tag} | NETWORK: {net} | ID: {short_id}]: durasi {self.format_duration(elapsed)}{target_str}")
             return
 
         if self.ad_start_ts is not None:
             elapsed = time.time() - self.ad_start_ts
-            self.log(f"IKLAN SELESAI: {self.ad_activity} | total durasi {self.format_duration(elapsed)}")
+            finished_ad = self.ad_activity
+            net, ad_type, short_id = self.get_ad_info(finished_ad)
+            slot_tag = "IKLAN SLOT" if getattr(self, "current_ad_slot_detected", False) else "BUKAN SLOT"
+            self.log(f"IKLAN SELESAI [DETEKSI: {slot_tag} | NETWORK: {net} | ID: {short_id}]: {finished_ad} | total durasi {self.format_duration(elapsed)}")
             self.ad_start_ts = None
             self.ad_activity = ""
+            self.current_ad_slot_detected = False
             self.last_ad_log_second = -1
             self.last_ad_close_check_ts = 0.0
+            self.on_ad_finished(finished_ad, elapsed)
 
     @staticmethod
     def normalize_text(text: str) -> str:
@@ -668,8 +1444,9 @@ class MagicOceanGuardian:
             self.log(f"TELEGRAM GAGAL: sender tidak ada {TELEGRAM_SENDER}")
             return
         try:
+            py_bin = sys.executable or "/opt/homebrew/bin/python3"
             result = subprocess.run(
-                ["python3", TELEGRAM_SENDER, message],
+                [py_bin, TELEGRAM_SENDER, message],
                 capture_output=True,
                 text=True,
                 timeout=15,
@@ -872,9 +1649,12 @@ class MagicOceanGuardian:
             return png_data, width, height
 
     def dump_ui_tree(self) -> Optional[ET.Element]:
-        # Pada sebagian iklan uiautomator bisa gagal "could not get idle state"; itu normal.
-        self.adb_out(["shell", "uiautomator", "dump", "/sdcard/magic_ocean_ui.xml"], timeout=5)
-        xml_text = self.adb_out(["shell", "cat", "/sdcard/magic_ocean_ui.xml"], timeout=5)
+        # Hapus file lama terlebih dahulu agar tidak membaca XML basi (seperti 'Tutup sheet' Play Store)
+        self.adb_out(["shell", "rm", "-f", "/sdcard/magic_ocean_ui.xml"], timeout=3)
+        dump_res = self.adb_out(["shell", "uiautomator", "dump", "/sdcard/magic_ocean_ui.xml"], timeout=4)
+        if "dumped to" not in dump_res:
+            return None
+        xml_text = self.adb_out(["shell", "cat", "/sdcard/magic_ocean_ui.xml"], timeout=4)
         if "<hierarchy" not in xml_text:
             return None
         try:
@@ -927,7 +1707,6 @@ class MagicOceanGuardian:
                 return kind, label, x, y
 
         # Kwai/Alliance sering menaruh tombol X sebagai ImageView tanpa text/content-desc.
-        # Contoh stuck: bounds [586,479][618,511] di sisi kanan kartu promo.
         image_candidates = []
         for node in root.iter("node"):
             klass = (node.get("class") or "").lower()
@@ -944,7 +1723,6 @@ class MagicOceanGuardian:
                 continue
             x = (x1 + x2) // 2
             y = (y1 + y2) // 2
-            # Tombol close promo biasanya kecil di sisi kanan, bukan tombol CTA tengah/bawah.
             if x < screen_w * 0.72 or y < screen_h * 0.18 or y > screen_h * 0.70:
                 continue
             score = x + (screen_h * 0.70 - y) * 0.2
@@ -990,6 +1768,8 @@ class MagicOceanGuardian:
                 continue
             norm = self.normalize_text(label)
             raw = label.strip().lower()
+            if any(k in norm for k in ("penarikan", "tarik", "saldo")) or norm.startswith("rp"):
+                continue
             kind = None
             if raw in arrow_chars:
                 kind = "PANAH_KANAN/NEXT"
@@ -1018,6 +1798,9 @@ class MagicOceanGuardian:
                 continue
             # Tulisan Close/Tutup kadang berupa tombol teks di tengah/bawah iklan.
             # Klik selama masih bukan area navigation bar bawah.
+            if x >= int(width * 0.48) and int(height * 0.04) <= y <= int(height * 0.20):
+                if self.has_top_right_penarikan():
+                    continue
             if kind == "X" and any(token in norm for token in ("close", "tutup")) and y < height * 0.86:
                 return kind, label, x, y
             if x > width * 0.60 or y < height * 0.30:
@@ -1066,9 +1849,9 @@ class MagicOceanGuardian:
                         abs_x = rx1 + int(cx)
                         abs_y = ry1 + int(cy)
                         r = int(radius)
-                        if abs_x < width * 0.82:
+                        if abs_x < width * 0.88:
                             continue
-                        if abs_y < max(78, int(height * 0.045)) or abs_y > height * 0.16:
+                        if abs_y < max(78, int(height * 0.045)) or abs_y > height * 0.14:
                             continue
                         patch = gray[
                             max(0, cy - r): min(gray.shape[0], cy + r),
@@ -1076,13 +1859,32 @@ class MagicOceanGuardian:
                         ]
                         if patch.size == 0:
                             continue
-                        mean_gray = float(patch.mean())
+                        patch_y, patch_x = np.ogrid[:patch.shape[0], :patch.shape[1]]
+                        patch_mask = (
+                            (patch_x - (patch.shape[1] - 1) / 2) ** 2
+                            + (patch_y - (patch.shape[0] - 1) / 2) ** 2
+                            <= r * r
+                        )
+                        white_ratio = float(((patch > 180) & patch_mask).sum()) / max(1, int(patch_mask.sum()))
+                        # Lingkaran dekorasi bisa terlihat seperti tombol, tetapi
+                        # tombol X/panah memiliki tanda putih yang jelas di dalamnya.
+                        if white_ratio < 0.03:
+                            continue
+                        mean_gray = float(patch[patch_mask].mean())
                         # Lingkaran close/next gelap; hindari lingkaran terang UI/game.
                         if not (45 <= mean_gray <= 135):
                             continue
+                        # Klik tepat di pusat lingkaran yang terdeteksi; jangan
+                        # menggeser ke bawah karena hitbox X tiap iklan berbeda.
                         tap_x = abs_x
-                        tap_y = min(height - 10, abs_y + max(8, r // 3))
-                        score = (abs_x / width) * 3000 + r * 40 - abs(abs_y - 115) * 8 - mean_gray
+                        tap_y = abs_y
+                        score = (
+                            (abs_x / width) * 3000
+                            + white_ratio * 1500
+                            + r * 40
+                            - abs(abs_y - 115) * 8
+                            - mean_gray
+                        )
                         circle_candidates.append(
                             (score, tap_x, tap_y, f"hough top-right circle r={r} mean={mean_gray:.1f} center=({abs_x},{abs_y})")
                         )
@@ -1140,9 +1942,9 @@ class MagicOceanGuardian:
                 if circularity < 0.45:
                     continue
 
-                # Klik sedikit lebih bawah dari center karena pada MBridge area aktifnya cenderung bawah panah.
+                # Klik tepat di pusat kontur tombol hasil deteksi.
                 tap_x = abs_x
-                tap_y = min(height - 10, abs_y + 8)
+                tap_y = abs_y
                 right_bonus = 4000 if area_name == "kanan-atas" else 0
                 edge_bonus = (abs_x / width) * 900 if area_name == "kanan-atas" else ((width - abs_x) / width) * 250
                 score = area + right_bonus + edge_bonus - abs_y * 2
@@ -1155,7 +1957,7 @@ class MagicOceanGuardian:
         return "PANAH_KANAN/TOP", label, int(x), int(y)
 
     def find_ad_finish_button_by_image(self, png_data: bytes, width: int, height: int) -> Optional[Tuple[str, str, int, int]]:
-        """Deteksi konservatif ikon X / panah kanan di area tepi iklan."""
+        """Deteksi konservatif ikon X di pojok atas layar iklan."""
         try:
             import cv2
             import numpy as np
@@ -1167,11 +1969,9 @@ class MagicOceanGuardian:
         if img is None:
             return None
 
-        # Area yang biasanya berisi tombol close/next iklan.
         search_areas = [
-            (int(width * 0.70), 0, width, int(height * 0.28)),          # kanan atas
-            (0, 0, int(width * 0.30), int(height * 0.28)),              # kiri atas
-            (int(width * 0.78), int(height * 0.18), width, int(height * 0.62)),  # sisi kanan
+            (int(width * 0.68), 0, width, int(height * 0.125)),         # kanan atas
+            (0, 0, int(width * 0.32), int(height * 0.125)),             # kiri atas
         ]
 
         for ax1, ay1, ax2, ay2 in search_areas:
@@ -1197,7 +1997,6 @@ class MagicOceanGuardian:
 
                 pos_diag = 0
                 neg_diag = 0
-                horizontal = 0
                 for line in lines.reshape(-1, 4):
                     x1, y1, x2, y2 = [int(v) for v in line]
                     dx = x2 - x1
@@ -1209,28 +2008,24 @@ class MagicOceanGuardian:
                         pos_diag += 1
                     elif -70 <= angle <= -25:
                         neg_diag += 1
-                    elif abs(angle) <= 15:
-                        horizontal += 1
 
                 abs_x = ax1 + x + w // 2
                 abs_y = ay1 + y + h // 2
-                # Abaikan pointer-location overlay/status bar dan ikon palsu yang terlalu atas.
                 if abs_y < max(85, int(height * 0.052)):
                     continue
-                # Untuk deteksi generik, jangan ambil panah tengah playable-ad.
-                # Tombol selesai iklan harus sangat atas atau sangat kanan.
-                is_upper_corner = abs_y < height * 0.16 and (abs_x < width * 0.20 or abs_x > width * 0.70)
-                is_right_edge = abs_x > width * 0.88
-                if not (is_upper_corner or is_right_edge):
-                    continue
-                if pos_diag >= 1 and neg_diag >= 1:
-                    kind = "X" if aspect < 1.35 else "PANAH_KANAN/NEXT"
-                    return kind, "ikon terdeteksi", abs_x, abs_y
-                if neg_diag >= 1 and horizontal >= 1 and abs_x > width * 0.75:
-                    return "PANAH_KANAN/NEXT", "ikon terdeteksi", abs_x, abs_y
+                # Jangan klik jika berada di area tombol Penarikan kanan atas
+                if abs_x >= int(width * 0.48) and int(height * 0.04) <= abs_y <= int(height * 0.20):
+                    if self.has_top_right_penarikan():
+                        continue
+                if abs_y < height * 0.125 and (abs_x < width * 0.30 or abs_x > width * 0.70):
+                    if pos_diag >= 1 and neg_diag >= 1:
+                        return "X", "ikon X terdeteksi", abs_x, abs_y
         return None
 
     def find_ad_finish_button(self) -> Optional[Tuple[str, str, int, int, str]]:
+        if self.has_top_right_penarikan():
+            return None
+
         ui_found = self.find_ad_finish_button_by_ui()
         if ui_found:
             kind, label, x, y = ui_found
@@ -1264,18 +2059,28 @@ class MagicOceanGuardian:
     def try_finish_ad(self, app: Optional[ForegroundApp]) -> None:
         if not app or not self.is_game_ad(app) or self.ad_start_ts is None:
             return
+        # Hanya periksa tombol Penarikan jika sedang di UnityPlayerActivity (karena activity SDK iklan murni pasti bukan game)
+        if app.package == TARGET_PACKAGE and "unityplayeractivity" in (app.activity or "").lower():
+            if self.has_top_right_penarikan():
+                self.ad_start_ts = None
+                self.ad_activity = None
+                return
 
         now = time.time()
         elapsed = now - self.ad_start_ts
-        if elapsed < AD_CLOSE_MIN_SECONDS:
+
+        target_watch = AD_CLOSE_MIN_SECONDS
+        if elapsed < target_watch:
             return
+
         if now - self.last_ad_close_check_ts < AD_CLOSE_CHECK_INTERVAL:
             return
         self.last_ad_close_check_ts = now
 
         found = self.find_ad_finish_button()
         if not found:
-            if elapsed > 28 and (now - self.last_ad_close_tap_ts >= 4):
+            fallback_limit = target_watch + 15.0
+            if elapsed > fallback_limit and (now - self.last_ad_close_tap_ts >= 4):
                 self.last_ad_close_tap_ts = now
                 self.log(f"FALLBACK CLOSE: iklan terbuka {self.format_duration(elapsed)} belum ada tombol tutup, kirim BACK")
                 self.adb_out(["shell", "input", "keyevent", "BACK"], timeout=3)
@@ -1285,40 +2090,56 @@ class MagicOceanGuardian:
         if x < 20 and y < 20:
             self.log(f"ABORT KLIK IKLAN: koordinat tidak valid ({x},{y})")
             return
+
+        # Track klik berulang pada tombol yang sama tanpa efek
+        btn_key = f"{x}_{y}_{kind}"
+        if self.ad_close_last_btn_key == btn_key:
+            self.ad_close_same_btn_count += 1
+        else:
+            self.ad_close_same_btn_count = 1
+            self.ad_close_last_btn_key = btn_key
+
+        # Jika tombol yang sama sudah diklik >= 5x tanpa efek, skip dan fallback BACK
+        if self.ad_close_same_btn_count >= 5:
+            self.log(
+                f"SKIP TOMBOL TIDAK BEREAKSI: {kind} di ({x},{y}) sudah diklik {self.ad_close_same_btn_count}x | "
+                f"durasi {self.format_duration(elapsed)}, fallback BACK"
+            )
+            self.adb_out(["shell", "input", "keyevent", "BACK"], timeout=3)
+            if self.ad_close_same_btn_count >= 8:
+                self.log(f"TOMBOL STUCK {self.ad_close_same_btn_count}x: restart game")
+                self.ad_close_same_btn_count = 0
+                self.ad_close_last_btn_key = ""
+                self.restart_game_for_stuck_ad(f"tombol {kind} di ({x},{y}) tidak bereaksi {self.ad_close_same_btn_count}x")
+            return
+
         self.log(
             f"MENEMUKAN TOMBOL SELESAI IKLAN: {kind} '{label}' "
             f"di ({x},{y}) via {source} | durasi {self.format_duration(elapsed)}"
         )
 
-        if now - self.last_ad_close_tap_ts < 3:
+        if now - self.last_ad_close_tap_ts < 1.0:
             return
         self.last_ad_close_tap_ts = now
         self.log(f"KLIK TOMBOL SELESAI IKLAN: {kind} di ({x},{y})")
-        label_norm = self.normalize_text(label)
-        if kind == "X" and any(token in label_norm for token in ("close", "tutup")):
-            # Tombol teks Close kadang area aktifnya bukan tepat di tengah OCR/UI text.
-            # Tap beberapa titik sekitar label supaya tidak stuck di iklan jenis ini.
-            screen_w, screen_h = self.get_screen_size()
-            close_points = []
-            for dx, dy in ((0, 0), (42, 0), (84, 0), (-42, 0), (0, 28), (42, 28), (84, 28)):
-                px = max(15, min(screen_w - 15, x + dx))
-                py = max(85, min(screen_h - 120, y + dy))
-                point = (px, py)
-                if point not in close_points:
-                    close_points.append(point)
-            self.tap_many(close_points, timeout=4, color="blue")
-            if elapsed > 20:
-                self.log(f"FALLBACK CLOSE: tombol Close belum menutup setelah {self.format_duration(elapsed)}, kirim BACK")
-                self.adb_out(["shell", "input", "keyevent", "BACK"], timeout=3)
-            if elapsed > 45:
-                self.restart_game_for_stuck_ad(f"tombol Close tidak bereaksi selama {self.format_duration(elapsed)}")
-            return
+        # Selalu klik tepat pada koordinat hasil deteksi terbaru.
         self.tap(x, y)
+        self.on_ad_finished(self.ad_activity or (app.activity if app else "unknown"), elapsed)
+        # Reset timer ad agar siklus berikutnya menunggu 30s lagi
+        self.ad_start_ts = now
+        self.ad_close_same_btn_count = 0
+        self.ad_close_last_btn_key = ""
+        self.last_ad_log_second = 0
 
     def ocr_current_screen(self, prefix: str) -> list[Tuple[str, str, int, int]]:
         """OCR layar sekarang. Return: [(text, bbox, x, y), ...]."""
         if not os.path.exists(OCR_HELPER):
             return []
+
+        now = time.time()
+        if hasattr(self, "_ocr_cache_ts") and (now - self._ocr_cache_ts < 0.6):
+            if hasattr(self, "_ocr_cache_entries") and self._ocr_cache_entries is not None:
+                return self._ocr_cache_entries
 
         safe_serial = re.sub(r"[^a-zA-Z0-9_.-]+", "_", self.serial or "default")
         screenshot_path = f"/tmp/magic_ocean_{prefix}_{safe_serial}.png"
@@ -1353,16 +2174,20 @@ class MagicOceanGuardian:
             except ValueError:
                 x, y = width // 2, height // 2
             entries.append((text, bbox, x, y))
+        self._ocr_cache_entries = entries
+        self._ocr_cache_ts = now
         return entries
 
     def find_reward_offer_buttons(self) -> Tuple[
         Optional[Tuple[str, str, int, int]],
         Optional[Tuple[str, str, int, int]],
+        Optional[Tuple[str, str, int, int]],
         Optional[Tuple[float, str, int, int]],
         Optional[Tuple[str, str, int, int]],
     ]:
-        """Cari tombol DOBEL, tombol NOT NOW/NOW NOT, nominal Rp reward, serta tombol X pop-up Pengaturan."""
+        """Cari tombol DOBEL, tombol BUKA, tombol NOT NOW/NOW NOT, nominal Rp reward, serta tombol X pop-up Pengaturan."""
         dobel = None
+        buka_btn = None
         not_now = None
         settings_btn = None
         reward_candidates: list[Tuple[int, float, str, int, int]] = []
@@ -1377,6 +2202,24 @@ class MagicOceanGuardian:
             norm = self.normalize_text(text)
             if dobel is None and "dobel" in norm:
                 dobel = (text, bbox, x, y)
+                continue
+
+            # Tombol BUKA (peti hadiah/bonus yang sering muncul berdampingan/di atas tombol NOT NOW / NOW NOT)
+            is_store = any(w in norm for w in ("toko", "store", "play", "google", "web", "browser", "situs", "link"))
+            is_buka = (
+                not is_store
+                and (
+                    norm == "buka"
+                    or "bukasekarang" in norm
+                    or "bukapet" in norm
+                    or "bukahadiah" in norm
+                    or norm.startswith("buka")
+                    or norm in {"open", "klaim", "claim", "ambil"}
+                )
+                and (350 <= y <= 1350)
+            )
+            if buka_btn is None and is_buka:
+                buka_btn = (text, bbox, x, y)
                 continue
 
             # Pop-up Pengaturan: tombol X berada di sebelah kanan teks Pengaturan (ujung kanan banner header pop-up).
@@ -1400,18 +2243,59 @@ class MagicOceanGuardian:
 
         reward_rp = None
         if reward_candidates:
-            target_y = dobel[3] if dobel else 1120
-            # Pilih nominal Rp yang paling dekat di atas tombol DOBEL, misalnya "Rp 41,9".
+            target_y = dobel[3] if dobel else (buka_btn[3] if buka_btn else 1120)
+            # Pilih nominal Rp yang paling dekat di atas tombol DOBEL/BUKA, misalnya "Rp 41,9".
             above = [item for item in reward_candidates if item[0] < target_y and (target_y - item[0]) <= 430]
             pool = above or reward_candidates
             pool.sort(key=lambda item: abs(target_y - item[0]))
             _sort_y, value, raw_text, x, y = pool[0]
             reward_rp = (value, raw_text, x, y)
-        return dobel, not_now, reward_rp, settings_btn
+        return dobel, buka_btn, not_now, reward_rp, settings_btn
+
+    def handle_confirm_close_popup(self, app: Optional[ForegroundApp]) -> bool:
+        """Jika muncul popup 'Confirm to close app' (Exit/Continue), klik Continue."""
+        if not app or app.package != TARGET_PACKAGE:
+            return False
+        now = time.time()
+        if now - self.last_confirm_close_check_ts < 2.5:
+            return False
+        self.last_confirm_close_check_ts = now
+
+        entries = self.ocr_current_screen("confirm_close")
+        if not entries:
+            return False
+        has_context = False
+        continue_btn = None
+        for text, bbox, x, y in entries:
+            norm = self.normalize_text(text)
+            if (
+                "confirmtoclose" in norm
+                or "confirmclose" in norm
+                or ("confirm" in norm and "close" in norm)
+                or "toclosetheapp" in norm
+                or "closetheapp" in norm
+                or ("wantto" in norm and ("exit" in norm or "quit" in norm or "close" in norm))
+                or norm in {"exit", "quit"}
+            ):
+                has_context = True
+            if continue_btn is None and ("continue" in norm or norm == "contin" or "continu" in norm):
+                continue_btn = (text, bbox, x, y)
+        if not (has_context and continue_btn):
+            return False
+        if now - self.last_confirm_close_tap_ts < 2.0:
+            return False
+        self.last_confirm_close_tap_ts = now
+        text, bbox, x, y = continue_btn
+        self.log(f"POPUP CONFIRM TO CLOSE TERDETEKSI: klik Continue '{text}' di ({x},{y}) | bbox={bbox}")
+        self.tap(x, y)
+        time.sleep(0.5)
+        self.dobel_visible = False
+        self.not_now_visible = False
+        return True
 
     def handle_wallet_page_if_needed(self, app: Optional[ForegroundApp]) -> bool:
         """Tutup halaman Dompet Saya/Detail Penarikan dengan panah kiri di kiri judul."""
-        if not app or app.package != TARGET_PACKAGE or self.is_game_ad(app):
+        if not app or app.package != TARGET_PACKAGE:
             return False
         now = time.time()
         if now - self.last_wallet_check_ts < 2.0:
@@ -1419,32 +2303,6 @@ class MagicOceanGuardian:
         self.last_wallet_check_ts = now
 
         entries = self.ocr_current_screen("wallet_page")
-        # Jika popup penarikan terbuka, tombol back/panah halaman tertutup overlay.
-        # Tutup dulu X oranye di kanan atas popup.
-        for text, bbox, x, y in entries:
-            norm = self.normalize_text(text)
-            is_withdraw_popup = (
-                "pilihmetodepenarikan" in norm
-                or "masukkanakunanda" in norm
-                or "tariksekarang" in norm
-                or ("metode" in norm and "penarikan" in norm)
-            )
-            if is_withdraw_popup:
-                tap_x = 650
-                tap_y = 450
-                self.log(f"POPUP PENARIKAN TERDETEKSI: '{text}' | klik X popup di ({tap_x},{tap_y}) lalu restart game")
-                self.tap(tap_x, tap_y)
-                time.sleep(0.35)
-                self.adb_out(["shell", "input", "keyevent", "KEYCODE_BACK"], timeout=5)
-                time.sleep(0.35)
-                self.dobel_visible = False
-                self.not_now_visible = False
-                self.bubble_watch_active = False
-                if now - self.last_wallet_restart_ts >= 5:
-                    self.last_wallet_restart_ts = now
-                    self.clear_apps_and_reopen_game("keluar dari popup penarikan/dompet")
-                return True
-
         for text, bbox, x, y in entries:
             norm = self.normalize_text(text)
             is_wallet_title = (
@@ -1455,24 +2313,74 @@ class MagicOceanGuardian:
             )
             # Judul halaman biasanya di area header atas; jangan salah tangkap tombol Penarikan di saldo/header game.
             if is_wallet_title and 90 <= y <= 280:
-                # Panah kiri halaman dompet ada sekitar x=70-80; x=45 terlalu kiri
-                # dan sering tidak kena, membuat bot terlihat tidak jalan.
-                tap_x = 75
+                tap_x = 45
                 tap_y = y
-                self.log(f"HALAMAN DOMPET TERDETEKSI: '{text}' | bbox={bbox} | klik panah kiri di ({tap_x},{tap_y}) lalu restart jika masih nyangkut")
+                self.log(f"HALAMAN DOMPET TERDETEKSI: '{text}' | bbox={bbox} | klik panah kiri di ({tap_x},{tap_y})")
                 self.tap(tap_x, tap_y)
-                time.sleep(0.35)
-                # Fallback aman khusus halaman dompet kalau tap panah masih tidak menutup.
-                self.adb_out(["shell", "input", "keyevent", "KEYCODE_BACK"], timeout=5)
-                time.sleep(0.35)
+                time.sleep(0.6)
                 self.dobel_visible = False
                 self.not_now_visible = False
                 self.bubble_watch_active = False
-                if now - self.last_wallet_restart_ts >= 5:
-                    self.last_wallet_restart_ts = now
-                    self.clear_apps_and_reopen_game("keluar dari halaman dompet/penarikan")
                 return True
         return False
+
+    def handle_gagal_popup(self, app: Optional[ForegroundApp]) -> bool:
+        """Jika muncul popup 'gagal' (level kalah/stuck), klik tombol 'Hidup kembali' (prioritas tombol video bawah)."""
+        if not app or app.package != TARGET_PACKAGE or self.is_game_ad(app):
+            return False
+
+        now = time.time()
+        if now - self.last_gagal_check_ts < 0.8:
+            return False
+        self.last_gagal_check_ts = now
+
+        entries = self.ocr_current_screen("gagal_popup")
+        if not entries:
+            return False
+
+        has_gagal = False
+        candidates: list[Tuple[str, str, int, int]] = []
+        for text, bbox, x, y in entries:
+            norm = self.normalize_text(text)
+            if "gagal" in norm or "kalah" in norm or "failed" in norm:
+                has_gagal = True
+            if "hidup" in norm or ("kembali" in norm and has_gagal):
+                if 700 <= y <= 1200:
+                    candidates.append((text, bbox, x, y))
+
+        if not (has_gagal or candidates):
+            return False
+
+        if now - self.last_gagal_tap_ts < 1.2:
+            return True
+        self.last_gagal_tap_ts = now
+
+        # Prioritaskan tombol video bawah (y > 950, target sekitar y=1041)
+        video_candidates = [c for c in candidates if c[3] > 950]
+        if video_candidates:
+            video_candidates.sort(key=lambda c: abs(c[3] - 1041))
+            best = video_candidates[0]
+            tap_x, tap_y = 360, best[3]
+            log_desc = f"tombol video '{best[0]}' di ({tap_x},{tap_y})"
+        elif candidates:
+            best = candidates[0]
+            if has_gagal and best[3] < 920:
+                tap_x, tap_y = 360, 1041
+                log_desc = f"tombol video di ({tap_x},{tap_y}) (posisi video di bawah '{best[0]}' y={best[3]})"
+            else:
+                tap_x, tap_y = 360, best[3]
+                log_desc = f"tombol '{best[0]}' di ({tap_x},{tap_y})"
+        else:
+            tap_x, tap_y = 360, 1041
+            log_desc = f"tombol video di ({tap_x},{tap_y}) (koordinat default pop-up gagal)"
+
+        self.log(f"POPUP GAGAL TERDETEKSI: klik Hidup Kembali -> {log_desc}")
+        self.tap(tap_x, tap_y, color="green")
+        time.sleep(0.5)
+        self.dobel_visible = False
+        self.not_now_visible = False
+        self.bubble_watch_active = False
+        return True
 
     def update_dobel_log(self, app: Optional[ForegroundApp]) -> None:
         # Cukup cek saat masih di package game, supaya tidak berat dan tidak salah deteksi app lain.
@@ -1486,7 +2394,7 @@ class MagicOceanGuardian:
             return
         self.last_dobel_check_ts = now
 
-        dobel, not_now, reward_rp, settings_btn = self.find_reward_offer_buttons()
+        dobel, buka_btn, not_now, reward_rp, settings_btn = self.find_reward_offer_buttons()
         if settings_btn:
             stext, sbbox, sx, sy = settings_btn
             self.log(f"MENEMUKAN POP-UP PENGATURAN: '{stext}' | bbox={sbbox} | klik tombol X di kanan teks di ({sx},{sy})")
@@ -1496,6 +2404,21 @@ class MagicOceanGuardian:
             self.dobel_visible = False
             self.not_now_visible = False
             return
+
+        if dobel or buka_btn:
+            # Pasca-iklan, rutinitas Google/DAFTAR hanya boleh berjalan bila
+            # reward berikutnya benar-benar tersedia. Setelah selesai, scan ulang;
+            # jangan klik koordinat lama karena tampilan dapat berubah.
+            if self.pending_slot_seeding_after_ad:
+                self.pending_slot_seeding_after_ad = False
+                self.last_chrome_seed_ts = now
+                target = "DOBEL" if dobel else "BUKA"
+                self.log(f"VALIDASI LOLOS: tombol {target} ada. Jalankan siklus sebelum klik {target}")
+                self.run_slot_seeding_and_app_routine()
+                self.dobel_visible = False
+                self.not_now_visible = False
+                self.last_dobel_check_ts = 0.0
+                return
 
         if dobel:
             text, bbox, x, y = dobel
@@ -1520,13 +2443,28 @@ class MagicOceanGuardian:
             self.dobel_visible = True
             self.not_now_visible = False
             self.bubble_watch_active = False
+
+        elif buka_btn:
+            text, bbox, x, y = buka_btn
+            screen_w, _screen_h = self.get_screen_size()
+            tap_x = screen_w // 2 if screen_w else x
+            tap_y = y
+            self.log(f"MENEMUKAN TOMBOL BUKA (PRIORITAS BUKA, JANGAN NOW NOT): '{text}' | bbox={bbox} | ocr=({x},{y}) | tap=({tap_x},{tap_y})")
+            if (not hasattr(self, "last_buka_tap_ts")) or (now - self.last_buka_tap_ts >= 1.2):
+                self.last_buka_tap_ts = now
+                self.log(f"KLIK TOMBOL BUKA di ({tap_x},{tap_y})")
+                self.tap(tap_x, tap_y, color="green")
+            self.dobel_visible = False
+            self.not_now_visible = False
+            self.bubble_watch_active = False
+
         elif not_now:
             text, bbox, x, y = not_now
             if not self.not_now_visible:
-                self.log(f"TIDAK ADA DOBEL, MENEMUKAN TOMBOL NOW NOT/NOT NOW: '{text}' | bbox={bbox} | tap=({x},{y})")
+                self.log(f"TIDAK ADA DOBEL/BUKA, MENEMUKAN TOMBOL NOW NOT/NOT NOW: '{text}' | bbox={bbox} | tap=({x},{y})")
                 self.log(f"KLIK TOMBOL NOW NOT/NOT NOW SEKALI di ({x},{y})")
                 self.tap(x, y)
-                time.sleep(0.6)
+                time.sleep(0.3)
                 self.capture_and_report_balance("setelah klik NOW NOT sebelum cari gelembung")
                 self.bubble_watch_active = True
                 self.bubble_watch_start_ts = time.time()
@@ -1548,43 +2486,34 @@ class MagicOceanGuardian:
         except Exception:
             return None
 
-        first_ts = time.time()
-        first = self.capture_screenshot()
-        if not first:
-            return None
-        first_png, width, height = first
-        self.last_bubble_screen_size = (width, height)
+        cached_img = getattr(self, "_cached_bubble_frame", None)
+        cached_ts = getattr(self, "_cached_bubble_ts", 0.0)
+        now_pre = time.time()
+        if cached_img is not None and (now_pre - cached_ts < 2.8):
+            img1 = cached_img
+            first_ts = cached_ts
+        else:
+            first_res = self.capture_screenshot()
+            if not first_res:
+                return None
+            first_png, width, height = first_res
+            self.last_bubble_screen_size = (width, height)
+            first_ts = time.time()
+            time.sleep(0.10)
+            img1 = cv2.imdecode(np.frombuffer(first_png, dtype=np.uint8), cv2.IMREAD_COLOR)
 
-        # Jangan langsung klik visual-cash tunggal: banyak yang hanya dekorasi/non-clickable.
-        # Cash-bubble harus dikonfirmasi bergerak oleh diff dua frame di bawah.
-
-        # Jeda pendek cukup untuk membaca arah gerak, jangan terlalu lama karena gelembung cepat lewat.
-        time.sleep(0.14)
         second_ts = time.time()
         second = self.capture_screenshot()
         if not second:
             return None
-        second_png, _, _ = second
+        second_png, width, height = second
         self.last_bubble_screen_size = (width, height)
 
-        img1 = cv2.imdecode(np.frombuffer(first_png, dtype=np.uint8), cv2.IMREAD_COLOR)
         img2 = cv2.imdecode(np.frombuffer(second_png, dtype=np.uint8), cv2.IMREAD_COLOR)
         if img1 is None or img2 is None or img1.shape != img2.shape:
             return None
-
-        # Jangan pernah scan/klik bubble kalau layar bukan halaman game biru.
-        # Halaman Dompet/Detail Penarikan putih punya banyak ikon uang hijau yang
-        # sebelumnya salah terbaca sebagai bubble.
-        game_roi = img2[int(height * 0.16):int(height * 0.82), :]
-        if game_roi.size == 0:
-            self.last_bubble_screen_is_game = False
-            return None
-        b, g, r = cv2.split(game_roi)
-        blue_ratio = float(((b > 120) & (b > g + 12) & (g > 70)).mean())
-        white_ratio = float(((b > 230) & (g > 230) & (r > 230)).mean())
-        self.last_bubble_screen_is_game = blue_ratio > 0.28 and white_ratio < 0.35
-        if not self.last_bubble_screen_is_game:
-            return None
+        self._cached_bubble_frame = img2
+        self._cached_bubble_ts = second_ts
 
         diff = cv2.absdiff(img1, img2)
         gray = cv2.cvtColor(diff, cv2.COLOR_BGR2GRAY)
@@ -1593,10 +2522,12 @@ class MagicOceanGuardian:
         mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
         mask = cv2.dilate(mask, kernel, iterations=2)
 
-        # Eksklusi zona statis
-        mask[:int(height * 0.16), :] = 0  # saldo / bar atas
-        mask[int(height * 0.95):, :] = 0  # navigasi / tombol bawah
-        mask[int(height * 0.78):, int(width * 0.50):] = 0  # terumbu karang bawah kanan
+        # Eksklusi zona statis atas saja. Area gelembung sekarang dibuat penuh
+        # sampai bawah layar, mulai dari bawah tombol menu garis-3.
+        scan_top = int(height * BUBBLE_SCAN_TOP_RATIO)
+        scan_bottom = int(height * BUBBLE_SCAN_BOTTOM_RATIO)
+        mask[:scan_top, :] = 0  # saldo / bar atas / tombol menu
+        mask[scan_bottom:, :] = 0  # sisakan margin bawah kecil
 
         contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         candidates = []
@@ -1613,21 +2544,11 @@ class MagicOceanGuardian:
 
             center_x = x + w // 2
             center_y = y + h // 2
-            if center_y < int(height * 0.16) or center_y > int(height * 0.95):
-                continue
-            # Area bawah kanan sering berisi dekorasi/tombol, tapi bubble uang Magic Ocean
-            # kadang muncul mepet bawah kiri. Jangan skip bubble bawah-kiri.
-            if center_y > int(height * 0.84) and center_x > int(width * 0.48):
+            if center_y < scan_top or center_y > scan_bottom:
                 continue
             if center_x < 30 or center_x > width - 30:
                 continue
-            if center_x > int(width * 0.50) and center_y > int(height * 0.78):
-                continue
-            # Abaikan papan puzzle/tile; animasi tile sering terlihat seperti bubble bergerak tapi tidak clickable.
-            if int(width * 0.28) <= center_x <= int(width * 0.73) and int(height * 0.34) <= center_y <= int(height * 0.58):
-                continue
 
-            # Periksa ROI di img2 (posisi terkini bubble), bukan pusat jejak diff.
             rx1 = max(0, x - 18)
             ry1 = max(0, y - 18)
             rx2 = min(width, x + w + 18)
@@ -1639,7 +2560,6 @@ class MagicOceanGuardian:
             hsv1 = cv2.cvtColor(roi1, cv2.COLOR_BGR2HSV)
             hsv2 = cv2.cvtColor(roi2, cv2.COLOR_BGR2HSV)
 
-            # Warna uang di dalam bubble: hijau dan kuning.
             green1 = cv2.inRange(hsv1, np.array([35, 55, 75]), np.array([90, 255, 255]))
             yellow1 = cv2.inRange(hsv1, np.array([15, 60, 90]), np.array([38, 255, 255]))
             green2 = cv2.inRange(hsv2, np.array([35, 55, 75]), np.array([90, 255, 255]))
@@ -1647,7 +2567,6 @@ class MagicOceanGuardian:
             money1 = cv2.bitwise_or(green1, yellow1)
             money2 = cv2.bitwise_or(green2, yellow2)
 
-            # Kilau gelembung transparan (putih / highlight).
             white1 = cv2.inRange(hsv1, np.array([0, 0, 160]), np.array([179, 85, 255]))
             white2 = cv2.inRange(hsv2, np.array([0, 0, 160]), np.array([179, 85, 255]))
             target1 = cv2.bitwise_or(money1, white1)
@@ -1656,14 +2575,11 @@ class MagicOceanGuardian:
             white_ratio = float(white2.mean() / 255.0)
             sat_mean = float(hsv2[:, :, 1].mean())
 
-            # Bubble reward harus benar-benar berisi uang hijau/kuning; jika dominan putih saja biasanya tile/dekorasi.
-            if money_ratio < 0.12:
+            if money_ratio < 0.05 and sat_mean < 25:
                 continue
-            if white_ratio < 0.05 and money_ratio < 0.16:
+            if white_ratio < 0.04 and money_ratio < 0.08:
                 continue
 
-            # Ambil titik aktual dari komponen target pada frame kedua.
-            # Kontur diff sering berada di tengah jejak lama+baru, sehingga tap telat/meleset.
             m2 = cv2.moments(target2)
             if m2["m00"] > 0:
                 latest_x = int(rx1 + m2["m10"] / m2["m00"])
@@ -1682,8 +2598,7 @@ class MagicOceanGuardian:
                 if abs(calc_vx) < 900 and abs(calc_vy) < 1200:
                     vx, vy = calc_vx, calc_vy
 
-            # PERBAIKAN: Lead lebih agresif untuk kompensasi detection delay 3s (0.48 → 0.70)
-            lead = 0.70
+            lead = 0.34
             pred_x = int(latest_x + vx * lead)
             pred_y = int(latest_y + vy * lead)
             if abs(pred_x - latest_x) > 170 or abs(pred_y - latest_y) > 220:
@@ -1697,16 +2612,9 @@ class MagicOceanGuardian:
             reward_icon = self.find_reward_bubble_icon(second_png, width, height)
             if reward_icon:
                 ix, iy, iinfo = reward_icon
-                # Bubble uang bawah-kiri sering nyaris statis/di tray, tetap klik karena
-                # ini target yang diminta user.
-                if ix < int(width * 0.48) and int(height * 0.82) <= iy <= int(height * 0.94):
-                    self.last_bubble_pair_velocity = (0.0, -180.0)
-                    return ix, iy, f"bottom-left-visual {iinfo}"
-                # Selain zona bawah-kiri, visual hanya valid kalau area ikon ikut bergerak nyata.
-                diff_roi = diff[max(0, iy - 45):min(height, iy + 45), max(0, ix - 45):min(width, ix + 45)]
-                if diff_roi.size > 0 and float(diff_roi.mean()) > 6.0:
-                    self.last_bubble_pair_velocity = (0.0, -180.0)
-                    return ix, iy, f"motion-confirmed-visual {iinfo}"
+                diff_roi = diff[max(0, iy - 35):min(height, iy + 35), max(0, ix - 35):min(width, ix + 35)]
+                if diff_roi.size > 0 and float(diff_roi.mean()) > 3.5:
+                    return ix, iy, f"motion-confirmed {iinfo}"
 
         if not candidates:
             return None
@@ -1715,10 +2623,10 @@ class MagicOceanGuardian:
         return int(cx), int(cy), info
 
     def find_reward_bubble_icon(self, png_data: bytes, width: int, height: int) -> Optional[Tuple[int, int, str]]:
-        """Deteksi cash-bubble reward.
+        """Deteksi cash-bubble reward yang bergerak.
 
-        Target yang benar adalah gelembung transparan bulat berisi uang hijau/kuning.
-        Filter ini mengecualikan area terumbu karang statis kanan-bawah dan papan puzzle.
+        Target yang benar adalah gelembung transparan berisi uang hijau/kuning.
+        Filter ini menghindari ikon bell kanan-bawah dan objek background seperti kura-kura.
         """
         try:
             import cv2
@@ -1737,15 +2645,16 @@ class MagicOceanGuardian:
         yellow = cv2.inRange(hsv, np.array([15, 70, 100]), np.array([38, 255, 255]))
         mask = cv2.bitwise_or(green, yellow)
 
+        scan_top = int(height * BUBBLE_SCAN_TOP_RATIO)
+        scan_bottom = int(height * BUBBLE_SCAN_BOTTOM_RATIO)
         allowed = np.zeros_like(mask)
-        allowed[int(height * 0.16):int(height * 0.95), :] = 255
-        # Exclude terumbu karang / background statis kanan-bawah
-        cv2.rectangle(allowed, (int(width * 0.50), int(height * 0.78)), (width, height), 0, -1)
+        allowed[scan_top:scan_bottom, :] = 255
         # Exclude papan puzzle tengah dan label Level yang juga hijau/kuning.
         cv2.rectangle(allowed, (210, int(height * 0.33)), (520, int(height * 0.58)), 0, -1)
         cv2.rectangle(allowed, (240, 300), (480, 430), 0, -1)
-        # Exclude saldo / tombol atas.
-        cv2.rectangle(allowed, (0, 0), (width, int(height * 0.16)), 0, -1)
+        # Exclude saldo / tombol atas. Area bawah sengaja tetap aktif.
+        cv2.rectangle(allowed, (0, 0), (width, scan_top), 0, -1)
+        cv2.rectangle(allowed, (0, scan_bottom), (width, height), 0, -1)
         mask = cv2.bitwise_and(mask, allowed)
 
         kernel = np.ones((5, 5), np.uint8)
@@ -1757,26 +2666,20 @@ class MagicOceanGuardian:
         for contour in contours:
             x, y, w, h = cv2.boundingRect(contour)
             area = cv2.contourArea(contour)
-            if area < 1000 or area > 18000:
+            if area < 1000 or area > 28000:
                 continue
-            if w < 42 or h < 42 or w > 150 or h > 150:
-                continue
-            aspect = w / float(h)
-            if aspect < 0.68 or aspect > 1.45:
+            if w < 35 or h < 35 or w > 230 or h > 230:
                 continue
             center_x = x + w // 2
             center_y = y + h // 2
-            if center_x < 35 or center_x > width - 35:
+            # Hindari kandidat terlalu mepet tepi layar
+            if center_x < 35 or center_x > width - 45:
                 continue
-            if center_y < int(height * 0.18) or center_y > int(height * 0.94):
-                continue
-            if center_y > int(height * 0.84) and center_x > int(width * 0.48):
-                continue
-            if center_x > int(width * 0.50) and center_y > int(height * 0.78):
+            if center_y < scan_top or center_y > scan_bottom:
                 continue
 
             # Bubble asli punya lingkaran/shine putih transparan di sekitar uang.
-            pad = 65
+            pad = 70
             x1 = max(0, center_x - pad)
             y1 = max(0, center_y - pad)
             x2 = min(width, center_x + pad)
@@ -1791,7 +2694,9 @@ class MagicOceanGuardian:
             if white_ratio < 0.10 or colored_ratio < 0.12:
                 continue
 
-            score = area + white_ratio * 6000 + colored_ratio * 2000
+            # Bubble reward biasanya di area sisi/tengah luar puzzle
+            side_bonus = 1200 if (center_x < width * 0.34 or center_x > width * 0.66) else 0
+            score = area + side_bonus + white_ratio * 6500 + colored_ratio * 1300
             candidates.append((score, center_x, center_y, f"cash-bubble area={int(area)} bbox=({x},{y},{w},{h}) white={white_ratio:.2f} color={colored_ratio:.2f}"))
 
         if not candidates:
@@ -1801,13 +2706,8 @@ class MagicOceanGuardian:
         return int(x), int(y), info
 
     def build_bubble_burst_points(self, x: int, y: int, width: int, height: int) -> list[Tuple[int, int]]:
-        """Titik tap brutal: bubble + hampir seluruh layar aman.
-
-        Zona yang sengaja tidak diklik:
-        - tombol Penarikan kanan atas
-        - tombol garis 3/menu kiri atas
-        - kotak-kotak puzzle di tengah
-        """
+        """Titik tap brutal: bubble + sweep area aman. Sama brutalnya dengan Magic Ocean."""
+        import math
         now = time.time()
         cx, cy = int(x), int(y)
         pair_v = getattr(self, "last_bubble_pair_velocity", None) or (0.0, -180.0)
@@ -1819,34 +2719,28 @@ class MagicOceanGuardian:
         points: list[Tuple[int, int]] = []
         seen: set[Tuple[int, int]] = set()
 
-        # Perkiraan zona UI Magic Ocean dari layar 720x1640; dibuat berbasis rasio agar aman.
-        withdraw_rect = (int(width * 0.58), int(height * 0.055), width - 12, int(height * 0.145))
+        # Zona exclude: Penarikan kanan atas, menu kiri atas, puzzle tengah
+        withdraw_rect = (int(width * 0.48), int(height * 0.04), width, int(height * 0.20))
         menu_rect = (0, int(height * 0.145), int(width * 0.18), int(height * 0.235))
-        # Kotak-kotak puzzle 3x3 di tengah. Jangan terlalu lebar supaya bubble
-        # yang muncul di sisi kiri/kanan papan tetap bisa kena.
-        center_tiles_rect = (int(width * 0.32), int(height * 0.37), int(width * 0.70), int(height * 0.55))
+        center_tiles_rect = (int(width * 0.30), int(height * 0.33), int(width * 0.72), int(height * 0.58))
 
-        def in_rect(px: int, py: int, rect: Tuple[int, int, int, int]) -> bool:
+        def in_rect(px, py, rect):
             x1, y1, x2, y2 = rect
             return x1 <= px <= x2 and y1 <= py <= y2
 
-        def safe(px: int, py: int) -> bool:
+        def safe(px, py):
             px, py = int(px), int(py)
             if px < 18 or px > width - 18:
                 return False
-            # Mode aman sekarang: klik bubble bawah saja. Jangan klik area atas
-            # supaya tidak pernah kena Penarikan/menu/header.
-            if py < int(height * 0.44) or py > int(height * 0.86):
+            if py < int(height * BUBBLE_SCAN_TOP_RATIO) or py > int(height * BUBBLE_SCAN_BOTTOM_RATIO):
                 return False
             if in_rect(px, py, withdraw_rect):
                 return False
             if in_rect(px, py, menu_rect):
                 return False
-            if in_rect(px, py, center_tiles_rect):
-                return False
             return True
 
-        def add_p(px: int, py: int) -> None:
+        def add_p(px, py):
             px, py = int(px), int(py)
             if not safe(px, py):
                 return
@@ -1855,121 +2749,144 @@ class MagicOceanGuardian:
                 seen.add(pt)
                 points.append(pt)
 
-        # 1) Pusat bubble + prediksi jalur gerak, tetapi tetap dibatasi agar
-        # batch 420 tidak habis hanya di sekitar bubble.
+        # 1) Pusat bubble + prediksi jalur gerak
         centers = [(cx, cy)]
-        for lead in (0.08, 0.16, 0.25, 0.36, 0.50, 0.65, 0.80):
+        for lead in (0.06, 0.12, 0.18, 0.26, 0.36, 0.50, 0.66, 0.84, 1.05):
             px = int(cx + vx * lead)
             py = int(cy + vy * lead)
             if abs(px - cx) <= 220 and abs(py - cy) <= 260:
                 centers.append((px, py))
-        for dy in (-30, -55, -85, -120, -160, -210):
+        for dy in (-20, -38, -58, -82, -112, -150, -195, -245):
             centers.append((cx, cy + dy))
 
-        import math
         for px, py in centers:
             add_p(px, py)
-            # Titik pendek rapat di badan bubble.
             for dx, dy in (
                 (18, 0), (-18, 0), (0, 18), (0, -18),
                 (14, 14), (-14, 14), (14, -14), (-14, -14),
             ):
                 add_p(px + dx, py + dy)
 
-        # 2) Sweep hampir semua layar aman. Ini dibuat lebih awal supaya batch
-        # 420 benar-benar menyebar, sambil tetap menghindari penarikan/menu/kotak.
-        step = 54
-        y_start = int(height * 0.44)
-        y_end = int(height * 0.86)
+        # 2) Sweep area aman
+        step = 24
+        y_start = int(height * BUBBLE_SCAN_TOP_RATIO)
+        y_end = int(height * BUBBLE_SCAN_BOTTOM_RATIO)
+        # Jangan top-down saja: urutkan baris selang-seling atas/bawah supaya
+        # batch 800 pertama juga sudah menyentuh area bawah layar.
+        rows = list(range(y_start, y_end, step))
+        ordered_rows: list[int] = []
+        lo, hi = 0, len(rows) - 1
+        while lo <= hi:
+            ordered_rows.append(rows[lo])
+            if lo != hi:
+                ordered_rows.append(rows[hi])
+            lo += 1
+            hi -= 1
         row = 0
-        for gy in range(y_start, y_end, step):
+        for gy in ordered_rows:
             offset = 0 if row % 2 == 0 else step // 2
             for gx in range(24 + offset, width - 20, step):
                 add_p(gx, gy)
             row += 1
 
-        # 3) Ring ekstra dan jalur vertikal di sekitar bubble untuk sisa slot.
+        # 3) Ring ekstra dan jalur vertikal
         for px, py in centers:
-            for radius in (35, 58, 82):
-                steps = max(8, int(2 * math.pi * radius / 22))
+            for radius in (26, 42, 62, 86, 112):
+                steps = max(10, int(2 * math.pi * radius / 16))
                 for i in range(steps):
                     angle = 2 * math.pi * i / steps
-                    add_p(px + radius * math.cos(angle), py + radius * math.sin(angle))
+                    add_p(int(px + radius * math.cos(angle)), int(py + radius * math.sin(angle)))
 
-        for dy in range(0, int(height * 0.62), 28):
+        for dy in range(0, int(height * 0.75), 18):
             add_p(cx, cy - dy)
-            add_p(cx - 32, cy - dy)
-            add_p(cx + 32, cy - dy)
+            add_p(cx, cy + dy)
+            add_p(cx - 24, cy - dy)
+            add_p(cx + 24, cy - dy)
+            add_p(cx - 48, cy - dy)
+            add_p(cx + 48, cy - dy)
+            add_p(cx - 24, cy + dy)
+            add_p(cx + 24, cy + dy)
+            add_p(cx - 48, cy + dy)
+            add_p(cx + 48, cy + dy)
+
+        # 4) Crosshair rapat
+        for offset in range(-150, 151, 18):
+            add_p(cx + offset, cy)
+            add_p(cx, cy + offset)
+            add_p(cx + offset, cy - 36)
+            add_p(cx + offset, cy + 36)
 
         self.log(
             "BUILD BURST GELEMBUNG BRUTAL: "
-            f"{len(points)} titik | exclude penarikan={withdraw_rect}, menu={menu_rect}, kotak={center_tiles_rect}"
+            f"{len(points)} titik | exclude penarikan={withdraw_rect}, menu={menu_rect}"
         )
-        return points[:420]
+        return points[:1400]
 
-    def build_home_bubble_spam_points(self, width: int, height: int) -> list[Tuple[int, int]]:
-        """Spam klik halaman utama saat bubble susah dideteksi.
+    def generate_magic_ocean_tile_points(self) -> list[Tuple[int, int]]:
+        """Titik tap di area board kotak-kotak ubin Magic Ocean Tile Crush (720x1640)."""
+        points = []
+        col_w = (580 - 140) / 4.0
+        row_h = (850 - 550) / 4.0
 
-        Sweep hampir semua area muncul bubble, tetapi tetap tidak klik:
-        - Penarikan kanan atas
-        - garis 3/menu kiri atas
-        - kotak puzzle tengah
-        - tombol bawah besar agar tidak membuka panel lain
-        """
-        points: list[Tuple[int, int]] = []
-        seen: set[Tuple[int, int]] = set()
+        idx = self.tile_tap_index
+        for i in range(3):
+            cur_idx = (idx + i) % 16
+            c = cur_idx % 4
+            r = cur_idx // 4
+            x = int(140 + (c + 0.5) * col_w)
+            y = int(550 + (r + 0.5) * row_h)
+            points.append((x, y))
 
-        withdraw_rect = (int(width * 0.56), int(height * 0.045), width - 8, int(height * 0.150))
-        menu_rect = (0, int(height * 0.135), int(width * 0.19), int(height * 0.245))
-        center_tiles_rect = (int(width * 0.32), int(height * 0.37), int(width * 0.70), int(height * 0.55))
-        bottom_left_button = (0, int(height * 0.875), int(width * 0.24), height)
-        bottom_right_button = (int(width * 0.72), int(height * 0.835), width, height)
+        self.tile_tap_index = (self.tile_tap_index + 3) % 16
+        return points
 
-        def in_rect(px: int, py: int, rect: Tuple[int, int, int, int]) -> bool:
-            x1, y1, x2, y2 = rect
-            return x1 <= px <= x2 and y1 <= py <= y2
+    def find_gameplay_tiles(self, png_data: bytes, width: int, height: int) -> list[Tuple[int, int]]:
+        """Deteksi kotak-kotak ubin langsung di layar gameplay board Magic Ocean."""
+        try:
+            import cv2
+            import numpy as np
+            img = cv2.imdecode(np.frombuffer(png_data, dtype=np.uint8), cv2.IMREAD_COLOR)
+            if img is None:
+                return []
+            crop = img[500:900, 100:620]
+            gray = cv2.cvtColor(crop, cv2.COLOR_BGR2GRAY)
+            _, thresh = cv2.threshold(gray, 200, 255, cv2.THRESH_BINARY)
+            contours, _ = cv2.findContours(thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+            tiles = []
+            for c in contours:
+                x, y, w, h = cv2.boundingRect(c)
+                if 50 <= w <= 110 and 50 <= h <= 110:
+                    cx = 100 + x + w // 2
+                    cy = 500 + y + h // 2
+                    if not any(abs(cx - tx) < 30 and abs(cy - ty) < 30 for tx, ty in tiles):
+                        tiles.append((cx, cy))
+            return tiles
+        except Exception:
+            return []
 
-        def safe(px: int, py: int) -> bool:
-            px, py = int(px), int(py)
-            if px < 18 or px > width - 18:
-                return False
-            # Spam hanya area bawah game; jangan klik area atas yang berisi Penarikan/menu.
-            if py < int(height * 0.44) or py > int(height * 0.86):
-                return False
-            for rect in (withdraw_rect, menu_rect, center_tiles_rect, bottom_left_button, bottom_right_button):
-                if in_rect(px, py, rect):
-                    return False
-            return True
+    def do_gameplay_tile_tap(self) -> None:
+        """Tap kotak-kotak ubin di halaman utama untuk mencocokkan ubin & memicu pop-up hadiah/iklan."""
+        now = time.time()
+        if now - self.last_tile_tap_ts < 0.7:
+            return
+        self.last_tile_tap_ts = now
 
-        def add(px: int, py: int) -> None:
-            px, py = int(px), int(py)
-            if not safe(px, py):
-                return
-            pt = (px, py)
-            if pt not in seen:
-                seen.add(pt)
-                points.append(pt)
+        screenshot = self.capture_screenshot()
+        tiles = []
+        if screenshot:
+            png_data, width, height = screenshot
+            tiles = self.find_gameplay_tiles(png_data, width, height)
 
-        # Prioritas: bawah game saja, tempat bubble sering lewat. Tidak klik atas.
-        priority = [
-            (25, int(height * 0.45), int(width * 0.32), int(height * 0.86), 34),
-            (int(width * 0.70), int(height * 0.45), width - 25, int(height * 0.86), 34),
-            (25, int(height * 0.72), int(width * 0.72), int(height * 0.86), 34),
-            (int(width * 0.22), int(height * 0.56), int(width * 0.82), int(height * 0.84), 38),
-        ]
-        for x1, y1, x2, y2, step in priority:
-            row = 0
-            for py in range(y1, y2, step):
-                offset = 0 if row % 2 == 0 else step // 2
-                for px in range(x1 + offset, x2, step):
-                    add(px, py)
-                row += 1
+        if tiles:
+            tap_points = tiles[:3]
+            self.log(f"TAP KOTAK UBIN TERDETEKSI: tap {len(tap_points)} ubin {tap_points} untuk memicu iklan/hadiah")
+        else:
+            tap_points = self.generate_magic_ocean_tile_points()
+            self.log(f"TAP KOTAK UBIN GRID: tap {len(tap_points)} ubin {tap_points} untuk memicu iklan/hadiah")
 
-        self.log(
-            "BUILD SPAM BUBBLE HALAMAN UTAMA: "
-            f"{len(points)} titik | exclude penarikan={withdraw_rect}, menu={menu_rect}, kotak={center_tiles_rect}"
-        )
-        return points[:360]
+        for x, y in tap_points:
+            self.tap(x, y, color="yellow")
+            time.sleep(0.06)
 
     def update_bubble_search(self, app: Optional[ForegroundApp]) -> None:
         now = time.time()
@@ -2018,33 +2935,13 @@ class MagicOceanGuardian:
             return
 
         if not self.bubble_watch_active:
-            screen_w, screen_h = getattr(self, "last_bubble_screen_size", self.get_screen_size())
-            if not self.last_bubble_screen_is_game:
-                self.log("SKIP SPAM BUBBLE: layar bukan halaman game biru (kemungkinan Dompet/Penarikan)")
-                return
-            # Kalau halaman utama terbuka, spam area bubble walau deteksi visual gagal.
-            # Ini sengaja agresif karena bubble kadang ada tapi OCR/diff tidak menangkap.
-            if now - self.last_home_bubble_spam_ts >= 2.0:
-                self.last_home_bubble_spam_ts = now
-                points = self.build_home_bubble_spam_points(screen_w, screen_h)
-                self.log(f"SPAM BUBBLE HALAMAN UTAMA: {len(points)} titik aman meski deteksi gagal")
-                tap_start_ts = time.time()
-                opened = self.tap_bubble_until_ad(points)
-                tap_ms = int((time.time() - tap_start_ts) * 1000)
-                self.log(f"SELESAI SPAM BUBBLE HALAMAN UTAMA: durasi_tap={tap_ms}ms opened={opened}")
-                after = self.get_foreground_app()
-                if opened or (after and self.is_game_ad(after)):
-                    activity = after.activity if after else "unknown"
-                    self.log(f"BERHASIL BUKA IKLAN DARI SPAM BUBBLE: {activity}")
-                    self.notify_ad_opened(activity, source="GELEMBUNG-SPAM", info="home-page-safe-spam")
-                    self.bubble_watch_active = False
-                    self.prev_bubble_detection = None
-                    return
-            self.log("MENUNGGU TARGET: tidak ada DOBEL/NOW NOT, sudah spam area bubble halaman utama")
+            self.log("MENUNGGU TARGET: tidak ada DOBEL/NOW NOT, scan cash-bubble normal belum menemukan target")
+            self.do_gameplay_tile_tap()
             return
 
         elapsed = now - self.bubble_watch_start_ts
         self.log(f"BELUM MENEMUKAN GELEMBUNG BERGERAK | durasi cari {self.format_duration(elapsed)}")
+        self.do_gameplay_tile_tap()
         if elapsed >= BUBBLE_TIMEOUT_SECONDS:
             self.restart_game_for_bubble_search(
                 f"{self.format_duration(elapsed)} tidak menemukan gelembung"
@@ -2062,31 +2959,53 @@ class MagicOceanGuardian:
             self.last_foreground = app.package
             self.log(f"Foreground: {app.package}/{app.activity}")
 
+        if self.handle_confirm_close_popup(app):
+            self.last_action = "clicked_confirm_close_continue"
+            return "clicked_confirm_close_continue", app
+
         if app.activity == "Application Not Responding":
             self.clear_apps_and_reopen_game(f"ANR/stuck terdeteksi pada {app.package}")
             self.last_action = "cleared_anr"
             return "cleared_anr", app
 
         if app.package == TARGET_PACKAGE:
-            self.update_ad_log(app)
-            self.try_finish_ad(app)
             if self.handle_wallet_page_if_needed(app):
                 self.last_action = "closed_wallet_page"
                 return "closed_wallet_page", app
+            if self.handle_gagal_popup(app):
+                self.last_action = "clicked_hidup_kembali"
+                return "clicked_hidup_kembali", app
+
+            if self.is_game_ad(app):
+                self.update_ad_log(app)
+                self.try_finish_ad(app)
+                self.last_action = "handling_ad"
+                return "handling_ad", app
+
+            # Berada di Halaman Utama Game (ada tombol Penarikan di kanan atas)
+            if self.ad_start_ts is not None:
+                self.ad_start_ts = None
+                self.ad_activity = None
+
             self.update_dobel_log(app)
             self.update_bubble_search(app)
-            self.last_action = "game_ok"
-            return "game_ok", app
+
+            self.last_action = "game_main_screen"
+            return "game_main_screen", app
 
         self.update_ad_log(app)
         self.try_finish_ad(app)
-        self.update_dobel_log(app)
-        self.update_bubble_search(app)
+
+        if getattr(self, "seeding_slot_routine", False):
+            return "seeding_slot_routine", app
 
         if app.package in BLOCKED_PACKAGES:
             self.close_blocked_app_and_return(app.package)
             self.last_action = "closed_blocked_and_returned"
             return "closed_blocked_and_returned", app
+
+        if getattr(self, "seeding_slot_routine", False):
+            return "seeding_slot_routine", app
 
         # Kalau bukan game dan bukan app sistem penting, buka game.
         self.launch_game(reason=f"foreground sekarang {app.package}")
@@ -2107,7 +3026,7 @@ class MagicOceanGuardian:
                 self.step()
                 if once:
                     return 0
-                time.sleep(0.25 if self.bubble_watch_active else self.interval)
+                time.sleep(0.12 if self.bubble_watch_active else self.interval)
         except KeyboardInterrupt:
             self.log("Bot dihentikan oleh user")
             return 0
@@ -2121,7 +3040,7 @@ def main() -> int:
     parser.add_argument("--dry-run", action="store_true", help="Log aksi tanpa mengeksekusi force-stop/launch")
     args = parser.parse_args()
 
-    bot = MagicOceanGuardian(serial=args.serial, interval=max(0.5, args.interval), dry_run=args.dry_run)
+    bot = MagicOceanGuardian(serial=args.serial, interval=max(0.2, args.interval), dry_run=args.dry_run)
     return bot.run(once=args.once)
 
 
