@@ -69,6 +69,12 @@ Keterangan kategori: game-game ini **susah, tetapi tetap cair**. Data pencairan 
 |---:|---|---|---|---|---|:---:|
 | 1 | Magic Star Crush Journey **[RAWAN TERBLOKIR]** | `com.starlightgame.magicstarcrushjourney` | ACM PROJECTS & AUTOMATION LTD / Elias Galvin | **1 kali penarikan:** Rp951. Rawan terblokir. | Belum dicatat | [ ] |
 
+## Fruit Blade Pop Crush — Elias Galvin / ACM PROJECTS & AUTOMATION LTD [RAWAN TERBLOKIR]
+
+| No. | Game | Package `com` | Developer / perusahaan | Keterangan | Iklan Slot | Bot |
+|---:|---|---|---|---|---|:---:|
+| 1 | Fruit Blade Pop Crush **[RAWAN TERBLOKIR]** | `com.starlightgame.fruitbladepopcrush` | ACM PROJECTS & AUTOMATION LTD / Elias Galvin | Belum ada catatan penarikan; rawan terblokir. | Belum dicatat | [x] |
+
 ## Daftar Blocked
 
 | No. | Game | Package `com` | Developer / perusahaan | Keterangan |
