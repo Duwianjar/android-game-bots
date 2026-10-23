@@ -29,6 +29,9 @@ Keterangan kategori: game-game ini **cukup cepat setelah Lucky Match, tetapi jar
 | 4 | Color Sand Blast | `com.xteleremobilecompanyltd.ColorSandBlast` | Sporting 2024 / محمد السيد عبدالرحيم محمود | Cukup cepat setelah Lucky Match, tetapi jarang terdeteksi. | [ ] |
 | 5 | Toy Drop | `com.NAMMUNIS.ToyDrop` | Tidak tercantum / Ekanayake Mudiyanselage Prasanna Dilshan Ekanayake | Cukup cepat setelah Lucky Match, tetapi jarang terdeteksi. | [ ] |
 | 6 | Fruit Block-More Gifts | `com.xteleremobilecompanyltd.FruitBlock` | Sporting 2024 / محمد السيد عبدالرحيم محمود | Cukup cepat setelah Lucky Match, tetapi jarang terdeteksi. | [ ] |
+| 7 | Cute Fish Link Fun | `com.xteleremobilecompanyltd.FishLink` | Sporting 2024 / محمد السيد عبدالرحيم محمود | **Kemungkinan Lucky Food.** Belum ada catatan penarikan; cukup cepat setelah Lucky Match, tetapi jarang terdeteksi. | [ ] |
+| 8 | Happy Blocks | `com.xteleremobilecompanyltd.HappyBlocks` | Sporting 2024 / محمد السيد عبدالرحيم محمود | **Kemungkinan Lucky Food.** Belum ada catatan penarikan; cukup cepat setelah Lucky Match, tetapi jarang terdeteksi. | [ ] |
+| 9 | Magic Merge | `com.xteleremobilecompanyltd.MagicMerge` | Sporting 2024 / محمد السيد عبدالرحيم محمود | **Kemungkinan Lucky Food.** Belum ada catatan penarikan; cukup cepat setelah Lucky Match, tetapi jarang terdeteksi. | [ ] |
 
 ## 🏢 Kategori Game Berdasarkan Pengembang
 
