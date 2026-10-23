@@ -83,9 +83,10 @@ Keterangan kategori: game-game ini **susah, tetapi tetap cair**. Data pencairan 
 | 8 | Universe Match - Puzzle Game | `com.shadowgames.dev.universe.match` | VPLibros Group / ayo hanafi | **Tidak cair; kemungkinan ikut terblokir.** |
 | 9 | Bubble Crush | `com.bubble.crush.stick.magicgames` | YounEXE / YOUNES MOUMENE | Dipindahkan ke daftar Blocked; data penarikan belum dicatat. |
 | 10 | Gem Mine: Jewel Puzzle | `com.gem.mine.stick.magicgames` | YounEXE / YOUNES MOUMENE | **Pernah cair 2 kali:** Rp200 dan Rp50; setelah itu tidak cair lagi. |
-| 11 | Happy Blocks | `com.xteleremobilecompanyltd.HappyBlocks` | Sporting 2024 / محمد السيد عبدالرحيم محمود | Kemungkinan cair, tetapi status tidak berubah setelah 2 kali penarikan sekitar Rp20-an. |
-| 12 | Pet Plush Link | `com.NAMMUNIS.PetPlushLink` | Tidak tercantum / Ekanayake Mudiyanselage Prasanna Dilshan Ekanayake | Dipindahkan ke daftar Blocked; data penarikan belum dicatat. |
-| 13 | Candy Tile: Sweet Puzzle | `org.beastcoast.major.tilegame.candy` | Cano YH / Fouad Andaloussi | Dipindahkan ke daftar Blocked; data penarikan belum dicatat. |
+| 11 | Dessert Crush | `com.magicgames.dessert.crush.stick` | YounEXE / YOUNES MOUMENE | **Penarikan Rp50 tidak cair.** |
+| 12 | Happy Blocks | `com.xteleremobilecompanyltd.HappyBlocks` | Sporting 2024 / محمد السيد عبدالرحيم محمود | Kemungkinan cair, tetapi status tidak berubah setelah 2 kali penarikan sekitar Rp20-an. |
+| 13 | Pet Plush Link | `com.NAMMUNIS.PetPlushLink` | Tidak tercantum / Ekanayake Mudiyanselage Prasanna Dilshan Ekanayake | Dipindahkan ke daftar Blocked; data penarikan belum dicatat. |
+| 14 | Candy Tile: Sweet Puzzle | `org.beastcoast.major.tilegame.candy` | Cano YH / Fouad Andaloussi | Dipindahkan ke daftar Blocked; data penarikan belum dicatat. |
 
 ## 🏢 Kategori Game Berdasarkan Pengembang
 
