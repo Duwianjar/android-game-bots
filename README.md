@@ -11,11 +11,11 @@ Keterangan kategori: game-game ini terasa paling cepat, tetapi relatif mudah ter
 |---:|---|---|---|---|---|:---:|
 | 1 | Tiny Blast Magic Land | `com.kuaifastfa.tinyblastmagicland` | DEVVVS 0043 / SUKRIATI | **Peringkat pertama.** Laporan penarikan cair 10 kali (9 nominal tercatat): Rp117, Rp159, Rp239, Rp346, Rp824, sekitar Rp1.000 sebanyak 3 kali, dan sekitar Rp3.000; tidak cair 2 kali: Rp62 dan Rp104. | Lumayan | [ ] |
 | 2 | Blade Slice Master Fruit | `com.diancutter.bladeslicemasterfruit` | DEVVVS 0043 / SUKRIATI | **Peringkat kedua.** Cepat, tetapi mudah terblokir. Laporan penarikan cair 4 kali: Rp65, Rp144, Rp785, dan sekitar Rp3.000; tercatat 2 pencairan: Rp396 dan Rp531. | Lumayan | [ ] |
-| 3 | Magic Tile Match Joy | `com.tilefunyou.magictilematchjoy` | DEVVVS 0043 / SUKRIATI | **Urutan ketiga.** Cair 2 kali: Rp33 dan sekitar Rp1.000; gagal 3 kali: Rp32, Rp209, dan Rp209. | Belum dicatat | [ ] |
-| 4 | Tile Match Crush Frenzy | `com.tilegamer.tilematchcrushfrenzy` | DEVVVS 0043 / SUKRIATI | Cepat, tetapi mudah terblokir. Laporan penarikan cair 4 kali: Rp79, Rp167, Rp202, dan Rp541; pending 1 kali: Rp41. | Belum dicatat | [ ] |
-| 5 | [Juicy Slash Blade Fruit](juicy-slash-blade-fruit/) | `com.dudufun.juicyslashbladefruit` | DEVVVS 0043 / SUKRIATI | Cepat, tetapi mudah terblokir. Laporan penarikan cair 2 kali: Rp114 dan Rp132; tidak cair 1 kali: Rp33. | Belum dicatat | [x] |
-| 6 | Lucky Match Path Journey | `com.smallclickergamer.luckymatchpathjourney` | DEVVVS 0043 / SUKRIATI | Cepat, tetapi mudah terblokir. Laporan penarikan cair 2 kali: Rp51 dan Rp98; tidak cair 2 kali: Rp35 dan Rp116. | Belum dicatat | [ ] |
-| 7 | Cut Fruit Blade Master | `com.goodgamecut.cutfruitblademaster` | DEVVVS 0043 / SUKRIATI | Laporan penarikan cair 8 kali: Rp67, Rp68, Rp563, Rp632, sekitar Rp1.000, dan sekitar Rp2.000 sebanyak 3 kali; tidak cair 1 kali: sekitar Rp2.000. | Lumayan | [ ] |
+| 3 | Cut Fruit Blade Master | `com.goodgamecut.cutfruitblademaster` | DEVVVS 0043 / SUKRIATI | **Peringkat ketiga.** Laporan penarikan cair 8 kali: Rp67, Rp68, Rp563, Rp632, sekitar Rp1.000, dan sekitar Rp2.000 sebanyak 3 kali; tidak cair 1 kali: sekitar Rp2.000. | Lumayan | [ ] |
+| 4 | Magic Tile Match Joy | `com.tilefunyou.magictilematchjoy` | DEVVVS 0043 / SUKRIATI | **Urutan keempat.** Cair 2 kali: Rp33 dan sekitar Rp1.000; gagal 3 kali: Rp32, Rp209, dan Rp209. | Lumayan | [ ] |
+| 5 | Tile Match Crush Frenzy | `com.tilegamer.tilematchcrushfrenzy` | DEVVVS 0043 / SUKRIATI | Cepat, tetapi mudah terblokir. Laporan penarikan cair 4 kali: Rp79, Rp167, Rp202, dan Rp541; pending 1 kali: Rp41. | Belum dicatat | [ ] |
+| 6 | [Juicy Slash Blade Fruit](juicy-slash-blade-fruit/) | `com.dudufun.juicyslashbladefruit` | DEVVVS 0043 / SUKRIATI | Cepat, tetapi mudah terblokir. Laporan penarikan cair 2 kali: Rp114 dan Rp132; tidak cair 1 kali: Rp33. | Belum dicatat | [x] |
+| 7 | Lucky Match Path Journey | `com.smallclickergamer.luckymatchpathjourney` | DEVVVS 0043 / SUKRIATI | Cepat, tetapi mudah terblokir. Laporan penarikan cair 2 kali: Rp51 dan Rp98; tidak cair 2 kali: Rp35 dan Rp116. | Belum dicatat | [ ] |
 
 ## Lucky Food
 
