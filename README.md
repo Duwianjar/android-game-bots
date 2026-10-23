@@ -52,6 +52,13 @@ Keterangan kategori: game-game ini **susah, tetapi tetap cair**. Data pencairan 
 | 2 | Snake Out Jam | `com.wiwvitsugeh.snack` | Belum ditemukan di listing publik | **4 kali penarikan:** Rp147, Rp9.237, Rp288, dan Rp51. Setelah penarikan sekitar Rp9.000, proses terasa susah. | Mudah | [ ] |
 | 3 | Beach Soda Sort | `com.apnabankshop.beach` | ApnaBankShop / MRS BLAISE HELEN HAWLEY | **14 kali penarikan (15 nominal tercatat):** Rp642, Rp532, Rp88, Rp17, Rp47, Rp103, Rp93, Rp604, Rp546, Rp1.061, Rp530, Rp136, Rp68, Rp158, dan Rp89. | Lumayan | [ ] |
 
+## Arrow Unblock
+
+| No. | Game | Package `com` | Developer / perusahaan | Keterangan | Iklan Slot | Bot |
+|---:|---|---|---|---|---|:---:|
+| 1 | Soda Pop Sort | `com.frenzy.sort.pack` | Tidak tercantum / Junaid Hameed | Data penarikan belum dicatat. | Belum dicatat | [ ] |
+| 2 | Power Bank Blast | `com.power.pack.game` | Tidak tercantum / Junaid Hameed | Data penarikan belum dicatat. | Belum dicatat | [ ] |
+
 ## Daftar Blocked
 
 | No. | Game | Package `com` | Developer / perusahaan | Keterangan |
