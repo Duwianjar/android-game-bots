@@ -4,11 +4,15 @@ Koleksi bot otomatis untuk berbagai game Android yang menghasilkan saldo real mo
 
 ## 🌞 Lucky Match — Siang Aman
 
-Kategori operasional untuk aplikasi Lucky Match yang terdeteksi terpasang di HP. Target awal maksimal **Rp500** pada sesi siang; jika progres cepat dan melewati Rp500, pantau selama **1–2 hari** sebelum menaikkan durasi. Nilai reward dapat berubah menurut akun, perangkat, iklan, jaringan, dan kebijakan aplikasi.
+Kategori operasional untuk **5 game Lucky** yang terdeteksi terpasang di HP. Target awal maksimal **Rp500** pada sesi siang; jika progres cepat dan melewati Rp500, pantau selama **1–2 hari** sebelum menaikkan durasi. Nilai reward dapat berubah menurut akun, perangkat, iklan, jaringan, dan kebijakan aplikasi.
 
-| Game | Package `com` | Pengembang / perusahaan | Status di HP | Catatan |
-|---|---|---|---|---|
-| **Lucky Match Path Journey** | `com.smallclickergamer.luckymatchpathjourney` | DEVVVS 0043 / SUKRIATI | Terpasang, versi 1.0.8 | Kategori siang aman; target awal maksimal Rp500, lalu pantau 1–2 hari jika melewati target. |
+| Game | Package `com` | Pengembang / perusahaan | Status di HP |
+|---|---|---|---|
+| **Lucky Sort: Water Puzzle** | `com.Lucky.Sort.Water.Puzzle` | Ranat Studio / youssra touilta | Terpasang, versi 1.0.0.9 |
+| **Lucky Block Match Winner** | `com.hussainbdoures.luckyblockmatchwinner` | The Global Webs / mohamed ahmed ibrahim salem | Terpasang, versi 1.0.2 |
+| **Lucky Pets Blast!** | `com.lucky.petsblast` | DongYing SmartEnergy / 大连东盈智能科技有限公司 | Terpasang, versi 1.1.3 |
+| **Lucky Match Path Journey** | `com.smallclickergamer.luckymatchpathjourney` | DEVVVS 0043 / SUKRIATI | Terpasang, versi 1.0.8 |
+| **Lucky Arrow Escape** | `com.starlightgame.luckyarrowescaper` | Elias Galvin / ACM PROJECTS & AUTOMATION LTD | Terpasang, versi 1.0.3 |
 
 ## 🏢 Kategori Game Berdasarkan Pengembang
 
