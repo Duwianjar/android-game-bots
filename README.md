@@ -99,7 +99,7 @@ Keterangan kategori: game-game ini **susah, tetapi tetap cair**. Data pencairan 
 
 - [Magic Ocean Tile Crush](magic-ocean-tile-crush/) — `com.starlightgame.magicoceantilecrush`
 - [Woodland Tile Match](woodland-tile-matcher/) — `com.starlightgame.woodlandtilematcher`
-- [Crazy Fruit Blade Winner](crazy-fruit-blade-winner/) — `com.starlightgame.crazyfruitbladewinner`
+- [Crazy Fruit Blade Winner](crazy-fruit-blade-winner/) **[RAWAN BLOCK IKLAN]** — `com.starlightgame.crazyfruitbladewinner`
 - [Fruit Blade Pop Crush](fruit-blade-pop-crush/) — `com.starlightgame.fruitbladepopcrush`
 - [Lucky Arrow Escape](lucky-arrow-escaper/) — `com.starlightgame.luckyarrowescaper`
 
@@ -209,7 +209,7 @@ Bot universal untuk auto-clicking dengan customizable coordinates.
 ### 15. Telegram Helper Bot (`telegram-helper/`)
 Helper bot untuk notifikasi Telegram dan monitoring saldo.
 
-### 16. Crazy Fruit Blade Winner Guardian Bot (`crazy-fruit-blade-winner/`)
+### 16. Crazy Fruit Blade Winner Guardian Bot (`crazy-fruit-blade-winner/`) — **[RAWAN BLOCK IKLAN]**
 Clone dari Fruit Blade Pop Crush untuk game Crazy Fruit Blade Winner. Package: `com.starlightgame.crazyfruitbladewinner`.
 
 
