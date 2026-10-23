@@ -32,12 +32,6 @@ Keterangan kategori: game-game ini **cukup cepat setelah Lucky Match, tetapi jar
 | 7 | Happy Blocks | `com.xteleremobilecompanyltd.HappyBlocks` | Sporting 2024 / محمد السيد عبدالرحيم محمود | **Blocked.** Sudah 2 kali penarikan sekitar Rp20-an, tetapi tidak cair. | Blocked | [ ] |
 | 8 | Magic Merge | `com.xteleremobilecompanyltd.MagicMerge` | Sporting 2024 / محمد السيد عبدالرحيم محمود | **Kemungkinan Lucky Food.** Belum ada catatan penarikan; cukup cepat setelah Lucky Match, tetapi jarang terdeteksi. | Belum dicatat | [ ] |
 
-## Daftar Blocked
-
-| No. | Game | Package `com` | Developer / perusahaan | Keterangan |
-|---:|---|---|---|---|
-| 1 | Happy Blocks | `com.xteleremobilecompanyltd.HappyBlocks` | Sporting 2024 / محمد السيد عبدالرحيم محمود | Sudah 2 kali penarikan sekitar Rp20-an, tetapi tidak cair. |
-
 ## Spider Rope
 
 Keterangan kategori: game-game ini **susah, tetapi tetap cair**. Data pencairan dapat berbeda menurut akun, perangkat, iklan, jaringan, dan kebijakan aplikasi.
@@ -49,6 +43,12 @@ Keterangan kategori: game-game ini **susah, tetapi tetap cair**. Data pencairan 
 | 3 | Monster Clear | `com.antiboom.puzzle.monster.clear.game` | Cano YH / Fouad Andaloussi | Susah, tetapi tetap cair. | Belum dicatat | [ ] |
 | 4 | Fresh Veggie Pop | `com.fresh.veggie.pop` | Tidak tercantum / BAE Publishing LLC | Susah, tetapi tetap cair. | Belum dicatat | [ ] |
 | 5 | Bus Jam Parking Master | `com.busjam.parking.master` | Tidak tercantum / أحمد البكري خميس موسي | Susah, tetapi tetap cair. | Belum dicatat | [x] |
+
+## Daftar Blocked
+
+| No. | Game | Package `com` | Developer / perusahaan | Keterangan |
+|---:|---|---|---|---|
+| 1 | Happy Blocks | `com.xteleremobilecompanyltd.HappyBlocks` | Sporting 2024 / محمد السيد عبدالرحيم محمود | Kemungkinan cair, tetapi status tidak berubah setelah 2 kali penarikan sekitar Rp20-an. |
 
 ## 🏢 Kategori Game Berdasarkan Pengembang
 
