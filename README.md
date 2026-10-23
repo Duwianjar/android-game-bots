@@ -17,6 +17,10 @@ Keterangan kategori: game-game ini terasa paling cepat, tetapi relatif mudah ter
 | 6 | Lucky Match Path Journey | `com.smallclickergamer.luckymatchpathjourney` | Cepat, tetapi mudah terblokir. Laporan penarikan cair 2 kali: Rp51 dan Rp98; tidak cair 2 kali: Rp35 dan Rp116. | [ ] |
 | 7 | Cut Fruit Blade Master | `com.goodgamecut.cutfruitblademaster` | Laporan penarikan cair 8 kali: Rp67, Rp68, Rp563, Rp632, sekitar Rp1.000, dan sekitar Rp2.000 sebanyak 3 kali; tidak cair 1 kali: sekitar Rp2.000. | [ ] |
 
+## Lucky Food
+
+Data game untuk kategori **Lucky Food** belum ditambahkan.
+
 ## 🏢 Kategori Game Berdasarkan Pengembang
 
 > Nama pengembang/perusahaan dan package di bawah ini berdasarkan metadata Google Play serta konfigurasi bot yang ada di repository. Nama perusahaan dapat berbeda dari nama brand pengembang.
