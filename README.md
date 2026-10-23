@@ -17,6 +17,13 @@ Keterangan kategori: game-game ini terasa paling cepat, tetapi relatif mudah ter
 | 6 | [Juicy Slash Blade Fruit](juicy-slash-blade-fruit/) | `com.dudufun.juicyslashbladefruit` | DEVVVS 0043 / SUKRIATI | Cepat, tetapi mudah terblokir. Laporan penarikan cair 2 kali: Rp114 dan Rp132; tidak cair 1 kali: Rp33. | Belum dicatat | [x] |
 | 7 | Lucky Match Path Journey | `com.smallclickergamer.luckymatchpathjourney` | DEVVVS 0043 / SUKRIATI | Cepat, tetapi mudah terblokir. Laporan penarikan cair 2 kali: Rp51 dan Rp98; tidak cair 2 kali: Rp35 dan Rp116. | Belum dicatat | [ ] |
 
+## Magic Ocean & Woodland Tile Match — ACM PROJECTS & AUTOMATION LTD / Elias Galvin
+
+| No. | Game | Package `com` | Developer / perusahaan | Keterangan | Iklan Slot | Bot |
+|---:|---|---|---|---|---|:---:|
+| 1 | Magic Ocean Tile Crush **[RAWAN TERBLOKIR]** | `com.starlightgame.magicoceantilecrush` | ACM PROJECTS & AUTOMATION LTD / Elias Galvin | Belum ada catatan penarikan; rawan terblokir. | Belum dicatat | [x] |
+| 2 | Woodland Tile Match **[RAWAN TERBLOKIR]** | `com.starlightgame.woodlandtilematcher` | ACM PROJECTS & AUTOMATION LTD / Elias Galvin | Belum ada catatan penarikan; rawan terblokir. | Belum dicatat | [x] |
+
 ## Lucky Food
 
 Keterangan kategori: game-game ini **cukup cepat setelah Lucky Match, tetapi jarang terdeteksi**. Nama developer/perusahaan dicocokkan dari metadata Google Play.
@@ -103,8 +110,8 @@ Keterangan kategori: game-game ini **susah, tetapi tetap cair**. Data pencairan 
 
 ### ACM PROJECTS & AUTOMATION LTD — Elias Galvin
 
-- [Magic Ocean Tile Crush](magic-ocean-tile-crush/) — `com.starlightgame.magicoceantilecrush`
-- [Woodland Tile Match](woodland-tile-matcher/) — `com.starlightgame.woodlandtilematcher`
+- [Magic Ocean Tile Crush](magic-ocean-tile-crush/) **[RAWAN TERBLOKIR]** — `com.starlightgame.magicoceantilecrush`
+- [Woodland Tile Match](woodland-tile-matcher/) **[RAWAN TERBLOKIR]** — `com.starlightgame.woodlandtilematcher`
 - [Crazy Fruit Blade Winner](crazy-fruit-blade-winner/) **[RAWAN BLOCK IKLAN]** — `com.starlightgame.crazyfruitbladewinner` — Lumayan, tetapi rawan block iklan.
 - [Fruit Blade Pop Crush](fruit-blade-pop-crush/) — `com.starlightgame.fruitbladepopcrush`
 - [Lucky Arrow Escape](lucky-arrow-escaper/) — `com.starlightgame.luckyarrowescaper`
