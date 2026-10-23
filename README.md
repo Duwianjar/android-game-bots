@@ -38,6 +38,18 @@ Keterangan kategori: game-game ini **cukup cepat setelah Lucky Match, tetapi jar
 |---:|---|---|---|---|
 | 1 | Happy Blocks | `com.xteleremobilecompanyltd.HappyBlocks` | Sporting 2024 / محمد السيد عبدالرحيم محمود | Sudah 2 kali penarikan sekitar Rp20-an, tetapi tidak cair. |
 
+## Spider Rope
+
+Keterangan kategori: game-game ini **susah, tetapi tetap cair**. Data pencairan dapat berbeda menurut akun, perangkat, iklan, jaringan, dan kebijakan aplikasi.
+
+| No. | Game | Package `com` | Developer / perusahaan | Keterangan | Iklan Slot | Bot |
+|---:|---|---|---|---|---|:---:|
+| 1 | Bottle Jam Solver | `com.bottle.jam.solver` | Tidak tercantum / UNJIBBED LTD | Susah, tetapi tetap cair. | Belum dicatat | [ ] |
+| 2 | Magical Gems Match 3 | `com.glow.magical.match3` | DKSHUBDeveloper / Ghulam Yaseen | Susah, tetapi tetap cair. | Belum dicatat | [x] |
+| 3 | Monster Clear | `com.antiboom.puzzle.monster.clear.game` | Cano YH / Fouad Andaloussi | Susah, tetapi tetap cair. | Belum dicatat | [ ] |
+| 4 | Fresh Veggie Pop | `com.fresh.veggie.pop` | Tidak tercantum / BAE Publishing LLC | Susah, tetapi tetap cair. | Belum dicatat | [ ] |
+| 5 | Bus Jam Parking Master | `com.busjam.parking.master` | Tidak tercantum / أحمد البكري خميس موسي | Susah, tetapi tetap cair. | Belum dicatat | [x] |
+
 ## 🏢 Kategori Game Berdasarkan Pengembang
 
 > Nama pengembang/perusahaan dan package di bawah ini berdasarkan metadata Google Play serta konfigurasi bot yang ada di repository. Nama perusahaan dapat berbeda dari nama brand pengembang.
