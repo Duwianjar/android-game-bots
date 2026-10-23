@@ -41,7 +41,7 @@ Keterangan kategori: game-game ini **susah, tetapi tetap cair**. Data pencairan 
 | 1 | Bottle Jam Solver | `com.bottle.jam.solver` | Tidak tercantum / UNJIBBED LTD | Game susah, penarikan sedikit. **4 kali penarikan:** Rp206, Rp108, Rp200, dan Rp202. | Belum dicatat | [ ] |
 | 2 | Magical Gems Match 3 | `com.glow.magical.match3` | DKSHUBDeveloper / Ghulam Yaseen | **13 kali penarikan:** Rp20, Rp89, Rp51, Rp81, Rp210, Rp107, Rp182, Rp1.050, Rp354, Rp531, Rp206, Rp273, dan Rp290. Susah, tetapi tetap cair. | Lumayan | [x] |
 | 3 | Monster Clear | `com.antiboom.puzzle.monster.clear.game` | Cano YH / Fouad Andaloussi | Baru 4 kali penarikan dan belum cair; kemungkinan slot sulit. Nominal penarikan: Rp140, Rp301, Rp134, dan Rp57. | Susah | [ ] |
-| 4 | Fresh Veggie Pop | `com.fresh.veggie.pop` | Tidak tercantum / BAE Publishing LLC | Susah, tetapi tetap cair. | Belum dicatat | [ ] |
+| 4 | Fresh Veggie Pop | `com.fresh.veggie.pop` | Tidak tercantum / BAE Publishing LLC | **4 kali penarikan:** Rp20, Rp95, Rp256, dan Rp74. Susah, tetapi tetap cair. | Belum dicatat | [ ] |
 | 5 | Bus Jam Parking Master | `com.busjam.parking.master` | Tidak tercantum / أحمد البكري خميس موسي | Susah, tetapi tetap cair. | Belum dicatat | [x] |
 
 ## Daftar Blocked
