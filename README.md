@@ -63,11 +63,11 @@ Keterangan kategori: game-game ini **susah, tetapi tetap cair**. Data pencairan 
 | 1 | Soda Pop Sort | `com.frenzy.sort.pack` | Tidak tercantum / Junaid Hameed | **3 kali penarikan:** Rp29, Rp3.026, dan Rp88. | Lumayan | [ ] |
 | 2 | Power Bank Blast | `com.power.pack.game` | Tidak tercantum / Junaid Hameed | **1 kali penarikan:** Rp537. | Belum dicatat | [ ] |
 
-## Magic Star Crush Journey — Elias Galvin / ACM PROJECTS & AUTOMATION LTD
+## Magic Star Crush Journey — Elias Galvin / ACM PROJECTS & AUTOMATION LTD [RAWAN TERBLOKIR]
 
 | No. | Game | Package `com` | Developer / perusahaan | Keterangan | Iklan Slot | Bot |
 |---:|---|---|---|---|---|:---:|
-| 1 | Magic Star Crush Journey | `com.starlightgame.magicstarcrushjourney` | ACM PROJECTS & AUTOMATION LTD / Elias Galvin | **1 kali penarikan:** Rp951. | Belum dicatat | [ ] |
+| 1 | Magic Star Crush Journey **[RAWAN TERBLOKIR]** | `com.starlightgame.magicstarcrushjourney` | ACM PROJECTS & AUTOMATION LTD / Elias Galvin | **1 kali penarikan:** Rp951. Rawan terblokir. | Belum dicatat | [ ] |
 
 ## Daftar Blocked
 
