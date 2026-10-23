@@ -57,7 +57,7 @@ Keterangan kategori: game-game ini **susah, tetapi tetap cair**. Data pencairan 
 | No. | Game | Package `com` | Developer / perusahaan | Keterangan | Iklan Slot | Bot |
 |---:|---|---|---|---|---|:---:|
 | 1 | Soda Pop Sort | `com.frenzy.sort.pack` | Tidak tercantum / Junaid Hameed | **3 kali penarikan:** Rp29, Rp3.026, dan Rp88. | Lumayan | [ ] |
-| 2 | Power Bank Blast | `com.power.pack.game` | Tidak tercantum / Junaid Hameed | Data penarikan belum dicatat. | Belum dicatat | [ ] |
+| 2 | Power Bank Blast | `com.power.pack.game` | Tidak tercantum / Junaid Hameed | **1 kali penarikan:** Rp537. | Belum dicatat | [ ] |
 
 ## Daftar Blocked
 
