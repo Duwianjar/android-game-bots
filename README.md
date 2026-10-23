@@ -44,6 +44,14 @@ Keterangan kategori: game-game ini **susah, tetapi tetap cair**. Data pencairan 
 | 4 | Fresh Veggie Pop | `com.fresh.veggie.pop` | Tidak tercantum / BAE Publishing LLC | **4 kali penarikan:** Rp20, Rp95, Rp256, dan Rp74. Susah, tetapi tetap cair. | Belum dicatat | [ ] |
 | 5 | Bottle Jam Solver | `com.bottle.jam.solver` | Tidak tercantum / UNJIBBED LTD | Game susah, penarikan sedikit. **4 kali penarikan:** Rp206, Rp108, Rp200, dan Rp202. | Belum dicatat | [ ] |
 
+## Bubble Crush
+
+| No. | Game | Package `com` | Developer / perusahaan | Keterangan | Iklan Slot | Bot |
+|---:|---|---|---|---|---|:---:|
+| 1 | Beach Soda Sort | `com.apnabankshop.beach` | ApnaBankShop / MRS BLAISE HELEN HAWLEY | Data penarikan belum dicatat. | Belum dicatat | [ ] |
+| 2 | Snake Out Jam | `com.wiwvitsugeh.snack` | Belum ditemukan di listing publik | Data developer dan penarikan belum tercatat. | Belum dicatat | [ ] |
+| 3 | Color Power Pop | `com.giraffeeapp.power` | Giraffee App / Muhammad Ahsan Saleem | Data penarikan belum dicatat. | Belum dicatat | [x] |
+
 ## Daftar Blocked
 
 | No. | Game | Package `com` | Developer / perusahaan | Keterangan |
