@@ -103,6 +103,7 @@ Keterangan kategori: game-game ini **susah, tetapi tetap cair**. Data pencairan 
 | 15 | Tasty Tile | Belum diketahui | CLEMMIE INDUSTRY LIMITED | **Pernah menarik Rp10 dan Rp50; setelah itu pengajuan Rp50 tidak cair/lama.** |
 | 16 | Fruit Blast | Belum diketahui | Funny Video Collections | Dipindahkan ke daftar Blocked; data penarikan belum dicatat. |
 | 17 | Treasure Elimination | Belum diketahui | Funny Video Collections | Dipindahkan ke daftar Blocked; data penarikan belum dicatat. |
+| 18 | Orb Quest | Belum diketahui | Belum diketahui | Tidak ditemukan di HP saat pengecekan; dimasukkan ke daftar Blocked sesuai permintaan. |
 
 ## 🏢 Kategori Game Berdasarkan Pengembang
 
