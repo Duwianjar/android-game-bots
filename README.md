@@ -33,10 +33,9 @@ Keterangan kategori: game-game ini **cukup cepat setelah Lucky Match, tetapi jar
 | 8 | Magic Merge | `com.xteleremobilecompanyltd.MagicMerge` | Sporting 2024 / محمد السيد عبدالرحيم محمود | **Kemungkinan Lucky Food.** Belum ada catatan penarikan; cukup cepat setelah Lucky Match, tetapi jarang terdeteksi. | Belum dicatat | [ ] |
 | 9 | **NEW — Animal Blast: Win Prize Game** | `com.jungle.bear.tiger.wild.animal.eliminate` | Faisal Developers / Salman Khan | Developer sama dengan Zoo Tile. **1 kali penarikan:** Rp397. Posisi tetap. | Belum dicatat | [x] |
 | 10 | **NEW — Mahjong Master: Win Real Cash!** | `com.mahong.master.tours.blossom.mingle` | Faisal Developers / Salman Khan | Developer sama dengan Zoo Tile. **1 kali penarikan:** Rp105. Posisi tetap. | Belum dicatat | [ ] |
-| 11 | **NEW — Catch Cute Pets: Tile Match** | `com.NAMMUNIS.CatchCutePets` | Tidak tercantum / Ekanayake Mudiyanselage Prasanna Dilshan Ekanayake | Developer sama dengan Toy Drop; data penarikan belum dicatat. | Belum dicatat | [ ] |
-| 12 | **NEW — Fortune Tile Mahjong** | `com.NAMMUNIS.FortuneTileMahjong` | Tidak tercantum / Ekanayake Mudiyanselage Prasanna Dilshan Ekanayake | Developer sama dengan Toy Drop; data penarikan belum dicatat. | Belum dicatat | [ ] |
-| 13 | **NEW — Pet Plush Link** | `com.NAMMUNIS.PetPlushLink` | Tidak tercantum / Ekanayake Mudiyanselage Prasanna Dilshan Ekanayake | Developer sama dengan Toy Drop; data penarikan belum dicatat. | Belum dicatat | [ ] |
-| 14 | **NEW — Cute Fish Link Fun** | `com.xteleremobilecompanyltd.FishLink` | Sporting 2024 / محمد السيد عبدالرحيم محمود | Developer sama dengan Veg Cup Blast; belum ada catatan penarikan. | Belum dicatat | [ ] |
+| 11 | **NEW — Fortune Tile Mahjong** | `com.NAMMUNIS.FortuneTileMahjong` | Tidak tercantum / Ekanayake Mudiyanselage Prasanna Dilshan Ekanayake | Developer sama dengan Toy Drop; data penarikan belum dicatat. | Belum dicatat | [ ] |
+| 12 | **NEW — Pet Plush Link** | `com.NAMMUNIS.PetPlushLink` | Tidak tercantum / Ekanayake Mudiyanselage Prasanna Dilshan Ekanayake | Developer sama dengan Toy Drop; data penarikan belum dicatat. | Belum dicatat | [ ] |
+| 13 | **NEW — Cute Fish Link Fun** | `com.xteleremobilecompanyltd.FishLink` | Sporting 2024 / محمد السيد عبدالرحيم محمود | Developer sama dengan Veg Cup Blast; belum ada catatan penarikan. | Belum dicatat | [ ] |
 
 ## Spider Rope
 
