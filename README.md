@@ -2,6 +2,14 @@
 
 Koleksi bot otomatis untuk berbagai game Android yang menghasilkan saldo real money.
 
+## 🌞 Lucky Match — Siang Aman
+
+Kategori operasional untuk aplikasi Lucky Match yang terdeteksi terpasang di HP. Target awal maksimal **Rp500** pada sesi siang; jika progres cepat dan melewati Rp500, pantau selama **1–2 hari** sebelum menaikkan durasi. Nilai reward dapat berubah menurut akun, perangkat, iklan, jaringan, dan kebijakan aplikasi.
+
+| Game | Package `com` | Pengembang / perusahaan | Status di HP | Catatan |
+|---|---|---|---|---|
+| **Lucky Match Path Journey** | `com.smallclickergamer.luckymatchpathjourney` | DEVVVS 0043 / SUKRIATI | Terpasang, versi 1.0.8 | Kategori siang aman; target awal maksimal Rp500, lalu pantau 1–2 hari jika melewati target. |
+
 ## 🏢 Kategori Game Berdasarkan Pengembang
 
 > Nama pengembang/perusahaan dan package di bawah ini berdasarkan metadata Google Play serta konfigurasi bot yang ada di repository. Nama perusahaan dapat berbeda dari nama brand pengembang.
