@@ -2,6 +2,46 @@
 
 Koleksi bot otomatis untuk berbagai game Android yang menghasilkan saldo real money.
 
+## 🏢 Kategori Game Berdasarkan Pengembang
+
+> Nama pengembang/perusahaan dan package di bawah ini berdasarkan metadata Google Play serta konfigurasi bot yang ada di repository. Nama perusahaan dapat berbeda dari nama brand pengembang.
+
+### ACM PROJECTS & AUTOMATION LTD — Elias Galvin
+
+- [Magic Ocean Tile Crush](magic-ocean-tile-crush/) — `com.starlightgame.magicoceantilecrush`
+- [Woodland Tile Match](woodland-tile-matcher/) — `com.starlightgame.woodlandtilematcher`
+- [Crazy Fruit Blade Winner](crazy-fruit-blade-winner/) — `com.starlightgame.crazyfruitbladewinner`
+- [Fruit Blade Pop Crush](fruit-blade-pop-crush/) — `com.starlightgame.fruitbladepopcrush`
+- [Lucky Arrow Escape](lucky-arrow-escaper/) — `com.starlightgame.luckyarrowescaper`
+
+### DEVVVS 0043 — SUKRIATI
+
+- [Juicy Slash Blade Fruit](juicy-slash-blade-fruit/) — `com.dudufun.juicyslashbladefruit`
+- [Lucky Fruit Bubble Dodge](lucky-fruit-bubble-dodge/) — `com.newgameclick.luckyfruitbubbledodge`
+
+### أحمد البكري خميس موسي
+
+- [Bus Jam Parking Master](bus-jam-parking/) — `com.busjam.parking.master`
+- [Coin Sort Dash](coin-dash-shot/) — `com.coin.sortdash.remove`
+
+### Pengembang lain
+
+- [Soda Pack Puzzle](soda-pack-puzzle/) — AbkAppStore / Abubakar Ahmad Yusuf — `com.soda.pack.puzzle`
+- [Soda Jam Puzzle](soda-jam-puzzle/) — Muhammad Armghan Abbas — `com.armg.sodajam`
+- [Lucky Mahjong Blast!](lucky-mahjong/) — DongYing SmartEnergy — `com.lucky.mahjong2`
+- [Juice Pack Frenzy](juice-pack/) — ApnaBankShop — `com.apnabankshop.juice`
+- [Bus Parking Dash](bus-parking-dash/) — Freelancer Jibon — `com.bus.parking.dash`
+- [Crazy Cans Sort](can-sort/) — BAE Publishing LLC — `com.cans.game.crazy`
+- [Color Power Pop](color-power-pop/) — Giraffee App — `com.giraffeeapp.power`
+- [Animal Blast: Win Prize Game](jungle-animal-eliminate/) — Faisal Developers — `com.jungle.bear.tiger.wild.animal.eliminate`
+- [Magical Gems Match 3](magic-gems-match/) — DKSHUBDeveloper — `com.glow.magical.match3`
+- [Juicy Tile](tile-juicy/) — Modhon Soft IT — `com.spiritbreaker.games.tilejuicy`
+
+### Belum terverifikasi
+
+- [Dragon Arrow Escape](dragon-arrow-escape/) — package lokal `com.dragonarrowescape.game`; pengembang/perusahaan belum ditemukan pada listing Google Play publik.
+- [Candy Crush](candy-crush/) — package dan pengembang belum teridentifikasi dari file bot yang ada.
+
 ## 🏆 Peringkat Game Rekomendasi
 
 > Catatan lapangan: peringkat ini berdasarkan pengamatan lokal dari log/bot yang sudah dicoba. Angka bisa berubah mengikuti reset harian, stok iklan, akun, device, dan kondisi jaringan.
