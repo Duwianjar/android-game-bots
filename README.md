@@ -24,7 +24,7 @@ Keterangan kategori: game-game ini **cukup cepat setelah Lucky Match, tetapi jar
 | No. | Game | Package `com` | Developer / perusahaan | Keterangan | Bot |
 |---:|---|---|---|---|:---:|
 | 1 | Tangkap Hewan Lucu: Permainan Tile *(Zoo Tile: Win Mega Rewards!)* | `com.zoo.tile.cute.animal.elephant.mouse.fox` | Faisal Developers / Salman Khan | **15 kali penarikan dan lancar semua.** Nominal dari kecil ke besar: Rp20, Rp50, Rp70, Rp104, Rp214, Rp279, Rp307, Rp597, Rp639, Rp964, Rp1.226, Rp1.594, Rp1.772, Rp1.866, dan Rp8.022. | [ ] |
-| 2 | Cup Babe Block | `com.xteleremobilecompanyltd.CupBabeBlock` | Sporting 2024 / محمد السيد عبدالرحيم محمود | Cukup cepat setelah Lucky Match, tetapi jarang terdeteksi. | [ ] |
+| 2 | Cup Babe Block | `com.xteleremobilecompanyltd.CupBabeBlock` | Sporting 2024 / محمد السيد عبدالرحيم محمود | **11 kali penarikan:** Rp20, Rp78, Rp73, Rp170, Rp504, Rp73, Rp71, Rp176, Rp553, Rp210, dan Rp310. Cukup cepat setelah Lucky Match, tetapi jarang terdeteksi. | [ ] |
 | 3 | Veg Cup Blast | `com.xteleremobilecompanyltd.VegCupBlast` | Sporting 2024 / محمد السيد عبدالرحيم محمود | Cukup cepat setelah Lucky Match, tetapi jarang terdeteksi. | [ ] |
 | 4 | Color Sand Blast | `com.xteleremobilecompanyltd.ColorSandBlast` | Sporting 2024 / محمد السيد عبدالرحيم محمود | Cukup cepat setelah Lucky Match, tetapi jarang terdeteksi. | [ ] |
 | 5 | Toy Drop | `com.NAMMUNIS.ToyDrop` | Tidak tercantum / Ekanayake Mudiyanselage Prasanna Dilshan Ekanayake | Cukup cepat setelah Lucky Match, tetapi jarang terdeteksi. | [ ] |
