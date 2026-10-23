@@ -19,7 +19,16 @@ Keterangan kategori: game-game ini terasa paling cepat, tetapi relatif mudah ter
 
 ## Lucky Food
 
-Data game untuk kategori **Lucky Food** belum ditambahkan.
+Keterangan kategori: game-game ini **cukup cepat setelah Lucky Match, tetapi jarang terdeteksi**. Nama developer/perusahaan dicocokkan dari metadata Google Play.
+
+| No. | Game | Package `com` | Developer / perusahaan | Keterangan | Bot |
+|---:|---|---|---|---|:---:|
+| 1 | Tangkap Hewan Lucu: Permainan Tile *(Zoo Tile: Win Mega Rewards!)* | `com.zoo.tile.cute.animal.elephant.mouse.fox` | Faisal Developers / Salman Khan | Cukup cepat setelah Lucky Match, tetapi jarang terdeteksi. | [ ] |
+| 2 | Cup Babe Block | `com.xteleremobilecompanyltd.CupBabeBlock` | Sporting 2024 / محمد السيد عبدالرحيم محمود | Cukup cepat setelah Lucky Match, tetapi jarang terdeteksi. | [ ] |
+| 3 | Veg Cup Blast | `com.xteleremobilecompanyltd.VegCupBlast` | Sporting 2024 / محمد السيد عبدالرحيم محمود | Cukup cepat setelah Lucky Match, tetapi jarang terdeteksi. | [ ] |
+| 4 | Color Sand Blast | `com.xteleremobilecompanyltd.ColorSandBlast` | Sporting 2024 / محمد السيد عبدالرحيم محمود | Cukup cepat setelah Lucky Match, tetapi jarang terdeteksi. | [ ] |
+| 5 | Toy Drop | `com.NAMMUNIS.ToyDrop` | Tidak tercantum / Ekanayake Mudiyanselage Prasanna Dilshan Ekanayake | Cukup cepat setelah Lucky Match, tetapi jarang terdeteksi. | [ ] |
+| 6 | Fruit Block-More Gifts | `com.xteleremobilecompanyltd.FruitBlock` | Sporting 2024 / محمد السيد عبدالرحيم محمود | Cukup cepat setelah Lucky Match, tetapi jarang terdeteksi. | [ ] |
 
 ## 🏢 Kategori Game Berdasarkan Pengembang
 
