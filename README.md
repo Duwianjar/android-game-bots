@@ -106,6 +106,7 @@ Keterangan kategori: game-game ini **susah, tetapi tetap cair**. Data pencairan 
 | 18 | Orb Quest | Belum diketahui | Belum diketahui | Tidak ditemukan di HP saat pengecekan; dimasukkan ke daftar Blocked sesuai permintaan. |
 | 19 | Patch Panic | `com.match3.game.patch.panic.terraform` | Belum diketahui | Ditemukan di HP; dimasukkan ke daftar Blocked sesuai permintaan. |
 | 20 | Sea Synth | `com.waterworld.games.tap.seasynth` | Belum diketahui | Ditemukan di HP; dimasukkan ke daftar Blocked sesuai permintaan. |
+| 21 | Garden Badges | `com.paldev.production.game.garden` | Belum diketahui | Ditemukan di HP; dimasukkan ke daftar Blocked sesuai permintaan. |
 
 ## 🏢 Kategori Game Berdasarkan Pengembang
 
