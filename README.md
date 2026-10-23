@@ -104,6 +104,7 @@ Keterangan kategori: game-game ini **susah, tetapi tetap cair**. Data pencairan 
 | 16 | Fruit Blast | Belum diketahui | Funny Video Collections | Dipindahkan ke daftar Blocked; data penarikan belum dicatat. |
 | 17 | Treasure Elimination | Belum diketahui | Funny Video Collections | Dipindahkan ke daftar Blocked; data penarikan belum dicatat. |
 | 18 | Orb Quest | Belum diketahui | Belum diketahui | Tidak ditemukan di HP saat pengecekan; dimasukkan ke daftar Blocked sesuai permintaan. |
+| 19 | Patch Panic | `com.match3.game.patch.panic.terraform` | Belum diketahui | Ditemukan di HP; dimasukkan ke daftar Blocked sesuai permintaan. |
 
 ## 🏢 Kategori Game Berdasarkan Pengembang
 
