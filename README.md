@@ -9,7 +9,7 @@ Keterangan kategori: game-game ini terasa paling cepat, tetapi relatif mudah ter
 
 | Game | Package `com` | Keterangan | Bot |
 |---|---|---|:---:|
-| Blade Slice Master Fruit | `com.diancutter.bladeslicemasterfruit` | Cepat, tetapi mudah terblokir | [ ] |
+| Blade Slice Master Fruit | `com.diancutter.bladeslicemasterfruit` | Cepat, tetapi mudah terblokir. Laporan penarikan cair 4 kali: Rp65, Rp144, Rp785, dan sekitar Rp3.000; tercatat 2 pencairan: Rp396 dan Rp531. | [ ] |
 | Tile Match Crush Frenzy | `com.tilegamer.tilematchcrushfrenzy` | Cepat, tetapi mudah terblokir | [ ] |
 | Lucky Match Path Journey | `com.smallclickergamer.luckymatchpathjourney` | Cepat, tetapi mudah terblokir | [ ] |
 | Magic Tile Match Joy | `com.tilefunyou.magictilematchjoy` | Cepat, tetapi mudah terblokir | [ ] |
