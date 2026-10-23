@@ -45,7 +45,7 @@ Keterangan kategori: game-game ini **susah, tetapi tetap cair**. Data pencairan 
 | 3 | Monster Clear | `com.antiboom.puzzle.monster.clear.game` | Cano YH / Fouad Andaloussi | Baru 4 kali penarikan dan belum cair; kemungkinan slot sulit. Nominal penarikan: Rp140, Rp301, Rp134, dan Rp57. | Susah | [ ] |
 | 4 | Fresh Veggie Pop | `com.fresh.veggie.pop` | Tidak tercantum / BAE Publishing LLC | **4 kali penarikan:** Rp20, Rp95, Rp256, dan Rp74. Susah, tetapi tetap cair. | Belum dicatat | [ ] |
 | 5 | Bottle Jam Solver | `com.bottle.jam.solver` | Tidak tercantum / UNJIBBED LTD | Game susah, penarikan sedikit. **4 kali penarikan:** Rp206, Rp108, Rp200, dan Rp202. | Belum dicatat | [ ] |
-| 6 | **NEW — Coin Sort Dash** | `com.coin.sortdash.remove` | أحمد البكري خميس موسي | Developer sama dengan Bus Jam Parking; data penarikan belum dicatat. | Belum dicatat | [x] |
+| 6 | **NEW — Coin Sort Dash** | `com.coin.sortdash.remove` | أحمد البكري خميس موسي | Developer sama dengan Bus Jam Parking. **3 kali penarikan:** Rp1.017, Rp627, dan Rp20. | Lumayan | [x] |
 | 7 | **NEW — Pyramid Gem Blast** | `com.pyramid.gem.blast` | أحمد البكري خميس موسي | Developer sama dengan Bus Jam Parking; data penarikan belum dicatat. | Belum dicatat | [ ] |
 | 8 | **NEW — Candy Tile: Sweet Puzzle** | `org.beastcoast.major.tilegame.candy` | Cano YH / Fouad Andaloussi | Developer sama dengan Monster Clear; data penarikan belum dicatat. | Belum dicatat | [ ] |
 | 9 | **NEW — Crazy Cans Sort** | `com.cans.game.crazy` | BAE Publishing LLC | Developer sama dengan Fresh Veggie Pop; data penarikan belum dicatat. | Belum dicatat | [x] |
