@@ -47,8 +47,6 @@ Keterangan kategori: game-game ini **susah, tetapi tetap cair**. Data pencairan 
 | 5 | Bottle Jam Solver | `com.bottle.jam.solver` | Tidak tercantum / UNJIBBED LTD | Game susah, penarikan sedikit. **4 kali penarikan:** Rp206, Rp108, Rp200, dan Rp202. | Belum dicatat | [ ] |
 | 6 | **NEW — Coin Sort Dash** | `com.coin.sortdash.remove` | أحمد البكري خميس موسي | Developer sama dengan Bus Jam Parking. **3 kali penarikan:** Rp1.017, Rp627, dan Rp20. | Lumayan | [x] |
 | 7 | **NEW — Pyramid Gem Blast** | `com.pyramid.gem.blast` | أحمد البكري خميس موسي | Developer sama dengan Bus Jam Parking. **2 kali penarikan:** Rp490 dan Rp20. | Belum dicatat | [ ] |
-| 8 | **NEW — Candy Tile: Sweet Puzzle** | `org.beastcoast.major.tilegame.candy` | Cano YH / Fouad Andaloussi | Developer sama dengan Monster Clear; data penarikan belum dicatat. | Belum dicatat | [ ] |
-| 9 | **NEW — Crazy Cans Sort** | `com.cans.game.crazy` | BAE Publishing LLC | Developer sama dengan Fresh Veggie Pop; data penarikan belum dicatat. | Belum dicatat | [x] |
 
 ## Bubble Crush
 
@@ -57,7 +55,7 @@ Keterangan kategori: game-game ini **susah, tetapi tetap cair**. Data pencairan 
 | 1 | Color Power Pop | `com.giraffeeapp.power` | Giraffee App / Muhammad Ahsan Saleem | **19 kali penarikan:** Rp1.000 sebanyak 4 kali dan Rp4.000 sekali; nominal 14 penarikan lainnya belum dirinci. | Lumayan | [x] |
 | 2 | Snake Out Jam | `com.wiwvitsugeh.snack` | Belum ditemukan di listing publik | **4 kali penarikan:** Rp147, Rp9.237, Rp288, dan Rp51. Setelah penarikan sekitar Rp9.000, proses terasa susah. | Mudah | [ ] |
 | 3 | Beach Soda Sort | `com.apnabankshop.beach` | ApnaBankShop / MRS BLAISE HELEN HAWLEY | **14 kali penarikan (15 nominal tercatat):** Rp642, Rp532, Rp88, Rp17, Rp47, Rp103, Rp93, Rp604, Rp546, Rp1.061, Rp530, Rp136, Rp68, Rp158, dan Rp89. | Lumayan | [ ] |
-| 4 | **NEW — Color Soda Pack** | `com.apnabankshop.soda` | ApnaBankShop / MRS BLAISE HELEN HAWLEY | Developer sama dengan Beach Soda Sort; data penarikan belum dicatat. | Belum dicatat | [ ] |
+| 4 | **NEW — Color Soda Pack** | `com.apnabankshop.soda` | ApnaBankShop / MRS BLAISE HELEN HAWLEY | Developer sama dengan Beach Soda Sort. Game susah; **2 kali penarikan:** Rp58 dan Rp288. | Belum dicatat | [ ] |
 
 ## Arrow Unblock
 
@@ -72,6 +70,7 @@ Keterangan kategori: game-game ini **susah, tetapi tetap cair**. Data pencairan 
 |---:|---|---|---|---|
 | 1 | Happy Blocks | `com.xteleremobilecompanyltd.HappyBlocks` | Sporting 2024 / محمد السيد عبدالرحيم محمود | Kemungkinan cair, tetapi status tidak berubah setelah 2 kali penarikan sekitar Rp20-an. |
 | 2 | Pet Plush Link | `com.NAMMUNIS.PetPlushLink` | Tidak tercantum / Ekanayake Mudiyanselage Prasanna Dilshan Ekanayake | Dipindahkan ke daftar Blocked; data penarikan belum dicatat. |
+| 3 | Candy Tile: Sweet Puzzle | `org.beastcoast.major.tilegame.candy` | Cano YH / Fouad Andaloussi | Dipindahkan ke daftar Blocked; data penarikan belum dicatat. |
 
 ## 🏢 Kategori Game Berdasarkan Pengembang
 
