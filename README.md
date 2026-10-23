@@ -44,7 +44,7 @@ Keterangan kategori: game-game ini **susah, tetapi tetap cair**. Data pencairan 
 | 2 | Magical Gems Match 3 | `com.glow.magical.match3` | DKSHUBDeveloper / Ghulam Yaseen | **13 kali penarikan:** Rp20, Rp89, Rp51, Rp81, Rp210, Rp107, Rp182, Rp1.050, Rp354, Rp531, Rp206, Rp273, dan Rp290. Susah, tetapi tetap cair. | Lumayan | [x] |
 | 3 | Fresh Veggie Pop | `com.fresh.veggie.pop` | Tidak tercantum / BAE Publishing LLC | **4 kali penarikan:** Rp20, Rp95, Rp256, dan Rp74. Susah, tetapi tetap cair. | Belum dicatat | [ ] |
 | 4 | Bottle Jam Solver | `com.bottle.jam.solver` | Tidak tercantum / UNJIBBED LTD | Game susah, penarikan sedikit. **4 kali penarikan:** Rp206, Rp108, Rp200, dan Rp202. | Belum dicatat | [ ] |
-| 5 | **NEW — Coin Sort Dash** | `com.coin.sortdash.remove` | أحمد البكري خميس موسي | Developer sama dengan Bus Jam Parking. **3 kali penarikan:** Rp1.017, Rp627, dan Rp20. | Lumayan | [x] |
+| 5 | **NEW — Coin Sort Dash [RAWAN TERBLOKIR IKLAN]** | `com.coin.sortdash.remove` | أحمد البكري خميس موسي | Developer sama dengan Bus Jam Parking. **3 kali penarikan:** Rp1.017, Rp627, dan Rp20. Lumayan, tetapi rawan terblokir iklan. | Lumayan | [x] |
 | 6 | **NEW — Pyramid Gem Blast** | `com.pyramid.gem.blast` | أحمد البكري خميس موسي | Developer sama dengan Bus Jam Parking. **2 kali penarikan:** Rp490 dan Rp20. | Belum dicatat | [ ] |
 
 ## Bubble Crush
@@ -111,7 +111,7 @@ Keterangan kategori: game-game ini **susah, tetapi tetap cair**. Data pencairan 
 ### أحمد البكري خميس موسي
 
 - [Bus Jam Parking Master](bus-jam-parking/) — `com.busjam.parking.master`
-- [Coin Sort Dash](coin-dash-shot/) — `com.coin.sortdash.remove`
+- [Coin Sort Dash](coin-dash-shot/) **[RAWAN TERBLOKIR IKLAN]** — `com.coin.sortdash.remove` — Lumayan, tetapi rawan terblokir iklan.
 
 ### Pengembang lain
 
