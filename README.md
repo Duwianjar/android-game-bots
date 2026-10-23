@@ -29,13 +29,10 @@ Keterangan kategori: game-game ini **cukup cepat setelah Lucky Match, tetapi jar
 | 4 | Color Sand Blast | `com.xteleremobilecompanyltd.ColorSandBlast` | Sporting 2024 / محمد السيد عبدالرحيم محمود | **11 kali penarikan:** Rp20, Rp296, Rp662, Rp2.311, Rp124, Rp315, Rp368, Rp479, Rp537, Rp664, dan Rp924. Cukup cepat setelah Lucky Match, tetapi jarang terdeteksi. | Lumayan | [ ] |
 | 5 | Toy Drop | `com.NAMMUNIS.ToyDrop` | Tidak tercantum / Ekanayake Mudiyanselage Prasanna Dilshan Ekanayake | **4 kali penarikan:** Rp20, Rp65, Rp1.670, dan Rp254. Cukup cepat setelah Lucky Match, tetapi jarang terdeteksi. | Lumayan | [ ] |
 | 6 | Fruit Block-More Gifts | `com.xteleremobilecompanyltd.FruitBlock` | Sporting 2024 / محمد السيد عبدالرحيم محمود | Data penarikan belum tercatat valid/error, tetapi performanya sepertinya lumayan. | Lumayan | [ ] |
-| 7 | Happy Blocks | `com.xteleremobilecompanyltd.HappyBlocks` | Sporting 2024 / محمد السيد عبدالرحيم محمود | **Blocked.** Sudah 2 kali penarikan sekitar Rp20-an, tetapi tidak cair. | Blocked | [ ] |
-| 8 | Magic Merge | `com.xteleremobilecompanyltd.MagicMerge` | Sporting 2024 / محمد السيد عبدالرحيم محمود | **Kemungkinan Lucky Food.** Belum ada catatan penarikan; cukup cepat setelah Lucky Match, tetapi jarang terdeteksi. | Belum dicatat | [ ] |
-| 9 | **NEW — Animal Blast: Win Prize Game** | `com.jungle.bear.tiger.wild.animal.eliminate` | Faisal Developers / Salman Khan | Developer sama dengan Zoo Tile. **1 kali penarikan:** Rp397. Posisi tetap. | Belum dicatat | [x] |
-| 10 | **NEW — Mahjong Master: Win Real Cash!** | `com.mahong.master.tours.blossom.mingle` | Faisal Developers / Salman Khan | Developer sama dengan Zoo Tile. **1 kali penarikan:** Rp105. Posisi tetap. | Belum dicatat | [ ] |
-| 11 | **NEW — Fortune Tile Mahjong** | `com.NAMMUNIS.FortuneTileMahjong` | Tidak tercantum / Ekanayake Mudiyanselage Prasanna Dilshan Ekanayake | Developer sama dengan Toy Drop. **3 kali penarikan:** Rp212, Rp60, dan Rp20. Posisi tetap. | Belum dicatat | [ ] |
-| 12 | **NEW — Pet Plush Link** | `com.NAMMUNIS.PetPlushLink` | Tidak tercantum / Ekanayake Mudiyanselage Prasanna Dilshan Ekanayake | Developer sama dengan Toy Drop; data penarikan belum dicatat. | Belum dicatat | [ ] |
-| 13 | **NEW — Cute Fish Link Fun** | `com.xteleremobilecompanyltd.FishLink` | Sporting 2024 / محمد السيد عبدالرحيم محمود | Developer sama dengan Veg Cup Blast; belum ada catatan penarikan. | Belum dicatat | [ ] |
+| 7 | Magic Merge | `com.xteleremobilecompanyltd.MagicMerge` | Sporting 2024 / محمد السيد عبدالرحيم محمود | **Kemungkinan Lucky Food.** Belum ada catatan penarikan; cukup cepat setelah Lucky Match, tetapi jarang terdeteksi. | Belum dicatat | [ ] |
+| 8 | **NEW — Animal Blast: Win Prize Game** | `com.jungle.bear.tiger.wild.animal.eliminate` | Faisal Developers / Salman Khan | Developer sama dengan Zoo Tile. **1 kali penarikan:** Rp397. Posisi tetap. | Belum dicatat | [x] |
+| 9 | **NEW — Mahjong Master: Win Real Cash!** | `com.mahong.master.tours.blossom.mingle` | Faisal Developers / Salman Khan | Developer sama dengan Zoo Tile. **1 kali penarikan:** Rp105. Posisi tetap. | Belum dicatat | [ ] |
+| 10 | **NEW — Fortune Tile Mahjong** | `com.NAMMUNIS.FortuneTileMahjong` | Tidak tercantum / Ekanayake Mudiyanselage Prasanna Dilshan Ekanayake | Developer sama dengan Toy Drop. **3 kali penarikan:** Rp212, Rp60, dan Rp20. Posisi tetap. | Belum dicatat | [ ] |
 
 ## Spider Rope
 
@@ -74,6 +71,7 @@ Keterangan kategori: game-game ini **susah, tetapi tetap cair**. Data pencairan 
 | No. | Game | Package `com` | Developer / perusahaan | Keterangan |
 |---:|---|---|---|---|
 | 1 | Happy Blocks | `com.xteleremobilecompanyltd.HappyBlocks` | Sporting 2024 / محمد السيد عبدالرحيم محمود | Kemungkinan cair, tetapi status tidak berubah setelah 2 kali penarikan sekitar Rp20-an. |
+| 2 | Pet Plush Link | `com.NAMMUNIS.PetPlushLink` | Tidak tercantum / Ekanayake Mudiyanselage Prasanna Dilshan Ekanayake | Dipindahkan ke daftar Blocked; data penarikan belum dicatat. |
 
 ## 🏢 Kategori Game Berdasarkan Pengembang
 
