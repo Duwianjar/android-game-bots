@@ -42,11 +42,10 @@ Keterangan kategori: game-game ini **susah, tetapi tetap cair**. Data pencairan 
 |---:|---|---|---|---|---|:---:|
 | 1 | Bus Jam Parking Master | `com.busjam.parking.master` | Tidak tercantum / أحمد البكري خميس موسي | **Peringkat pertama.** 29 kali penarikan; banyak nominal Rp2.000, Rp3.000, Rp6.000, dan Rp7.000. Terbesar sekitar Rp10.000, tetapi belum cair. | Belum dicatat | [x] |
 | 2 | Magical Gems Match 3 | `com.glow.magical.match3` | DKSHUBDeveloper / Ghulam Yaseen | **13 kali penarikan:** Rp20, Rp89, Rp51, Rp81, Rp210, Rp107, Rp182, Rp1.050, Rp354, Rp531, Rp206, Rp273, dan Rp290. Susah, tetapi tetap cair. | Lumayan | [x] |
-| 3 | Monster Clear | `com.antiboom.puzzle.monster.clear.game` | Cano YH / Fouad Andaloussi | Baru 4 kali penarikan dan belum cair; kemungkinan slot sulit. Nominal penarikan: Rp140, Rp301, Rp134, dan Rp57. | Susah | [ ] |
-| 4 | Fresh Veggie Pop | `com.fresh.veggie.pop` | Tidak tercantum / BAE Publishing LLC | **4 kali penarikan:** Rp20, Rp95, Rp256, dan Rp74. Susah, tetapi tetap cair. | Belum dicatat | [ ] |
-| 5 | Bottle Jam Solver | `com.bottle.jam.solver` | Tidak tercantum / UNJIBBED LTD | Game susah, penarikan sedikit. **4 kali penarikan:** Rp206, Rp108, Rp200, dan Rp202. | Belum dicatat | [ ] |
-| 6 | **NEW — Coin Sort Dash** | `com.coin.sortdash.remove` | أحمد البكري خميس موسي | Developer sama dengan Bus Jam Parking. **3 kali penarikan:** Rp1.017, Rp627, dan Rp20. | Lumayan | [x] |
-| 7 | **NEW — Pyramid Gem Blast** | `com.pyramid.gem.blast` | أحمد البكري خميس موسي | Developer sama dengan Bus Jam Parking. **2 kali penarikan:** Rp490 dan Rp20. | Belum dicatat | [ ] |
+| 3 | Fresh Veggie Pop | `com.fresh.veggie.pop` | Tidak tercantum / BAE Publishing LLC | **4 kali penarikan:** Rp20, Rp95, Rp256, dan Rp74. Susah, tetapi tetap cair. | Belum dicatat | [ ] |
+| 4 | Bottle Jam Solver | `com.bottle.jam.solver` | Tidak tercantum / UNJIBBED LTD | Game susah, penarikan sedikit. **4 kali penarikan:** Rp206, Rp108, Rp200, dan Rp202. | Belum dicatat | [ ] |
+| 5 | **NEW — Coin Sort Dash** | `com.coin.sortdash.remove` | أحمد البكري خميس موسي | Developer sama dengan Bus Jam Parking. **3 kali penarikan:** Rp1.017, Rp627, dan Rp20. | Lumayan | [x] |
+| 6 | **NEW — Pyramid Gem Blast** | `com.pyramid.gem.blast` | أحمد البكري خميس موسي | Developer sama dengan Bus Jam Parking. **2 kali penarikan:** Rp490 dan Rp20. | Belum dicatat | [ ] |
 
 ## Bubble Crush
 
@@ -68,9 +67,17 @@ Keterangan kategori: game-game ini **susah, tetapi tetap cair**. Data pencairan 
 
 | No. | Game | Package `com` | Developer / perusahaan | Keterangan |
 |---:|---|---|---|---|
-| 1 | Happy Blocks | `com.xteleremobilecompanyltd.HappyBlocks` | Sporting 2024 / محمد السيد عبدالرحيم محمود | Kemungkinan cair, tetapi status tidak berubah setelah 2 kali penarikan sekitar Rp20-an. |
-| 2 | Pet Plush Link | `com.NAMMUNIS.PetPlushLink` | Tidak tercantum / Ekanayake Mudiyanselage Prasanna Dilshan Ekanayake | Dipindahkan ke daftar Blocked; data penarikan belum dicatat. |
-| 3 | Candy Tile: Sweet Puzzle | `org.beastcoast.major.tilegame.candy` | Cano YH / Fouad Andaloussi | Dipindahkan ke daftar Blocked; data penarikan belum dicatat. |
+| 1 | Fruit Slice Rush | `com.fruit.slicerush` | MNJJ Ventures / MNJJ Enterprises LLC | **Tidak cair; kemungkinan ikut terblokir.** |
+| 2 | Mine Sweeper: Jewel Puzzle | `com.mine.sweeper.magicstick.games` | YounEXE / YOUNES MOUMENE | **Tidak cair; kemungkinan ikut terblokir.** |
+| 3 | Juicy Tile | `com.spiritbreaker.games.tilejuicy` | Modhon Soft IT / meher sarkar | **Tidak cair; kemungkinan ikut terblokir.** |
+| 4 | Ocean Tile: Match 3 Puzzle | `com.shadowgames.dev.ocean.tile` | VPLibros Group / ayo hanafi | **Tidak cair; kemungkinan ikut terblokir.** |
+| 5 | Sweet Woodland Match | `com.sweet.woodlandmatch` | FunTech Technology / FunTech Technology Limited | **Tidak cair; kemungkinan ikut terblokir.** |
+| 6 | Lucky Sort: Water Puzzle | `com.Lucky.Sort.Water.Puzzle` | Ranat Studio / youssra touilta | **Tidak cair; kemungkinan ikut terblokir.** |
+| 7 | Monster Clear | `com.antiboom.puzzle.monster.clear.game` | Cano YH / Fouad Andaloussi | **Tidak cair; kemungkinan ikut terblokir.** |
+| 8 | Universe Match - Puzzle Game | `com.shadowgames.dev.universe.match` | VPLibros Group / ayo hanafi | **Tidak cair; kemungkinan ikut terblokir.** |
+| 9 | Happy Blocks | `com.xteleremobilecompanyltd.HappyBlocks` | Sporting 2024 / محمد السيد عبدالرحيم محمود | Kemungkinan cair, tetapi status tidak berubah setelah 2 kali penarikan sekitar Rp20-an. |
+| 10 | Pet Plush Link | `com.NAMMUNIS.PetPlushLink` | Tidak tercantum / Ekanayake Mudiyanselage Prasanna Dilshan Ekanayake | Dipindahkan ke daftar Blocked; data penarikan belum dicatat. |
+| 11 | Candy Tile: Sweet Puzzle | `org.beastcoast.major.tilegame.candy` | Cano YH / Fouad Andaloussi | Dipindahkan ke daftar Blocked; data penarikan belum dicatat. |
 
 ## 🏢 Kategori Game Berdasarkan Pengembang
 
@@ -105,7 +112,6 @@ Keterangan kategori: game-game ini **susah, tetapi tetap cair**. Data pencairan 
 - [Color Power Pop](color-power-pop/) — Giraffee App — `com.giraffeeapp.power`
 - [Animal Blast: Win Prize Game](jungle-animal-eliminate/) — Faisal Developers — `com.jungle.bear.tiger.wild.animal.eliminate`
 - [Magical Gems Match 3](magic-gems-match/) — DKSHUBDeveloper — `com.glow.magical.match3`
-- [Juicy Tile](tile-juicy/) — Modhon Soft IT — `com.spiritbreaker.games.tilejuicy`
 
 ### Belum terverifikasi
 
