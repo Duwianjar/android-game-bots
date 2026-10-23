@@ -2,17 +2,20 @@
 
 Koleksi bot otomatis untuk berbagai game Android yang menghasilkan saldo real money.
 
-## 🌞 Lucky Match — Siang Aman
+## Lucky Match - DEVVVS 0043
 
-Kategori operasional untuk **5 game Lucky** yang terdeteksi terpasang di HP. Target awal maksimal **Rp500** pada sesi siang; jika progres cepat dan melewati Rp500, pantau selama **1–2 hari** sebelum menaikkan durasi. Nilai reward dapat berubah menurut akun, perangkat, iklan, jaringan, dan kebijakan aplikasi.
+**Pengembang/perusahaan:** DEVVVS 0043 / **SUKRIATI**.
+Keterangan kategori: game-game ini terasa paling cepat, tetapi relatif mudah terblokir. Gunakan target awal maksimal **Rp500** pada sesi siang dan pantau 1–2 hari. Reward tidak dijamin dan dapat berubah menurut akun, perangkat, iklan, jaringan, serta kebijakan aplikasi.
 
-| Game | Package `com` | Pengembang / perusahaan | Status di HP |
-|---|---|---|---|
-| **Lucky Sort: Water Puzzle** | `com.Lucky.Sort.Water.Puzzle` | Ranat Studio / youssra touilta | Terpasang, versi 1.0.0.9 |
-| **Lucky Block Match Winner** | `com.hussainbdoures.luckyblockmatchwinner` | The Global Webs / mohamed ahmed ibrahim salem | Terpasang, versi 1.0.2 |
-| **Lucky Pets Blast!** | `com.lucky.petsblast` | DongYing SmartEnergy / 大连东盈智能科技有限公司 | Terpasang, versi 1.1.3 |
-| **Lucky Match Path Journey** | `com.smallclickergamer.luckymatchpathjourney` | DEVVVS 0043 / SUKRIATI | Terpasang, versi 1.0.8 |
-| **Lucky Arrow Escape** | `com.starlightgame.luckyarrowescaper` | Elias Galvin / ACM PROJECTS & AUTOMATION LTD | Terpasang, versi 1.0.3 |
+| Game | Package `com` | Keterangan | Bot |
+|---|---|---|:---:|
+| Blade Slice Master Fruit | `com.diancutter.bladeslicemasterfruit` | Cepat, tetapi mudah terblokir | [ ] |
+| Tile Match Crush Frenzy | `com.tilegamer.tilematchcrushfrenzy` | Cepat, tetapi mudah terblokir | [ ] |
+| Lucky Match Path Journey | `com.smallclickergamer.luckymatchpathjourney` | Cepat, tetapi mudah terblokir | [ ] |
+| Magic Tile Match Joy | `com.tilefunyou.magictilematchjoy` | Cepat, tetapi mudah terblokir | [ ] |
+| [Juicy Slash Blade Fruit](juicy-slash-blade-fruit/) | `com.dudufun.juicyslashbladefruit` | Cepat, tetapi mudah terblokir | [x] |
+| Cut Fruit Blade Master | `com.goodgamecut.cutfruitblademaster` | Cepat, tetapi mudah terblokir | [ ] |
+| Tiny Blast Magic Land | `com.kuaifastfa.tinyblastmagicland` | Cepat, tetapi mudah terblokir | [ ] |
 
 ## 🏢 Kategori Game Berdasarkan Pengembang
 
