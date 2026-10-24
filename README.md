@@ -2,6 +2,28 @@
 
 Koleksi bot otomatis untuk berbagai game Android yang menghasilkan saldo real money.
 
+## Rekomendasi Instalasi
+
+Urutan ini dibuat dari catatan penarikan yang sudah ada. **Tidak ada data yang membuktikan cair semua sampai Rp10.000.** Zoo Tile adalah catatan paling kuat karena 15 kali penarikan disebut lancar semua dengan maksimum Rp8.022. Bus Jam memiliki nominal sekitar Rp10.000, tetapi nominal terbesar tersebut belum cair. Game Blocked tidak dimasukkan dalam rekomendasi instalasi.
+
+| Prioritas | Game | Package `com` | Dasar analisis | Saran instalasi |
+|---:|---|---|---|---|
+| 1 | Tangkap Hewan Lucu / Zoo Tile | `com.zoo.tile.cute.animal.elephant.mouse.fox` | **15 kali lancar semua**, maksimum Rp8.022. | **Instal pertama.** |
+| 2 | Bus Jam Parking Master | `com.busjam.parking.master` | 29 kali penarikan; banyak nominal Rp2.000–Rp7.000. Target terbesar sekitar Rp10.000 belum cair. | Instal setelah Zoo Tile; pantau nominal besar. |
+| 3 | Snake Out Jam | `com.wiwvitsugeh.snack` | Ada penarikan Rp9.237. Setelah penarikan sekitar Rp9.000, proses terasa susah. | Instal berikutnya dengan target kecil dulu. |
+| 4 | Color Power Pop | `com.giraffeeapp.power` | 19 kali penarikan; Rp1.000 sebanyak 4 kali dan Rp4.000 sekali. | Rekomendasi menengah. |
+| 5 | Soda Pop Sort | `com.frenzy.sort.pack` | 3 kali penarikan: Rp29, Rp3.026, dan Rp88. | Rekomendasi menengah. |
+| 6 | Color Sand Blast | `com.xteleremobilecompanyltd.ColorSandBlast` | 11 kali penarikan; maksimum Rp2.311. Tidak ada gagal yang dicatat. | Rekomendasi setelah prioritas utama. |
+| 7 | Veg Cup Blast | `com.xteleremobilecompanyltd.VegCupBlast` | 5 kali penarikan; maksimum Rp2.191. | Rekomendasi setelah prioritas utama. |
+| 8 | Toy Drop | `com.NAMMUNIS.ToyDrop` | 4 kali penarikan; maksimum Rp1.670. | Rekomendasi setelah prioritas utama. |
+| 9 | Beach Soda Sort | `com.apnabankshop.beach` | Ada penarikan Rp1.061; catatan jumlah penarikan dan nominal tidak sepenuhnya cocok. | Instal dengan pemantauan. |
+| 10 | Magical Gems Match 3 | `com.glow.magical.match3` | 13 kali penarikan; ada nominal Rp1.050. | Instal dengan target kecil. |
+| 11 | Coin Sort Dash | `com.coin.sortdash.remove` | 3 kali penarikan; ada Rp1.017. **Rawan terblokir iklan.** | Instal setelah prioritas utama. |
+| 12 | Tiny Blast Magic Land | `com.kuaifastfa.tinyblastmagicland` | Ada pencairan sekitar Rp3.000, tetapi 2 penarikan tidak cair. | Prioritas lebih rendah. |
+| 13 | Blade Slice Master Fruit | `com.diancutter.bladeslicemasterfruit` | Ada pencairan sekitar Rp3.000, tetapi data juga mencatat pencairan lain Rp396 dan Rp531. | Prioritas lebih rendah. |
+| 14 | Cut Fruit Blade Master | `com.goodgamecut.cutfruitblademaster` | Ada pencairan sekitar Rp2.000, tetapi 1 penarikan sekitar Rp2.000 tidak cair. | Prioritas lebih rendah. |
+| 15 | Magic Tile Match Joy | `com.tilefunyou.magictilematchjoy` | Ada pencairan sekitar Rp1.000, tetapi 3 penarikan gagal. | Prioritas rendah. |
+
 ## Lucky Match - DEVVVS 0043
 
 **Pengembang/perusahaan:** DEVVVS 0043 / **SUKRIATI**.
