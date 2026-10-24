@@ -25,7 +25,7 @@ Urutan ini dibuat dari catatan penarikan yang sudah ada. **Tidak ada data yang m
 | 15 | Blade Slice Master Fruit | `com.diancutter.bladeslicemasterfruit` | Ada pencairan sekitar Rp3.000, tetapi data juga mencatat pencairan lain Rp396 dan Rp531. | Prioritas lebih rendah. |
 | 16 | Cut Fruit Blade Master | `com.goodgamecut.cutfruitblademaster` | Ada pencairan sekitar Rp2.000, tetapi 1 penarikan sekitar Rp2.000 tidak cair. | Prioritas lebih rendah. |
 | 17 | Magic Tile Match Joy | `com.tilefunyou.magictilematchjoy` | Ada pencairan sekitar Rp1.000, tetapi 3 penarikan gagal. | Prioritas rendah. |
-| 18 | Crazy Fruit Blade Winner | `com.starlightgame.crazyfruitbladewinner` | Belum ada catatan penarikan. **Lumayan, tetapi rawan block iklan.** | Belum dapat diranking; instal setelah game dengan riwayat cair. |
+| 18 | Crazy Fruit Blade Winner | `com.starlightgame.crazyfruitbladewinner` | Belum ada catatan penarikan. **Sekitar Rp200 per hari di awal, tetapi langsung turun setelahnya; lumayan, tetapi rawan block iklan.** | Belum dapat diranking; instal setelah game dengan riwayat cair. |
 
 ## Lucky Match - DEVVVS 0043
 
@@ -141,7 +141,7 @@ Keterangan kategori: game-game ini **susah, tetapi tetap cair**. Data pencairan 
 
 - [Magic Ocean Tile Crush](magic-ocean-tile-crush/) **[RAWAN TERBLOKIR]** — `com.starlightgame.magicoceantilecrush`
 - [Woodland Tile Match](woodland-tile-matcher/) **[RAWAN TERBLOKIR]** — `com.starlightgame.woodlandtilematcher`
-- [Crazy Fruit Blade Winner](crazy-fruit-blade-winner/) **[RAWAN BLOCK IKLAN]** — `com.starlightgame.crazyfruitbladewinner` — Lumayan, tetapi rawan block iklan.
+- [Crazy Fruit Blade Winner](crazy-fruit-blade-winner/) **[RAWAN BLOCK IKLAN]** — `com.starlightgame.crazyfruitbladewinner` — Sekitar Rp200 per hari di awal, tetapi langsung turun setelahnya; lumayan, tetapi rawan block iklan.
 - [Fruit Blade Pop Crush](fruit-blade-pop-crush/) — `com.starlightgame.fruitbladepopcrush`
 - [Lucky Arrow Escape](lucky-arrow-escaper/) — `com.starlightgame.luckyarrowescaper`
 
@@ -252,7 +252,7 @@ Bot universal untuk auto-clicking dengan customizable coordinates.
 Helper bot untuk notifikasi Telegram dan monitoring saldo.
 
 ### 16. Crazy Fruit Blade Winner Guardian Bot (`crazy-fruit-blade-winner/`) — **[RAWAN BLOCK IKLAN]**
-Clone dari Fruit Blade Pop Crush untuk game Crazy Fruit Blade Winner. Package: `com.starlightgame.crazyfruitbladewinner`. Keterangan: lumayan, tetapi rawan block iklan.
+Clone dari Fruit Blade Pop Crush untuk game Crazy Fruit Blade Winner. Package: `com.starlightgame.crazyfruitbladewinner`. Keterangan: sekitar Rp200 per hari di awal, tetapi langsung turun setelahnya; lumayan, tetapi rawan block iklan.
 
 
 
