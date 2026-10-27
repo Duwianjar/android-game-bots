@@ -43,16 +43,16 @@ BLOCKED_PACKAGES = {
 LOG_FILE = os.path.expanduser("~/magic_ocean_guardian_bot.log")
 SALDO_STATE_FILE = os.path.expanduser("~/magic_ocean_saldo_state.json")
 TELEGRAM_SENDER = "/Users/macbookair/telegram_sender.py"
-DEFAULT_INTERVAL = 0.024
+DEFAULT_INTERVAL = 0.005
 OCR_HELPER = "/Users/macbookair/ocr_helper"
 TAP_MARKER = "/Users/macbookair/scrcpy_tap_marker"
-DOBEL_CHECK_INTERVAL = 0.056
-DOBEL_TAP_RETRY_SECONDS = 0.12
-AD_CLOSE_CHECK_INTERVAL = 0.056
+DOBEL_CHECK_INTERVAL = 0.01
+DOBEL_TAP_RETRY_SECONDS = 0.04
+AD_CLOSE_CHECK_INTERVAL = 0.01
 # Sebagian iklan TikTok membuka Play Store otomatis dalam 8â10 detik. Coba
 # tombol tutup segera setelah kontrol iklan tersedia, bukan setelah durasi video penuh.
-AD_CLOSE_MIN_SECONDS = 1.0
-AD_TARGET_SECONDS = 10.0
+AD_CLOSE_MIN_SECONDS = 0.0
+AD_TARGET_SECONDS = 5.0
 AD_STUCK_RESTART_SECONDS = 120.0
 BUBBLE_CHECK_INTERVAL = 0.0
 BUBBLE_TIMEOUT_SECONDS = 300.0  # 5 menit (hanya restart jika 5 menit tidak menemukan gelembung)
@@ -220,7 +220,7 @@ class MagicOceanGuardian:
             return
         args: list[str] = []
         # Batasi supaya marker tetap ringan.
-        for x, y, color, duration, diameter in specs[:80]:
+        for x, y, color, duration, diameter in specs[:15]:
             args += [str(int(x)), str(int(y)), color, str(float(duration)), str(int(diameter))]
         try:
             subprocess.Popen([TAP_MARKER, *args], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -285,7 +285,7 @@ class MagicOceanGuardian:
         """Tap gelembung SUPER CEPAT & BRUTAL via monkey burst (3x lebih cepat)."""
         if not points:
             return False
-        batch = points[:260]
+        batch = points[:40]
         self.log(f"TAP BATCH GELEMBUNG SUPER BRUTAL: {len(batch)} titik presisi cepat")
         self.tap_many(batch, timeout=6, color="red")
         self.last_dobel_check_ts = 0.0
@@ -296,7 +296,7 @@ class MagicOceanGuardian:
             self.log(f"STOP TAP GELEMBUNG: foreground berubah ({app.package}/{app.activity})")
             return True
 
-        second_wave = list(reversed(points[:180]))
+        second_wave = list(reversed(points[:25]))
         if second_wave:
             self.log(f"TAP GELEMBUNG WAVE 2 BRUTAL: {len(second_wave)} titik tambahan")
             self.tap_many(second_wave, timeout=6, color="red")
@@ -1508,10 +1508,8 @@ class MagicOceanGuardian:
                 self.last_ad_log_second = elapsed_second
                 net, ad_type, short_id = self.get_ad_info(app.activity)
                 slot_tag = self.get_ad_slot_label()
-                if not getattr(self, "current_ad_slot_detected", False) and not getattr(self, "non_slot_review_saved", False) and elapsed >= 3.0:
-                    self.non_slot_review_saved = True
-                    self.save_non_slot_ad_review(app.activity)
-                    self.detect_ad_report_controls()
+                # Skip heavy file/dump review to maintain ultra-fast speed
+                pass
                 target_str = f" / target {int(AD_TARGET_SECONDS)}s"
                 self.log(f"IKLAN DITONTON [DETEKSI: {slot_tag} | NETWORK: {net} | ID: {short_id}]: durasi {self.format_duration(elapsed)}{target_str}")
             return
@@ -1610,25 +1608,8 @@ class MagicOceanGuardian:
         return value, raw_text
 
     def send_telegram_message(self, message: str) -> None:
-        if not os.path.exists(TELEGRAM_SENDER):
-            self.log(f"TELEGRAM GAGAL: sender tidak ada {TELEGRAM_SENDER}")
-            return
-        try:
-            py_bin = sys.executable or "/opt/homebrew/bin/python3"
-            result = subprocess.run(
-                [py_bin, TELEGRAM_SENDER, message],
-                capture_output=True,
-                text=True,
-                timeout=15,
-            )
-            ok = result.returncode == 0
-            self.log(f"TELEGRAM {'TERKIRIM' if ok else 'GAGAL'}: saldo report | rc={result.returncode}")
-            if result.stdout.strip():
-                self.log(f"TELEGRAM STDOUT: {result.stdout.strip()[:180]}")
-            if result.stderr.strip():
-                self.log(f"TELEGRAM STDERR: {result.stderr.strip()[:180]}")
-        except Exception as exc:
-            self.log(f"TELEGRAM ERROR: {exc}")
+        # Telegram dinonaktifkan sepenuhnya agar bot berjalan maksimal tanpa delay jaringan
+        return
 
     def capture_and_report_balance(self, reason: str) -> None:
         detected = self.detect_top_rupiah_balance()
@@ -1677,7 +1658,7 @@ class MagicOceanGuardian:
             f"SALDO TERDETEKSI: sekarang={self.format_rupiah(current_value)} "
             f"sebelumnya={prev_display} selisih={diff_display} elapsed={elapsed_text}"
         )
-        self.send_telegram_message(message)
+        # self.send_telegram_message(message)
 
     def notify_dobel_found(
         self,
@@ -1746,7 +1727,7 @@ class MagicOceanGuardian:
             f"TELEGRAM NOTIF: DOBEL | reward={reward_display} | "
             f"saldo={current_display} prev={prev_display} diff={diff_display}"
         )
-        self.send_telegram_message(message)
+        # self.send_telegram_message(message)
 
     def notify_ad_opened(self, activity: str, source: str = "IKLAN", info: str = "") -> None:
         now = time.time()
@@ -1766,8 +1747,8 @@ class MagicOceanGuardian:
             f"<b>Lama cari gelembung:</b> {html.escape(search_elapsed)}\n"
             f"<b>Info:</b> {html.escape(info[:160])}"
         )
-        self.log(f"TELEGRAM NOTIF: iklan terbuka | source={source} | {activity}")
-        self.send_telegram_message(message)
+        # self.log(f"TELEGRAM NOTIF: iklan terbuka | source={source} | {activity}")
+        # self.send_telegram_message(message)
 
     def notify_bubble_search_once(self, reason: str) -> None:
         if self.bubble_search_notified:
@@ -1781,8 +1762,8 @@ class MagicOceanGuardian:
             f"â³ <b>Timeout:</b> {html.escape(self.format_duration(BUBBLE_TIMEOUT_SECONDS))}\n"
             "ð¯ <i>Bot mulai scan cash-bubble dan akan brutal tap jika ketemu.</i>"
         )
-        self.log(f"TELEGRAM NOTIF: mulai cari gelembung | {reason}")
-        self.send_telegram_message(message)
+        # self.log(f"TELEGRAM NOTIF: mulai cari gelembung | {reason}")
+        # self.send_telegram_message(message)
 
     @staticmethod
     def parse_bounds(bounds: str) -> Optional[Tuple[int, int]]:
@@ -2213,36 +2194,34 @@ class MagicOceanGuardian:
         return None
 
     def find_ad_finish_button(self) -> Optional[Tuple[str, str, int, int, str]]:
-        if self.has_top_right_penarikan():
-            return None
-
-        ui_found = self.find_ad_finish_button_by_ui()
-        if ui_found:
-            kind, label, x, y = ui_found
-            return kind, label, x, y, "ui"
-
         screenshot = self.capture_screenshot()
         if not screenshot:
             return None
         png_data, width, height = screenshot
 
-        # Penting: cek tombol lingkaran pojok atas dulu.
-        # Pada iklan MBridge, deteksi generik sering salah memilih panah palsu di tengah layar
-        # sehingga klik tidak bereaksi. Tombol asli ada di pojok kanan/kiri atas.
+        # 1. Cek tombol pojok atas via OpenCV gambar (super cepat ~5ms)
         top_corner_found = self.find_ad_top_corner_button_by_image(png_data, width, height)
         if top_corner_found:
             kind, label, x, y = top_corner_found
             return kind, label, x, y, "top-corner"
 
+        # 2. Cek ikon X via OpenCV gambar (~5ms)
+        image_found = self.find_ad_finish_button_by_image(png_data, width, height)
+        if image_found:
+            kind, label, x, y = image_found
+            return kind, label, x, y, "image"
+
+        # 3. Cek OCR untuk tombol X/Close/Skip
         ocr_found = self.find_ad_finish_button_by_ocr(png_data, width, height)
         if ocr_found:
             kind, label, x, y = ocr_found
             return kind, label, x, y, "ocr"
 
-        image_found = self.find_ad_finish_button_by_image(png_data, width, height)
-        if image_found:
-            kind, label, x, y = image_found
-            return kind, label, x, y, "image"
+        # 4. Fallback UI dump hanya jika OpenCV/OCR belum menemukan
+        ui_found = self.find_ad_finish_button_by_ui()
+        if ui_found:
+            kind, label, x, y = ui_found
+            return kind, label, x, y, "ui"
 
         return None
 
@@ -2309,16 +2288,15 @@ class MagicOceanGuardian:
             f"di ({x},{y}) via {source} | durasi {self.format_duration(elapsed)}"
         )
 
-        if now - self.last_ad_close_tap_ts < 0.2:
+        if now - self.last_ad_close_tap_ts < 0.04:
             return
         self.last_ad_close_tap_ts = now
         self.log(f"KLIK TOMBOL SELESAI IKLAN: {kind} di ({x},{y})")
-        # Selalu klik tepat pada koordinat hasil deteksi terbaru.
-        self.tap(x, y)
+        # Burst tap cepat tombol selesai iklan
+        self.monkey_burst([(x, y), (x, y), (x + 2, y + 2)], delay_ms=0, timeout=1)
         self.ad_finished_reported = True
         self.on_ad_finished(self.ad_activity or (app.activity if app else "unknown"), elapsed)
-        # Reset timer ad agar siklus berikutnya menunggu target 20s lagi
-        self.ad_start_ts = now
+        # Jangan reset ad_start_ts = now agar tidak menghambat penutupan endcard berikutnya
         self.ad_close_same_btn_count = 0
         self.ad_close_last_btn_key = ""
         self.last_ad_log_second = 0
@@ -2329,7 +2307,7 @@ class MagicOceanGuardian:
             return []
 
         now = time.time()
-        if hasattr(self, "_ocr_cache_ts") and (now - self._ocr_cache_ts < 0.6):
+        if hasattr(self, "_ocr_cache_ts") and (now - self._ocr_cache_ts < 0.05):
             if hasattr(self, "_ocr_cache_entries") and self._ocr_cache_entries is not None:
                 return self._ocr_cache_entries
 
@@ -2742,7 +2720,7 @@ class MagicOceanGuardian:
                 self.last_dobel_tap_ts = now
                 self.remember_pending_dobel_reward(reward_rp)
                 self.log(f"KLIK TOMBOL DOBEL di ({tap_x},{tap_y}) | simpan reward DOBEL={reward_rp}")
-                self.tap(tap_x, tap_y)
+                self.monkey_burst([(tap_x, tap_y), (tap_x, tap_y)], delay_ms=0, timeout=1)
             self.dobel_visible = True
             self.not_now_visible = False
             self.bubble_watch_active = False
@@ -3366,7 +3344,7 @@ class MagicOceanGuardian:
                 self.step()
                 if once:
                     return 0
-                time.sleep(0.008 if self.bubble_watch_active else self.interval)
+                time.sleep(0.002 if self.bubble_watch_active else self.interval)
         except KeyboardInterrupt:
             self.log("Bot dihentikan oleh user")
             return 0
@@ -3380,7 +3358,7 @@ def main() -> int:
     parser.add_argument("--dry-run", action="store_true", help="Log aksi tanpa mengeksekusi force-stop/launch")
     args = parser.parse_args()
 
-    bot = MagicOceanGuardian(serial=args.serial, interval=max(0.02, args.interval), dry_run=args.dry_run)
+    bot = MagicOceanGuardian(serial=args.serial, interval=max(0.005, args.interval), dry_run=args.dry_run)
     return bot.run(once=args.once)
 
 
