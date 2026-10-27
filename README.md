@@ -56,7 +56,7 @@ Keterangan kategori: game-game ini **cukup cepat setelah Lucky Match, tetapi jar
 
 | No. | Game | Package `com` | Developer / perusahaan | Keterangan | Iklan Slot | Bot |
 |---:|---|---|---|---|---|:---:|
-| 1 | Tangkap Hewan Lucu: Permainan Tile *(Zoo Tile: Win Mega Rewards!)* | `com.zoo.tile.cute.animal.elephant.mouse.fox` | Faisal Developers / Salman Khan | **15 kali penarikan dan lancar semua.** Nominal dari kecil ke besar: Rp20, Rp50, Rp70, Rp104, Rp214, Rp279, Rp307, Rp597, Rp639, Rp964, Rp1.226, Rp1.594, Rp1.772, Rp1.866, dan Rp8.022. | Mudah | [ ] |
+| 1 | [Tangkap Hewan Lucu: Permainan Tile *(Zoo Tile: Win Mega Rewards!)*](zoo-tile/) | `com.zoo.tile.cute.animal.elephant.mouse.fox` | Faisal Developers / Salman Khan | **15 kali penarikan dan lancar semua.** Nominal dari kecil ke besar: Rp20, Rp50, Rp70, Rp104, Rp214, Rp279, Rp307, Rp597, Rp639, Rp964, Rp1.226, Rp1.594, Rp1.772, Rp1.866, dan Rp8.022. | Mudah | [x] |
 | 2 | Cup Babe Block | `com.xteleremobilecompanyltd.CupBabeBlock` | Sporting 2024 / محمد السيد عبدالرحيم محمود | **11 kali penarikan:** Rp20, Rp78, Rp73, Rp170, Rp504, Rp73, Rp71, Rp176, Rp553, Rp210, dan Rp310. Cukup cepat setelah Lucky Match, tetapi jarang terdeteksi. | **Susah** | [ ] |
 | 3 | Veg Cup Blast | `com.xteleremobilecompanyltd.VegCupBlast` | Sporting 2024 / محمد السيد عبدالرحيم محمود | **5 kali penarikan:** Rp179, Rp2.191, Rp242, Rp208, dan Rp269. Cukup cepat setelah Lucky Match, tetapi jarang terdeteksi. | Mendingan | [ ] |
 | 4 | Color Sand Blast | `com.xteleremobilecompanyltd.ColorSandBlast` | Sporting 2024 / محمد السيد عبدالرحيم محمود | **11 kali penarikan:** Rp20, Rp296, Rp662, Rp2.311, Rp124, Rp315, Rp368, Rp479, Rp537, Rp664, dan Rp924. Cukup cepat setelah Lucky Match, tetapi jarang terdeteksi. | Lumayan | [ ] |
@@ -133,6 +133,7 @@ Keterangan kategori: game-game ini **susah, tetapi tetap cair**. Data pencairan 
 | 19 | Patch Panic | `com.match3.game.patch.panic.terraform` | Belum diketahui | Ditemukan di HP; dimasukkan ke daftar Blocked sesuai permintaan. |
 | 20 | Sea Synth | `com.waterworld.games.tap.seasynth` | Belum diketahui | Ditemukan di HP; dimasukkan ke daftar Blocked sesuai permintaan. |
 | 21 | Garden Badges | `com.paldev.production.game.garden` | Belum diketahui | Ditemukan di HP; dimasukkan ke daftar Blocked sesuai permintaan. |
+| 22 | Soda Pack Sort | `com.mobiroller.soda.pack` | MIC3 / Michael Jones | Tidak bisa tonton iklan. |
 
 ## 🏢 Kategori Game Berdasarkan Pengembang
 
