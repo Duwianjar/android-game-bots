@@ -144,6 +144,7 @@ Keterangan kategori: game-game ini **susah, tetapi tetap cair**. Data pencairan 
 | No. | Game | Package `com` | Developer / perusahaan | Keterangan | Iklan Slot | Bot |
 |---:|---|---|---|---|---|:---:|
 | 1 | Cozy Flora Sort | `com.lancasites.sweetflowersort` | Lança Sites | Game sortir bunga/flora. **Penarikan 1.000 aman dan beberapa ratus aman.** | Belum dicatat | [ ] |
+| 2 | Mafia Honor | `com.fatbrandsinc.mafiahonor` | Lança Sites | Game kasual/strategi mafia. **Penarikan cuma 100 tapi aman.** | Belum dicatat | [ ] |
 
 ## Daftar Blocked
 
