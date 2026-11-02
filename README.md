@@ -139,6 +139,12 @@ Keterangan kategori: game-game ini **susah, tetapi tetap cair**. Data pencairan 
 |---:|---|---|---|---|---|:---:|
 | 1 | Sunny Bus Jam | `com.nazer.gaming.busjam` | nazer gaming studio | Game puzzle bus jam. **Penarikan 500 aman.** | Belum dicatat | [ ] |
 
+## Lança Sites
+
+| No. | Game | Package `com` | Developer / perusahaan | Keterangan | Iklan Slot | Bot |
+|---:|---|---|---|---|---|:---:|
+| 1 | Cozy Flora Sort | `com.lancasites.sweetflowersort` | Lança Sites | Game sortir bunga/flora. **Penarikan 1.000 aman dan beberapa ratus aman.** | Belum dicatat | [ ] |
+
 ## Daftar Blocked
 
 | No. | Game | Package `com` | Developer / perusahaan | Keterangan |
