@@ -143,7 +143,8 @@ Keterangan kategori: game-game ini **susah, tetapi tetap cair**. Data pencairan 
 
 | No. | Game | Package `com` | Developer / perusahaan | Keterangan | Iklan Slot | Bot |
 |---:|---|---|---|---|---|:---:|
-| 1 | Bunny Dream Night | `com.bunny.dream.night` | Jalebi Apps | Game kasual tema kelinci. **Penarikan 500 aman.** | Belum dicatat | [ ] |
+| 1 | Ruins of Gold | `com.ruins.of.gold` | Jalebi Apps | Game puzzle/eksplorasi emas. **Penarikan 2.000 aman DANA.** | Belum dicatat | [ ] |
+| 2 | Bunny Dream Night | `com.bunny.dream.night` | Jalebi Apps | Game kasual tema kelinci. **Penarikan 500 aman.** | Belum dicatat | [ ] |
 
 ## Lança Sites
 
@@ -151,6 +152,12 @@ Keterangan kategori: game-game ini **susah, tetapi tetap cair**. Data pencairan 
 |---:|---|---|---|---|---|:---:|
 | 1 | Cozy Flora Sort | `com.lancasites.sweetflowersort` | Lança Sites | Game sortir bunga/flora. **Penarikan 1.000 aman dan beberapa ratus aman.** | Belum dicatat | [ ] |
 | 2 | Mafia Honor | `com.fatbrandsinc.mafiahonor` | Lança Sites | Game kasual/strategi mafia. **Penarikan cuma 100 tapi aman.** | Belum dicatat | [ ] |
+
+## Kategori Panah & Jam Escape (Arrow & Jam - Studio Tunggal)
+
+| No. | Game | Package `com` | Developer / perusahaan | Keterangan | Iklan Slot | Bot |
+|---:|---|---|---|---|---|:---:|
+| 1 | Arrow Jam | `com.arrow.jam.hlyj` | sho never | Game panah macet / unblock arrow. **Penarikan 500 aman.** | Belum dicatat | [ ] |
 
 ## Daftar Blocked
 
