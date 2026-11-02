@@ -133,6 +133,12 @@ Keterangan kategori: game-game ini **susah, tetapi tetap cair**. Data pencairan 
 |---:|---|---|---|---|---|:---:|
 | 1 | Bus Parking Frenzy | `com.arlonstudio.bus` | arlon studio | Game parkir bus. **Penarikan 500 DANA aman.** | Belum dicatat | [ ] |
 
+### nazer gaming studio
+
+| No. | Game | Package `com` | Developer / perusahaan | Keterangan | Iklan Slot | Bot |
+|---:|---|---|---|---|---|:---:|
+| 1 | Sunny Bus Jam | `com.nazer.gaming.busjam` | nazer gaming studio | Game puzzle bus jam. **Penarikan 500 aman.** | Belum dicatat | [ ] |
+
 ## Daftar Blocked
 
 | No. | Game | Package `com` | Developer / perusahaan | Keterangan |
