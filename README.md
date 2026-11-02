@@ -127,6 +127,12 @@ Keterangan kategori: game-game ini **susah, tetapi tetap cair**. Data pencairan 
 |---:|---|---|---|---|---|:---:|
 | 1 | Global Carnival Arrow | `com.Lucinda.GlobalCarnivalArrow` | ALEXANDER DEJARNETTE | Tema panah karnaval. **Penarikan 1.000 dua kali DANA aman.** | Belum dicatat | [ ] |
 
+### arlon studio
+
+| No. | Game | Package `com` | Developer / perusahaan | Keterangan | Iklan Slot | Bot |
+|---:|---|---|---|---|---|:---:|
+| 1 | Bus Parking Frenzy | `com.arlonstudio.bus` | arlon studio | Game parkir bus. **Penarikan 500 DANA aman.** | Belum dicatat | [ ] |
+
 ## Daftar Blocked
 
 | No. | Game | Package `com` | Developer / perusahaan | Keterangan |
