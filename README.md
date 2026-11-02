@@ -217,6 +217,7 @@ Keterangan kategori: game-game ini **susah, tetapi tetap cair**. Data pencairan 
 | 28 | Arrow Claw | `com.gungamefire.ArrowClaw` | GunGameFire | Blocked jaringan; belum ada catatan penarikan. |
 | 29 | Happy Bird Sort | `com.kingu.birdsort` | Kingu Studio | Cuma 150 cair lama, kemungkinan tidak cair. |
 | 30 | Lucky Gem Merge | `com.luckygem.merge` | ADC Link | Riwayat penarikan tidak ada. |
+| 31 | Snaky Go | `com.terraform.snakygo` | Bigiku.com | Baru 200, iklan sudah tidak bisa dibuka. Package terraform (mirip Patch Panic). |
 
 ## 🏢 Kategori Game Berdasarkan Pengembang
 
