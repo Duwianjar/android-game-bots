@@ -79,10 +79,10 @@ Keterangan kategori: game-game ini **susah, tetapi tetap cair**. Data pencairan 
 | No. | Game | Package `com` | Developer / perusahaan | Keterangan | Iklan Slot | Bot |
 |---:|---|---|---|---|---|:---:|
 | 1 | Bus Jam Parking Master | `com.busjam.parking.master` | Tidak tercantum / أحمد البكري خميس موسي | **Peringkat pertama.** 29 kali penarikan; banyak nominal Rp2.000, Rp3.000, Rp6.000, dan Rp7.000 (Maks Rp7.000). Terbesar sekitar Rp10.000, tetapi belum cair. | Belum dicatat | [x] |
-| 2 | Cute Fish Link Fun | `com.xteleremobilecompanyltd.FishLink` | Sporting 2024 / محمد السيد عبدالرحيم محمود | Aman, penarikan 1100 (Maks Rp1.100). | Belum dicatat | [ ] |
-| 3 | Magical Gems Match 3 | `com.glow.magical.match3` | DKSHUBDeveloper / Ghulam Yaseen | **13 kali penarikan:** Rp20, Rp89, Rp51, Rp81, Rp210, Rp107, Rp182, Rp1.050, Rp354, Rp531, Rp206, Rp273, dan Rp290 (Maks Rp1.050). Susah, tetapi tetap cair. | Lumayan | [x] |
-| 4 | Coin Sort Dash [RAWAN TERBLOKIR IKLAN] | `com.coin.sortdash.remove` | أحمد البكري خميس موسي | Developer sama dengan Bus Jam Parking. **3 kali penarikan:** Rp1.017, Rp627, dan Rp20 (Maks Rp1.017). Lumayan, tetapi rawan terblokir iklan. | Lumayan | [x] |
-| 5 | Bus Jam Escape Frenzy | `com.busjam.escape.frenzy` | DKSHUBDeveloper / Ghulam Yaseen | Developer sama dengan Magical Gems Match 3. Tema bus jam puzzle. **Penarikan 500 aman DANA.** | Belum dicatat | [ ] |
+| 2 | Bus Jam Escape Frenzy | `com.busjam.escape.frenzy` | DKSHUBDeveloper / Ghulam Yaseen | Developer sama dengan Magical Gems Match 3. Tema bus jam puzzle. **Penarikan 5.000 aman DANA (Maks Rp5.000).** | Belum dicatat | [ ] |
+| 3 | Cute Fish Link Fun | `com.xteleremobilecompanyltd.FishLink` | Sporting 2024 / محمد السيد عبدالرحيم محمود | Aman, penarikan 1100 (Maks Rp1.100). | Belum dicatat | [ ] |
+| 4 | Magical Gems Match 3 | `com.glow.magical.match3` | DKSHUBDeveloper / Ghulam Yaseen | **13 kali penarikan:** Rp20, Rp89, Rp51, Rp81, Rp210, Rp107, Rp182, Rp1.050, Rp354, Rp531, Rp206, Rp273, dan Rp290 (Maks Rp1.050). Susah, tetapi tetap cair. | Lumayan | [x] |
+| 5 | Coin Sort Dash [RAWAN TERBLOKIR IKLAN] | `com.coin.sortdash.remove` | أحمد البكري خميس موسي | Developer sama dengan Bus Jam Parking. **3 kali penarikan:** Rp1.017, Rp627, dan Rp20 (Maks Rp1.017). Lumayan, tetapi rawan terblokir iklan. | Lumayan | [x] |
 | 6 | Pyramid Gem Blast | `com.pyramid.gem.blast` | أحمد البكري خميس موسي | Developer sama dengan Bus Jam Parking. **2 kali penarikan:** Rp490 dan Rp20 (Maks Rp490). | Belum dicatat | [ ] |
 | 7 | Fresh Veggie Pop | `com.fresh.veggie.pop` | Tidak tercantum / BAE Publishing LLC | **4 kali penarikan:** Rp20, Rp95, Rp256, dan Rp74 (Maks Rp256). Susah, tetapi tetap cair. | Belum dicatat | [ ] |
 | 8 | Bottle Jam Solver | `com.bottle.jam.solver` | Tidak tercantum / UNJIBBED LTD | Game susah, penarikan sedikit. **4 kali penarikan:** Rp206, Rp108, Rp200, dan Rp202 (Maks Rp206). | Belum dicatat | [ ] |
