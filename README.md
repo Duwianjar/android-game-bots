@@ -160,6 +160,7 @@ Keterangan kategori: game-game ini **susah, tetapi tetap cair**. Data pencairan 
 | 1 | Arrow Jam | `com.arrow.jam.hlyj` | sho never | Game panah macet / unblock arrow. **Penarikan 500 aman.** | Belum dicatat | [ ] |
 | 2 | Snail Arrows Twist | `com.factoid.snailarrows` | factoid | Game panah putar model siput. **Penarikan 500 aman.** | Belum dicatat | [ ] |
 | 3 | Arrow Zen Cash | `com.goods.admin.arrow.zen.cash` | Goods Administration | Game panah bertema reward / cash. **Penarikan 200 aman.** | Belum dicatat | [ ] |
+| 4 | Bus Jam Rush | `putulive.app.bus` | StudyPort | Game bus jam penumpang warna. **Penarikan 200 aman.** | Belum dicatat | [ ] |
 
 ## Daftar Blocked
 
