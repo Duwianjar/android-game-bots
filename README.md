@@ -169,6 +169,12 @@ Keterangan kategori: game-game ini **susah, tetapi tetap cair**. Data pencairan 
 | 1 | Sweet Block Puzzle Clear | `com.sweet.bloco.quebra` | AS_ZR | Game block puzzle bertema manis. **Penarikan 1.200 sukses DANA.** | Belum dicatat | [ ] |
 | 2 | Fruit Block Sort | `com.fruitblocksort.sortpack.gp` | Bejodev | Game sortir blok buah ke dalam pack. **Penarikan 400 sukses DANA.** | Belum dicatat | [ ] |
 
+## Kategori Merge & Block 2048 (Studio Tunggal)
+
+| No. | Game | Package `com` | Developer / perusahaan | Keterangan | Iklan Slot | Bot |
+|---:|---|---|---|---|---|:---:|
+| 1 | Blossom Merge 2048 | `com.garden.merge.blossom` | EasyFrete | Gabungan puzzle 2048 tema bunga mekar. **Penarikan 200 aman.** | Belum dicatat | [ ] |
+
 ## Daftar Blocked
 
 | No. | Game | Package `com` | Developer / perusahaan | Keterangan |
