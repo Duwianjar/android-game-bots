@@ -149,6 +149,7 @@ Keterangan kategori: game-game ini **susah, tetapi tetap cair**. Data pencairan 
 | 24 | SliceBladeSplash | `com.suncollecter.slicebladesplash` | DEVVVS 0043 | Penarikan 2rb tidak cair dan rawan terblokir iklannya. |
 | 25 | Arrow Soccer Beauty | `com.xteleremobilecompanyltd.ArrowSoccerBeauty` | Sporting 2024 / محمد السيد عبدالرحيم محمود | Aplikasi tidak bisa dibuka, terdeteksi jaringan. Satu developer dengan Veg Cup Blast & Color Sand Blast; belum ada catatan penarikan. |
 | 26 | Greenfield Merge | `com.xteleremobilecompanyltd.GreenfieldMerge` | Sporting 2024 / محمد السيد عبدالرحيم محمود | Terdeteksi jaringan. Satu developer dengan Color Sand Blast; belum ada catatan penarikan. |
+| 27 | Crystal Blast | `com.shadowgames.dev.crystal.blast` | VPLibros Group / ayo hanafi | Tarik cuma 100 tidak cair. Satu developer dengan Ocean Tile dan Universe Match. |
 
 ## 🏢 Kategori Game Berdasarkan Pengembang
 
