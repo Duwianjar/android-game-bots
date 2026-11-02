@@ -88,6 +88,7 @@ Keterangan kategori: game-game ini **susah, tetapi tetap cair**. Data pencairan 
 | 8 | Fresh Veggie Pop | `com.fresh.veggie.pop` | Tidak tercantum / BAE Publishing LLC | **4 kali penarikan:** Rp20, Rp95, Rp256, dan Rp74 (Maks Rp256). Susah, tetapi tetap cair. | Belum dicatat | [ ] |
 | 9 | Bottle Jam Solver | `com.bottle.jam.solver` | Tidak tercantum / UNJIBBED LTD | Game susah, penarikan sedikit. **4 kali penarikan:** Rp206, Rp108, Rp200, dan Rp202 (Maks Rp206). | Belum dicatat | [ ] |
 | 10 | Gold Gems Journey | `com.gems.adventure.journey` | DKSHUBDeveloper / Ghulam Yaseen | Developer sama dengan Magical Gems Match 3. Tema match gems. **Penarikan 200 aman DANA.** | Belum dicatat | [ ] |
+| 11 | Bus Escape: Traffic Puzzle | `sb.ad.hyper.busflow` | MIC3 / Michael Jones | Perlu waspada; developer sama dengan Soda Pack Sort (di Daftar Blocked). Tema bus escape/traffic. **Penarikan 200 aman.** | Belum dicatat | [ ] |
 
 ## Bubble Crush
 
