@@ -191,6 +191,7 @@ Keterangan kategori: game-game ini **susah, tetapi tetap cair**. Data pencairan 
 | 25 | Arrow Soccer Beauty | `com.xteleremobilecompanyltd.ArrowSoccerBeauty` | Sporting 2024 / محمد السيد عبدالرحيم محمود | Aplikasi tidak bisa dibuka, terdeteksi jaringan. Satu developer dengan Veg Cup Blast & Color Sand Blast; belum ada catatan penarikan. |
 | 26 | Greenfield Merge | `com.xteleremobilecompanyltd.GreenfieldMerge` | Sporting 2024 / محمد السيد عبدالرحيم محمود | Terdeteksi jaringan. Satu developer dengan Color Sand Blast; belum ada catatan penarikan. |
 | 27 | Crystal Blast | `com.shadowgames.dev.crystal.blast` | VPLibros Group / ayo hanafi | Tarik cuma 100 tidak cair. Satu developer dengan Ocean Tile dan Universe Match. |
+| 28 | Arrow Claw | `com.gungamefire.ArrowClaw` | GunGameFire | Blocked jaringan; belum ada catatan penarikan. |
 
 ## 🏢 Kategori Game Berdasarkan Pengembang
 
