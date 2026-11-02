@@ -181,6 +181,7 @@ Keterangan kategori: game-game ini **susah, tetapi tetap cair**. Data pencairan 
 | No. | Game | Package `com` | Developer / perusahaan | Keterangan | Iklan Slot | Bot |
 |---:|---|---|---|---|---|:---:|
 | 1 | Fortuna Bubble Shooter | `com.fortuna.bubble` | UniteGrand Auto | Game tembak gelembung warna. **Penarikan 700 DANA aman.** | Belum dicatat | [ ] |
+| 2 | Orchard Trio | `com.wiwitsugeh.orchardtrio` | M.S Max | Package mirip awalan com.wiwvitsugeh.snack (Snake Out Jam). **Penarikan 500 aman.** | Belum dicatat | [ ] |
 
 ## Daftar Blocked
 
