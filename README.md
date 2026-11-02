@@ -49,6 +49,8 @@ Keterangan kategori: game-game ini terasa paling cepat, tetapi relatif mudah ter
 |---:|---|---|---|---|---|:---:|
 | 1 | Magic Ocean Tile Crush **[RAWAN TERBLOKIR]** | `com.starlightgame.magicoceantilecrush` | ACM PROJECTS & AUTOMATION LTD / Elias Galvin | Belum ada catatan penarikan; rawan terblokir. | Belum dicatat | [x] |
 | 2 | Woodland Tile Match **[RAWAN TERBLOKIR]** | `com.starlightgame.woodlandtilematcher` | ACM PROJECTS & AUTOMATION LTD / Elias Galvin | Belum ada catatan penarikan; rawan terblokir. | Belum dicatat | [x] |
+| 3 | Crazy Tile Match Winner | `com.moonshotcube.crazytilematchwinner` | Elias Galvin | Penarikan 500 cair DANA. | Belum dicatat | [ ] |
+| 4 | Lucky Pop Crush | `com.starlightgame.luckypopcrusher` | ACM PROJECTS & AUTOMATION LTD / Elias Galvin | Penarikan 300 cair DANA. | Belum dicatat | [ ] |
 
 ## Lucky Food
 
