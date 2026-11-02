@@ -200,6 +200,7 @@ Keterangan kategori: game-game ini **susah, tetapi tetap cair**. Data pencairan 
 | 26 | Greenfield Merge | `com.xteleremobilecompanyltd.GreenfieldMerge` | Sporting 2024 / محمد السيد عبدالرحيم محمود | Terdeteksi jaringan. Satu developer dengan Color Sand Blast; belum ada catatan penarikan. |
 | 27 | Crystal Blast | `com.shadowgames.dev.crystal.blast` | VPLibros Group / ayo hanafi | Tarik cuma 100 tidak cair. Satu developer dengan Ocean Tile dan Universe Match. |
 | 28 | Arrow Claw | `com.gungamefire.ArrowClaw` | GunGameFire | Blocked jaringan; belum ada catatan penarikan. |
+| 29 | Happy Bird Sort | `com.kingu.birdsort` | Kingu Studio | Cuma 150 cair lama, kemungkinan tidak cair. |
 
 ## 🏢 Kategori Game Berdasarkan Pengembang
 
