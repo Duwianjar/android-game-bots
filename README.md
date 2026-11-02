@@ -139,6 +139,12 @@ Keterangan kategori: game-game ini **susah, tetapi tetap cair**. Data pencairan 
 |---:|---|---|---|---|---|:---:|
 | 1 | Sunny Bus Jam | `com.nazer.gaming.busjam` | nazer gaming studio | Game puzzle bus jam. **Penarikan 500 aman.** | Belum dicatat | [ ] |
 
+### Jalebi Apps
+
+| No. | Game | Package `com` | Developer / perusahaan | Keterangan | Iklan Slot | Bot |
+|---:|---|---|---|---|---|:---:|
+| 1 | Bunny Dream Night | `com.bunny.dream.night` | Jalebi Apps | Game kasual tema kelinci. **Penarikan 500 aman.** | Belum dicatat | [ ] |
+
 ## Lança Sites
 
 | No. | Game | Package `com` | Developer / perusahaan | Keterangan | Iklan Slot | Bot |
