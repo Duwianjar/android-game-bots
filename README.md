@@ -138,6 +138,7 @@ Keterangan kategori: game-game ini **susah, tetapi tetap cair**. Data pencairan 
 | 22 | Soda Pack Sort | `com.mobiroller.soda.pack` | MIC3 / Michael Jones | Tidak bisa tonton iklan. |
 | 23 | MagicDreamStarCrush | `com.luckystarter.magicdreamstarcrush` | DEVVVS 0043 | Penarikan 600 tidak cair. |
 | 24 | SliceBladeSplash | `com.suncollecter.slicebladesplash` | DEVVVS 0043 | Penarikan 2rb tidak cair dan rawan terblokir iklannya. |
+| 25 | Arrow Soccer Beauty | `com.xteleremobilecompanyltd.ArrowSoccerBeauty` | Sporting 2024 / محمد السيد عبدالرحيم محمود | Aplikasi tidak bisa dibuka, terdeteksi jaringan. Satu developer dengan Veg Cup Blast & Color Sand Blast; belum ada catatan penarikan. |
 
 ## 🏢 Kategori Game Berdasarkan Pengembang
 
