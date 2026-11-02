@@ -136,6 +136,8 @@ Keterangan kategori: game-game ini **susah, tetapi tetap cair**. Data pencairan 
 | 20 | Sea Synth | `com.waterworld.games.tap.seasynth` | Belum diketahui | Ditemukan di HP; dimasukkan ke daftar Blocked sesuai permintaan. |
 | 21 | Garden Badges | `com.paldev.production.game.garden` | Belum diketahui | Ditemukan di HP; dimasukkan ke daftar Blocked sesuai permintaan. |
 | 22 | Soda Pack Sort | `com.mobiroller.soda.pack` | MIC3 / Michael Jones | Tidak bisa tonton iklan. |
+| 23 | MagicDreamStarCrush | `com.luckystarter.magicdreamstarcrush` | DEVVVS 0043 | Penarikan 600 tidak cair. |
+| 24 | SliceBladeSplash | `com.suncollecter.slicebladesplash` | DEVVVS 0043 | Penarikan 2rb tidak cair dan rawan terblokir iklannya. |
 
 ## 🏢 Kategori Game Berdasarkan Pengembang
 
