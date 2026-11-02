@@ -84,11 +84,12 @@ Keterangan kategori: game-game ini **susah, tetapi tetap cair**. Data pencairan 
 | 4 | Cute Fish Link Fun | `com.xteleremobilecompanyltd.FishLink` | Sporting 2024 / محمد السيد عبدالرحيم محمود | Aman, penarikan 1100 (Maks Rp1.100). | Belum dicatat | [ ] |
 | 5 | Magical Gems Match 3 | `com.glow.magical.match3` | DKSHUBDeveloper / Ghulam Yaseen | **13 kali penarikan:** Rp20, Rp89, Rp51, Rp81, Rp210, Rp107, Rp182, Rp1.050, Rp354, Rp531, Rp206, Rp273, dan Rp290 (Maks Rp1.050). Susah, tetapi tetap cair. | Lumayan | [x] |
 | 6 | Coin Sort Dash [RAWAN TERBLOKIR IKLAN] | `com.coin.sortdash.remove` | أحمد البكري خميس موسي | Developer sama dengan Bus Jam Parking. **3 kali penarikan:** Rp1.017, Rp627, dan Rp20 (Maks Rp1.017). Lumayan, tetapi rawan terblokir iklan. | Lumayan | [x] |
-| 7 | Pyramid Gem Blast | `com.pyramid.gem.blast` | أحمد البكري خميس موسي | Developer sama dengan Bus Jam Parking. **2 kali penarikan:** Rp490 dan Rp20 (Maks Rp490). | Belum dicatat | [ ] |
-| 8 | Fresh Veggie Pop | `com.fresh.veggie.pop` | Tidak tercantum / BAE Publishing LLC | **4 kali penarikan:** Rp20, Rp95, Rp256, dan Rp74 (Maks Rp256). Susah, tetapi tetap cair. | Belum dicatat | [ ] |
-| 9 | Bottle Jam Solver | `com.bottle.jam.solver` | Tidak tercantum / UNJIBBED LTD | Game susah, penarikan sedikit. **4 kali penarikan:** Rp206, Rp108, Rp200, dan Rp202 (Maks Rp206). | Belum dicatat | [ ] |
-| 10 | Gold Gems Journey | `com.gems.adventure.journey` | DKSHUBDeveloper / Ghulam Yaseen | Developer sama dengan Magical Gems Match 3. Tema match gems. **Penarikan 200 aman DANA.** | Belum dicatat | [ ] |
-| 11 | Bus Escape: Traffic Puzzle | `sb.ad.hyper.busflow` | MIC3 / Michael Jones | Perlu waspada; developer sama dengan Soda Pack Sort (di Daftar Blocked). Tema bus escape/traffic. **Penarikan 200 aman.** | Belum dicatat | [ ] |
+| 7 | Soccer Tap Guard | `goal.soccertap.guardfrenzy` | MIC3 / Michael Jones | Perlu waspada; developer sama dengan Soda Pack Sort (Daftar Blocked). **Penarikan 1.000 aman.** | Belum dicatat | [ ] |
+| 8 | Pyramid Gem Blast | `com.pyramid.gem.blast` | أحمد البكري خميس موسي | Developer sama dengan Bus Jam Parking. **2 kali penarikan:** Rp490 dan Rp20 (Maks Rp490). | Belum dicatat | [ ] |
+| 9 | Fresh Veggie Pop | `com.fresh.veggie.pop` | Tidak tercantum / BAE Publishing LLC | **4 kali penarikan:** Rp20, Rp95, Rp256, dan Rp74 (Maks Rp256). Susah, tetapi tetap cair. | Belum dicatat | [ ] |
+| 10 | Bottle Jam Solver | `com.bottle.jam.solver` | Tidak tercantum / UNJIBBED LTD | Game susah, penarikan sedikit. **4 kali penarikan:** Rp206, Rp108, Rp200, dan Rp202 (Maks Rp206). | Belum dicatat | [ ] |
+| 11 | Gold Gems Journey | `com.gems.adventure.journey` | DKSHUBDeveloper / Ghulam Yaseen | Developer sama dengan Magical Gems Match 3. Tema match gems. **Penarikan 200 aman DANA.** | Belum dicatat | [ ] |
+| 12 | Bus Escape: Traffic Puzzle | `sb.ad.hyper.busflow` | MIC3 / Michael Jones | Perlu waspada; developer sama dengan Soda Pack Sort (di Daftar Blocked). Tema bus escape/traffic. **Penarikan 200 aman.** | Belum dicatat | [ ] |
 
 ## Bubble Crush
 
