@@ -162,6 +162,12 @@ Keterangan kategori: game-game ini **susah, tetapi tetap cair**. Data pencairan 
 | 3 | Arrow Zen Cash | `com.goods.admin.arrow.zen.cash` | Goods Administration | Game panah bertema reward / cash. **Penarikan 200 aman.** | Belum dicatat | [ ] |
 | 4 | Bus Jam Rush | `putulive.app.bus` | StudyPort | Game bus jam penumpang warna. **Penarikan 200 aman.** | Belum dicatat | [ ] |
 
+## Kategori Tile, Match & Sort (Studio Tunggal)
+
+| No. | Game | Package `com` | Developer / perusahaan | Keterangan | Iklan Slot | Bot |
+|---:|---|---|---|---|---|:---:|
+| 1 | Fruit Block Sort | `com.fruitblocksort.sortpack.gp` | Bejodev | Game sortir blok buah ke dalam pack. **Penarikan 400 sukses DANA.** | Belum dicatat | [ ] |
+
 ## Daftar Blocked
 
 | No. | Game | Package `com` | Developer / perusahaan | Keterangan |
