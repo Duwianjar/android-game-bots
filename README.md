@@ -119,6 +119,14 @@ Keterangan kategori: game-game ini **susah, tetapi tetap cair**. Data pencairan 
 |---:|---|---|---|---|---|:---:|
 | 1 | Fruit Blade Pop Crush **[RAWAN TERBLOKIR]** | `com.starlightgame.fruitbladepopcrush` | ACM PROJECTS & AUTOMATION LTD / Elias Galvin | Belum ada catatan penarikan; rawan terblokir. | Belum dicatat | [x] |
 
+## Developer Baru dengan Koleksi Multi-Game di HP
+
+### ALEXANDER DEJARNETTE
+
+| No. | Game | Package `com` | Developer / perusahaan | Keterangan | Iklan Slot | Bot |
+|---:|---|---|---|---|---|:---:|
+| 1 | Global Carnival Arrow | `com.Lucinda.GlobalCarnivalArrow` | ALEXANDER DEJARNETTE | Tema panah karnaval. **Penarikan 1.000 dua kali DANA aman.** | Belum dicatat | [ ] |
+
 ## Daftar Blocked
 
 | No. | Game | Package `com` | Developer / perusahaan | Keterangan |
