@@ -208,6 +208,7 @@ Keterangan kategori: game-game ini **susah, tetapi tetap cair**. Data pencairan 
 | 27 | Crystal Blast | `com.shadowgames.dev.crystal.blast` | VPLibros Group / ayo hanafi | Tarik cuma 100 tidak cair. Satu developer dengan Ocean Tile dan Universe Match. |
 | 28 | Arrow Claw | `com.gungamefire.ArrowClaw` | GunGameFire | Blocked jaringan; belum ada catatan penarikan. |
 | 29 | Happy Bird Sort | `com.kingu.birdsort` | Kingu Studio | Cuma 150 cair lama, kemungkinan tidak cair. |
+| 30 | Lucky Gem Merge | `com.luckygem.merge` | ADC Link | Riwayat penarikan tidak ada. |
 
 ## 🏢 Kategori Game Berdasarkan Pengembang
 
