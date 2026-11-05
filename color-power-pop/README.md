@@ -17,7 +17,7 @@ Panduan teknis dan catatan analisis penarikan saldo untuk game **Color Power Pop
 | **Instalasi Pertama** | **19 kali penarikan:** Rp1.000 sebanyak 4 kali dan Rp4.000 sekali (nominal lainnya bertahap). |
 | **Instalasi Kedua** | **DANA aman tapi cuma sedikit karena kemungkinan instalnya di akhir.** |
 | **Iklan Slot** | Lumayan (tersedia iklan slot untuk boost perolehan koin). |
-| **Rekomendasi Instalasi** | **Rekomendasi menengah.** Posisi prioritas 6 (di atas Snake Out Jam). Pasang target kecil-menengah terlebih dahulu. |
+| **Rekomendasi Instalasi** | **Rekomendasi menengah.** Posisi prioritas 7 (di atas Snake Out Jam). Pasang target kecil-menengah terlebih dahulu. |
 | **Metode Pencairan** | DANA / Saldo e-wallet. |
 
 ---
