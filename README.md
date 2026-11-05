@@ -245,6 +245,8 @@ Keterangan kategori: game-game ini **susah, tetapi tetap cair**. Data pencairan 
 | 33 | Magic Tile Match Joy | `com.tilefunyou.magictilematchjoy` | DEVVVS 0043 / SUKRIATI | Awal-awal aman tapi sekarang sudah terblokir, kemungkinannya karena tidak bisa rekening yang sama. Ada pencairan sekitar Rp1.000, tetapi 3 penarikan gagal. |
 | 34 | Lucky Block Mathwin | Belum diketahui | Belum diketahui | Penarikan kedua gagal, kemungkinan tidak bisa rekening yang sama. Belum ada catatan penarikan valid dan package belum terverifikasi. |
 | 35 | Lucky Fruit Bubble Dodge | `com.newgameclick.luckyfruitbubbledodge` | DEVVVS 0043 / SUKRIATI | Instalasi kedua tidak cair, kemungkinan tidak bisa rekening sama dan cuma 1 rb. |
+| 36 | Pop Crush Fever | `com.duyifun.popcrushfever` | Duyifun | Instalasi kedua tidak bisa cair, baru penginstalan pertama yang bisa; sama dengan game lain, tidak bisa cair karena rekening harus baru. |
+| 37 | Lucky Fruit Sniper | `com.smallclicker.luckyfruitsniper` | DEVVVS 0043 / SUKRIATI | Sudah dikit tidak cair. |
 
 ## 🏢 Kategori Game Berdasarkan Pengembang
 
