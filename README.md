@@ -17,8 +17,8 @@ Urutan ini dibuat dari catatan penarikan yang sudah ada. **Tidak ada data yang m
 | 5 | [Color Power Pop](color-power-pop/) | `com.giraffeeapp.power` | 19 kali penarikan; Rp1.000 sebanyak 4 kali dan Rp4.000 sekali. | DANA aman tapi cuma sedikit karena kemungkinan instalnya di akhir. | Rekomendasi menengah. |
 | 6 | [Snake Out Jam](snake-out-jam/) | `com.wiwvitsugeh.snack` | Ada penarikan Rp9.237. Setelah penarikan sekitar Rp9.000, proses terasa susah. | Instalasi kedua susah iklan slotnya. | Instal berikutnya dengan target kecil dulu. ([Panduan Instalasi & Bypass Lisensi](snake-out-jam/README.md)) |
 | 7 | [Magical Gems Match 3](magic-gems-match/) | `com.glow.magical.match3` | 13 kali penarikan; ada nominal Rp1.050. | DANA normal tapi sedikit kemungkinan karena terakhir. | Instal dengan target kecil. |
-| 8 | [Coin Sort Dash](coin-dash-shot/) | `com.coin.sortdash.remove` | 3 kali penarikan; ada Rp1.017. **Rawan terblokir iklan.** | DANA normal tapi sedikit kemungkinan karena terakhir. | Instal setelah prioritas utama. |
-| 9 | Color Sand Blast | `com.xteleremobilecompanyltd.ColorSandBlast` | 11 kali penarikan; maksimum Rp2.311. Tidak ada gagal yang dicatat. | - | Rekomendasi setelah prioritas utama. |
+| 8 | Color Sand Blast | `com.xteleremobilecompanyltd.ColorSandBlast` | 11 kali penarikan; maksimum Rp2.311. Tidak ada gagal yang dicatat. | DANA aman dan stabil. | Rekomendasi setelah prioritas utama. |
+| 9 | [Coin Sort Dash](coin-dash-shot/) | `com.coin.sortdash.remove` | 3 kali penarikan; ada Rp1.017. **Rawan terblokir iklan.** | DANA normal tapi sedikit kemungkinan karena terakhir. | Instal setelah prioritas utama. |
 | 10 | Veg Cup Blast | `com.xteleremobilecompanyltd.VegCupBlast` | 5 kali penarikan; maksimum Rp2.191. | - | Rekomendasi setelah prioritas utama. |
 | 11 | Toy Drop | `com.NAMMUNIS.ToyDrop` | 4 kali penarikan; maksimum Rp1.670. | - | Rekomendasi setelah prioritas utama. |
 | 12 | Beach Soda Sort | `com.apnabankshop.beach` | Ada penarikan Rp1.061; catatan jumlah penarikan dan nominal tidak sepenuhnya cocok. | - | Instal dengan pemantauan. |
