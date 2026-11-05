@@ -21,13 +21,12 @@ Urutan ini dibuat dari catatan penarikan yang sudah ada. **Tidak ada data yang m
 | 9 | [Coin Sort Dash](coin-dash-shot/) | `com.coin.sortdash.remove` | 3 kali penarikan; ada Rp1.017. **Rawan terblokir iklan.** | DANA normal tapi sedikit kemungkinan karena terakhir. | Instal setelah prioritas utama. |
 | 10 | Veg Cup Blast | `com.xteleremobilecompanyltd.VegCupBlast` | 5 kali penarikan; maksimum Rp2.191. | DANA tetap aman, tapi cuma dapat sedikit karena kemungkinan di akhir. | Rekomendasi setelah prioritas utama. |
 | 11 | Toy Drop | `com.NAMMUNIS.ToyDrop` | 4 kali penarikan; maksimum Rp1.670. | DANA aman, paling banyak Rp1.300. | Rekomendasi setelah prioritas utama. |
-| 12 | Beach Soda Sort | `com.apnabankshop.beach` | Ada penarikan Rp1.061; catatan jumlah penarikan dan nominal tidak sepenuhnya cocok. | - | Instal dengan pemantauan. |
-| 13 | Crazy Fruit Blade Winner | `com.starlightgame.crazyfruitbladewinner` | Belum ada catatan penarikan. **Sekitar Rp200 per hari di awal, tetapi langsung turun setelahnya; lumayan, tetapi rawan block iklan.** | - | Belum dapat diranking; instal setelah game dengan riwayat cair. |
-| 14 | Tiny Blast Magic Land | `com.kuaifastfa.tinyblastmagicland` | Ada pencairan sekitar Rp3.000, tetapi 2 penarikan tidak cair. | - | Prioritas lebih rendah. |
-| 15 | Blade Slice Master Fruit | `com.diancutter.bladeslicemasterfruit` | Ada pencairan sekitar Rp3.000, tetapi data juga mencatat pencairan lain Rp396 dan Rp531. | - | Prioritas lebih rendah. |
-| 16 | Cut Fruit Blade Master | `com.goodgamecut.cutfruitblademaster` | Ada pencairan sekitar Rp2.000, tetapi 1 penarikan sekitar Rp2.000 tidak cair. | - | Prioritas lebih rendah. |
-| 17 | Magic Tile Match Joy | `com.tilefunyou.magictilematchjoy` | Ada pencairan sekitar Rp1.000, tetapi 3 penarikan gagal. | - | Prioritas rendah. |
-| 18 | Lucky Block Mathwin | Belum diketahui | Belum ada catatan penarikan dan package belum terverifikasi. | - | Belum dapat diranking. |
+| 12 | Crazy Fruit Blade Winner | `com.starlightgame.crazyfruitbladewinner` | Belum ada catatan penarikan. **Sekitar Rp200 per hari di awal, tetapi langsung turun setelahnya; lumayan, tetapi rawan block iklan.** | - | Belum dapat diranking; instal setelah game dengan riwayat cair. |
+| 13 | Tiny Blast Magic Land | `com.kuaifastfa.tinyblastmagicland` | Ada pencairan sekitar Rp3.000, tetapi 2 penarikan tidak cair. | - | Prioritas lebih rendah. |
+| 14 | Blade Slice Master Fruit | `com.diancutter.bladeslicemasterfruit` | Ada pencairan sekitar Rp3.000, tetapi data juga mencatat pencairan lain Rp396 dan Rp531. | - | Prioritas lebih rendah. |
+| 15 | Cut Fruit Blade Master | `com.goodgamecut.cutfruitblademaster` | Ada pencairan sekitar Rp2.000, tetapi 1 penarikan sekitar Rp2.000 tidak cair. | - | Prioritas lebih rendah. |
+| 16 | Magic Tile Match Joy | `com.tilefunyou.magictilematchjoy` | Ada pencairan sekitar Rp1.000, tetapi 3 penarikan gagal. | - | Prioritas rendah. |
+| 17 | Lucky Block Mathwin | Belum diketahui | Belum ada catatan penarikan dan package belum terverifikasi. | - | Belum dapat diranking. |
 
 </div>
 
@@ -100,7 +99,7 @@ Keterangan kategori: game-game ini **susah, tetapi tetap cair**. Data pencairan 
 |---:|---|---|---|---|---|:---:|
 | 1 | Color Power Pop | `com.giraffeeapp.power` | Giraffee App / Muhammad Ahsan Saleem | **19 kali penarikan:** Rp1.000 sebanyak 4 kali dan Rp4.000 sekali; nominal 14 penarikan lainnya belum dirinci. | Lumayan | [x] |
 | 2 | [Snake Out Jam](snake-out-jam/) | `com.wiwvitsugeh.snack` | Belum ditemukan di listing publik | **4 kali penarikan:** Rp147, Rp9.237, Rp288, dan Rp51. Setelah penarikan sekitar Rp9.000, proses terasa susah. ([Panduan Instalasi](snake-out-jam/README.md)) | Mudah | [ ] |
-| 3 | Beach Soda Sort | `com.apnabankshop.beach` | ApnaBankShop / MRS BLAISE HELEN HAWLEY | **14 kali penarikan (15 nominal tercatat):** Rp642, Rp532, Rp88, Rp17, Rp47, Rp103, Rp93, Rp604, Rp546, Rp1.061, Rp530, Rp136, Rp68, Rp158, dan Rp89. | Lumayan | [ ] |
+| 3 | Beach Soda Sort | `com.apnabankshop.beach` | ApnaBankShop / MRS BLAISE HELEN HAWLEY | **14 kali penarikan (15 nominal tercatat):** Rp642, Rp532, Rp88, Rp17, Rp47, Rp103, Rp93, Rp604, Rp546, Rp1.061, Rp530, Rp136, Rp68, Rp158, dan Rp89. Instalasi kedua tidak bisa DANA lagi dan cuma dikit juga. | Lumayan | [ ] |
 | 4 | **NEW — Color Soda Pack** | `com.apnabankshop.soda` | ApnaBankShop / MRS BLAISE HELEN HAWLEY | Developer sama dengan Beach Soda Sort. Game susah; **2 kali penarikan:** Rp58 dan Rp288. | Belum dicatat | [ ] |
 
 ## Arrow Unblock
