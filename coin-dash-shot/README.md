@@ -17,7 +17,7 @@ Panduan teknis dan catatan monetisasi untuk game **Coin Sort Dash**.
 | **Instalasi Pertama** | **3 kali penarikan:** Rp1.017, Rp627, dan Rp20 (Maks Rp1.017). Lumayan, tetapi rawan terblokir iklan. |
 | **Instalasi Kedua** | **DANA normal tapi sedikit kemungkinan karena terakhir.** |
 | **Iklan Slot** | Lumayan, tetapi rawan pemblokiran iklan. |
-| **Rekomendasi Instalasi** | **Instal setelah prioritas utama.** Prioritas 9 dalam daftar rekomendasi. |
+| **Rekomendasi Instalasi** | **Instal setelah prioritas utama.** Prioritas 10 dalam daftar rekomendasi. |
 | **Metode Pencairan** | DANA / Saldo e-wallet. |
 
 ---

@@ -17,7 +17,7 @@ Panduan teknis dan catatan monetisasi untuk game **Magical Gems Match 3**.
 | **Instalasi Pertama** | **13 kali penarikan (Maks Rp1.050):** Rp20, Rp89, Rp51, Rp81, Rp210, Rp107, Rp182, Rp1.050, Rp354, Rp531, Rp206, Rp273, dan Rp290. Karakteristik: Susah, tetapi tetap cair. |
 | **Instalasi Kedua** | **DANA normal tapi sedikit kemungkinan karena terakhir.** |
 | **Iklan Slot** | Lumayan (tersedia reward slot/iklan). |
-| **Rekomendasi Instalasi** | **Instal dengan target kecil.** Masuk dalam kelompok Rekomendasi Prioritas 7. |
+| **Rekomendasi Instalasi** | **Instal dengan target kecil.** Masuk dalam kelompok Rekomendasi Prioritas 8. |
 | **Metode Pencairan** | DANA / Saldo e-wallet. |
 
 ---
