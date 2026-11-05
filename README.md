@@ -39,6 +39,18 @@ Urutan ini dibuat dari catatan penarikan yang sudah ada. **Tidak ada data yang m
 
 </div>
 
+## Tabel Semi Rekomendasi
+
+Game semi rekomendasi dengan opsi pencairan alternatif atau ketentuan akun/rekening khusus.
+
+<div style="overflow-x: auto;">
+
+| No. | Game | Package `com` | Instalasi Pertama | Instalasi Kedua / Catatan | Saran instalasi |
+|---:|---|---|---|---|---|
+| 1 | [Bus Parking Dash](bus-parking-dash/) | `com.bus.parking.dash` | Tersedia bot otomatis. | Ini bisa OVO atau beda rekening baru. | Semi rekomendasi; gunakan opsi OVO atau rekening baru. |
+
+</div>
+
 ## Lucky Match - DEVVVS 0043
 
 **Pengembang/perusahaan:** DEVVVS 0043 / **SUKRIATI**.
