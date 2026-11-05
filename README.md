@@ -18,17 +18,16 @@ Urutan ini dibuat dari catatan penarikan yang sudah ada. **Tidak ada data yang m
 | 6 | [Snake Out Jam](snake-out-jam/) | `com.wiwvitsugeh.snack` | Ada penarikan Rp9.237. Setelah penarikan sekitar Rp9.000, proses terasa susah. | Instalasi kedua susah iklan slotnya. | Instal berikutnya dengan target kecil dulu. ([Panduan Instalasi & Bypass Lisensi](snake-out-jam/README.md)) |
 | 7 | [Magical Gems Match 3](magic-gems-match/) | `com.glow.magical.match3` | 13 kali penarikan; ada nominal Rp1.050. | DANA normal tapi sedikit kemungkinan karena terakhir. | Instal dengan target kecil. |
 | 8 | [Coin Sort Dash](coin-dash-shot/) | `com.coin.sortdash.remove` | 3 kali penarikan; ada Rp1.017. **Rawan terblokir iklan.** | DANA normal tapi sedikit kemungkinan karena terakhir. | Instal setelah prioritas utama. |
-| 9 | Soda Pop Sort | `com.frenzy.sort.pack` | 3 kali penarikan: Rp29, Rp3.026, dan Rp88. | - | Rekomendasi menengah. |
-| 10 | Color Sand Blast | `com.xteleremobilecompanyltd.ColorSandBlast` | 11 kali penarikan; maksimum Rp2.311. Tidak ada gagal yang dicatat. | - | Rekomendasi setelah prioritas utama. |
-| 11 | Veg Cup Blast | `com.xteleremobilecompanyltd.VegCupBlast` | 5 kali penarikan; maksimum Rp2.191. | - | Rekomendasi setelah prioritas utama. |
-| 12 | Toy Drop | `com.NAMMUNIS.ToyDrop` | 4 kali penarikan; maksimum Rp1.670. | - | Rekomendasi setelah prioritas utama. |
-| 13 | Beach Soda Sort | `com.apnabankshop.beach` | Ada penarikan Rp1.061; catatan jumlah penarikan dan nominal tidak sepenuhnya cocok. | - | Instal dengan pemantauan. |
-| 14 | Crazy Fruit Blade Winner | `com.starlightgame.crazyfruitbladewinner` | Belum ada catatan penarikan. **Sekitar Rp200 per hari di awal, tetapi langsung turun setelahnya; lumayan, tetapi rawan block iklan.** | - | Belum dapat diranking; instal setelah game dengan riwayat cair. |
-| 15 | Tiny Blast Magic Land | `com.kuaifastfa.tinyblastmagicland` | Ada pencairan sekitar Rp3.000, tetapi 2 penarikan tidak cair. | - | Prioritas lebih rendah. |
-| 16 | Blade Slice Master Fruit | `com.diancutter.bladeslicemasterfruit` | Ada pencairan sekitar Rp3.000, tetapi data juga mencatat pencairan lain Rp396 dan Rp531. | - | Prioritas lebih rendah. |
-| 17 | Cut Fruit Blade Master | `com.goodgamecut.cutfruitblademaster` | Ada pencairan sekitar Rp2.000, tetapi 1 penarikan sekitar Rp2.000 tidak cair. | - | Prioritas lebih rendah. |
-| 18 | Magic Tile Match Joy | `com.tilefunyou.magictilematchjoy` | Ada pencairan sekitar Rp1.000, tetapi 3 penarikan gagal. | - | Prioritas rendah. |
-| 19 | Lucky Block Mathwin | Belum diketahui | Belum ada catatan penarikan dan package belum terverifikasi. | - | Belum dapat diranking. |
+| 9 | Color Sand Blast | `com.xteleremobilecompanyltd.ColorSandBlast` | 11 kali penarikan; maksimum Rp2.311. Tidak ada gagal yang dicatat. | - | Rekomendasi setelah prioritas utama. |
+| 10 | Veg Cup Blast | `com.xteleremobilecompanyltd.VegCupBlast` | 5 kali penarikan; maksimum Rp2.191. | - | Rekomendasi setelah prioritas utama. |
+| 11 | Toy Drop | `com.NAMMUNIS.ToyDrop` | 4 kali penarikan; maksimum Rp1.670. | - | Rekomendasi setelah prioritas utama. |
+| 12 | Beach Soda Sort | `com.apnabankshop.beach` | Ada penarikan Rp1.061; catatan jumlah penarikan dan nominal tidak sepenuhnya cocok. | - | Instal dengan pemantauan. |
+| 13 | Crazy Fruit Blade Winner | `com.starlightgame.crazyfruitbladewinner` | Belum ada catatan penarikan. **Sekitar Rp200 per hari di awal, tetapi langsung turun setelahnya; lumayan, tetapi rawan block iklan.** | - | Belum dapat diranking; instal setelah game dengan riwayat cair. |
+| 14 | Tiny Blast Magic Land | `com.kuaifastfa.tinyblastmagicland` | Ada pencairan sekitar Rp3.000, tetapi 2 penarikan tidak cair. | - | Prioritas lebih rendah. |
+| 15 | Blade Slice Master Fruit | `com.diancutter.bladeslicemasterfruit` | Ada pencairan sekitar Rp3.000, tetapi data juga mencatat pencairan lain Rp396 dan Rp531. | - | Prioritas lebih rendah. |
+| 16 | Cut Fruit Blade Master | `com.goodgamecut.cutfruitblademaster` | Ada pencairan sekitar Rp2.000, tetapi 1 penarikan sekitar Rp2.000 tidak cair. | - | Prioritas lebih rendah. |
+| 17 | Magic Tile Match Joy | `com.tilefunyou.magictilematchjoy` | Ada pencairan sekitar Rp1.000, tetapi 3 penarikan gagal. | - | Prioritas rendah. |
+| 18 | Lucky Block Mathwin | Belum diketahui | Belum ada catatan penarikan dan package belum terverifikasi. | - | Belum dapat diranking. |
 
 </div>
 
@@ -108,8 +107,8 @@ Keterangan kategori: game-game ini **susah, tetapi tetap cair**. Data pencairan 
 
 | No. | Game | Package `com` | Developer / perusahaan | Keterangan | Iklan Slot | Bot |
 |---:|---|---|---|---|---|:---:|
-| 1 | Soda Pop Sort | `com.frenzy.sort.pack` | Tidak tercantum / Junaid Hameed | **3 kali penarikan:** Rp29, Rp3.026, dan Rp88. | Lumayan | [ ] |
-| 2 | Power Bank Blast | `com.power.pack.game` | Tidak tercantum / Junaid Hameed | **1 kali penarikan:** Rp537. | Belum dicatat | [ ] |
+| 1 | Power Bank Blast | `com.power.pack.game` | Tidak tercantum / Junaid Hameed | **1 kali penarikan:** Rp537. | Belum dicatat | [ ] |
+| 2 | Soda Pop Sort | `com.frenzy.sort.pack` | Tidak tercantum / Junaid Hameed | **3 kali penarikan:** Rp29, Rp3.026, dan Rp88. Instalasi kedua sudah dikit tidak bisa DANA ulang. | Lumayan | [ ] |
 
 ## Magic Star Crush Journey — Elias Galvin / ACM PROJECTS & AUTOMATION LTD [RAWAN TERBLOKIR]
 
