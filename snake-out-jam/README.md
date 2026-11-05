@@ -18,7 +18,8 @@ Panduan teknis instalasi, bypass lisensi Google Play (PairIP Licensing), dan cat
 | **Total Penarikan Tercatat** | 4 kali: Rp147, Rp9.237, Rp288, dan Rp51 |
 | **Pencairan Terbesar** | Rp9.237 (Berhasil cair ke e-wallet) |
 | **Karakteristik Game** | Setelah berhasil melakukan penarikan besar di kisaran **Rp9.000**, proses permainan dan pencairan terasa jauh lebih sulit atau dipersulit oleh server game. |
-| **Rekomendasi Instalasi** | **Instal dengan target kecil dulu.** Jangan langsung memaksakan mengejar target Rp10.000+ dalam sekali sesi. |
+| **Instalasi Kedua** | **Susah iklan slotnya** (iklan reward/slot susah muncul/didapat saat instalasi kedua). |
+| **Rekomendasi Instalasi** | **Instal dengan target kecil dulu.** Berada di bawah Color Power Pop. Jangan langsung memaksakan mengejar target Rp10.000+ dalam sekali sesi. |
 
 ---
 
