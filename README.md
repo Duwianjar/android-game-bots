@@ -12,6 +12,7 @@ Game-game yang memiliki riwayat pencairan berhasil di awal namun bermasalah di i
 |---:|---|---|---|---|---|
 | 1 | Blade Slice Master Fruit | `com.diancutter.bladeslicemasterfruit` | Ada pencairan sekitar Rp3.000, tetapi data juga mencatat pencairan lain Rp396 dan Rp531. | Instalasi kedua tidak bisa tarik padahal 14 rb. | Coba tarik kecil dulu. |
 | 2 | Cut Fruit Blade Master | `com.goodgamecut.cutfruitblademaster` | Ada pencairan sekitar Rp2.000, tetapi 1 penarikan sekitar Rp2.000 tidak cair. | 18 rb pending. | Coba tarik kecil dulu. |
+| 3 | LuckyScrewSort | Belum diketahui | Perlu dicek. | Penarikan 6 rb dua kali gagal, kemungkinan tidak bisa rekening sama (DANA). | Coba tarik kecil dulu. |
 
 </div>
 
@@ -230,6 +231,7 @@ Keterangan kategori: game-game ini **susah, tetapi tetap cair**. Data pencairan 
 | 32 | Golden Cup Spin | `com.goldencup.happyday` | Applied Data Company LLC | Tidak jelas, mungkin terdeteksi sistem jaringan. |
 | 33 | Magic Tile Match Joy | `com.tilefunyou.magictilematchjoy` | DEVVVS 0043 / SUKRIATI | Awal-awal aman tapi sekarang sudah terblokir, kemungkinannya karena tidak bisa rekening yang sama. Ada pencairan sekitar Rp1.000, tetapi 3 penarikan gagal. |
 | 34 | Lucky Block Mathwin | Belum diketahui | Belum diketahui | Penarikan kedua gagal, kemungkinan tidak bisa rekening yang sama. Belum ada catatan penarikan valid dan package belum terverifikasi. |
+| 35 | Lucky Fruit Bubble Dodge | `com.newgameclick.luckyfruitbubbledodge` | DEVVVS 0043 / SUKRIATI | Instalasi kedua tidak cair, kemungkinan tidak bisa rekening sama dan cuma 1 rb. |
 
 ## 🏢 Kategori Game Berdasarkan Pengembang
 
@@ -246,7 +248,7 @@ Keterangan kategori: game-game ini **susah, tetapi tetap cair**. Data pencairan 
 ### DEVVVS 0043 — SUKRIATI
 
 - [Juicy Slash Blade Fruit](juicy-slash-blade-fruit/) — `com.dudufun.juicyslashbladefruit`
-- [Lucky Fruit Bubble Dodge](lucky-fruit-bubble-dodge/) — `com.newgameclick.luckyfruitbubbledodge`
+- [Lucky Fruit Bubble Dodge](lucky-fruit-bubble-dodge/) **[BLOCKED]** — `com.newgameclick.luckyfruitbubbledodge` — Instalasi kedua tidak cair, kemungkinan tidak bisa rekening sama dan cuma 1 rb.
 
 ### أحمد البكري خميس موسي
 
