@@ -2,6 +2,19 @@
 
 Koleksi bot otomatis untuk berbagai game Android yang menghasilkan saldo real money.
 
+## Tabel Check
+
+Game-game yang memiliki riwayat pencairan berhasil di awal namun bermasalah di instalasi kedua (seperti penarikan nominal besar tertahan/pending atau tidak bisa tarik). Disarankan mencoba penarikan nominal kecil terlebih dahulu.
+
+<div style="overflow-x: auto;">
+
+| No. | Game | Package `com` | Instalasi Pertama | Instalasi Kedua | Saran instalasi |
+|---:|---|---|---|---|---|
+| 1 | Blade Slice Master Fruit | `com.diancutter.bladeslicemasterfruit` | Ada pencairan sekitar Rp3.000, tetapi data juga mencatat pencairan lain Rp396 dan Rp531. | Instalasi kedua tidak bisa tarik padahal 14 rb. | Coba tarik kecil dulu. |
+| 2 | Cut Fruit Blade Master | `com.goodgamecut.cutfruitblademaster` | Ada pencairan sekitar Rp2.000, tetapi 1 penarikan sekitar Rp2.000 tidak cair. | 18 rb pending. | Coba tarik kecil dulu. |
+
+</div>
+
 ## Rekomendasi Instalasi
 
 Urutan ini dibuat dari catatan penarikan yang sudah ada. **Tidak ada data yang membuktikan cair semua sampai Rp10.000.** Zoo Tile adalah catatan paling kuat karena 15 kali penarikan disebut lancar semua dengan maksimum Rp8.022. Bus Jam memiliki nominal sekitar Rp10.000, tetapi nominal terbesar tersebut belum cair. Dalam kelompok analisis yang sama, game yang bot-nya tersedia ditempatkan lebih atas. Game Blocked tidak dimasukkan dalam rekomendasi instalasi.
@@ -22,10 +35,6 @@ Urutan ini dibuat dari catatan penarikan yang sudah ada. **Tidak ada data yang m
 | 10 | [Coin Sort Dash](coin-dash-shot/) | `com.coin.sortdash.remove` | 3 kali penarikan; ada Rp1.017. **Rawan terblokir iklan.** | DANA normal tapi sedikit kemungkinan karena terakhir. | Instal setelah prioritas utama. |
 | 11 | Veg Cup Blast | `com.xteleremobilecompanyltd.VegCupBlast` | 5 kali penarikan; maksimum Rp2.191. | DANA tetap aman, tapi cuma dapat sedikit karena kemungkinan di akhir. | Rekomendasi setelah prioritas utama. |
 | 12 | Toy Drop | `com.NAMMUNIS.ToyDrop` | 4 kali penarikan; maksimum Rp1.670. | DANA aman, paling banyak Rp1.300. | Rekomendasi setelah prioritas utama. |
-| 13 | Blade Slice Master Fruit | `com.diancutter.bladeslicemasterfruit` | Ada pencairan sekitar Rp3.000, tetapi data juga mencatat pencairan lain Rp396 dan Rp531. | - | Prioritas lebih rendah. |
-| 14 | Cut Fruit Blade Master | `com.goodgamecut.cutfruitblademaster` | Ada pencairan sekitar Rp2.000, tetapi 1 penarikan sekitar Rp2.000 tidak cair. | - | Prioritas lebih rendah. |
-| 15 | Magic Tile Match Joy | `com.tilefunyou.magictilematchjoy` | Ada pencairan sekitar Rp1.000, tetapi 3 penarikan gagal. | - | Prioritas rendah. |
-| 16 | Lucky Block Mathwin | Belum diketahui | Belum ada catatan penarikan dan package belum terverifikasi. | - | Belum dapat diranking. |
 
 </div>
 
@@ -36,13 +45,12 @@ Keterangan kategori: game-game ini terasa paling cepat, tetapi relatif mudah ter
 
 | No. | Game | Package `com` | Developer / perusahaan | Keterangan | Iklan Slot | Bot |
 |---:|---|---|---|---|---|:---:|
-| 1 | Blade Slice Master Fruit | `com.diancutter.bladeslicemasterfruit` | DEVVVS 0043 / SUKRIATI | **Peringkat pertama.** Cepat, tetapi mudah terblokir. Laporan penarikan cair 4 kali: Rp65, Rp144, Rp785, dan sekitar Rp3.000; tercatat 2 pencairan: Rp396 dan Rp531. | Lumayan | [ ] |
-| 2 | Cut Fruit Blade Master | `com.goodgamecut.cutfruitblademaster` | DEVVVS 0043 / SUKRIATI | **Peringkat kedua.** Laporan penarikan cair 8 kali: Rp67, Rp68, Rp563, Rp632, sekitar Rp1.000, dan sekitar Rp2.000 sebanyak 3 kali; tidak cair 1 kali: sekitar Rp2.000. | Lumayan | [ ] |
-| 3 | Magic Tile Match Joy | `com.tilefunyou.magictilematchjoy` | DEVVVS 0043 / SUKRIATI | **Urutan ketiga.** Cair 2 kali: Rp33 dan sekitar Rp1.000; gagal 3 kali: Rp32, Rp209, dan Rp209. | Lumayan | [ ] |
-| 4 | Tile Match Crush Frenzy | `com.tilegamer.tilematchcrushfrenzy` | DEVVVS 0043 / SUKRIATI | Cepat, tetapi mudah terblokir. Laporan penarikan cair 4 kali: Rp79, Rp167, Rp202, dan Rp541; pending 1 kali: Rp41. | Belum dicatat | [ ] |
-| 5 | [Juicy Slash Blade Fruit](juicy-slash-blade-fruit/) | `com.dudufun.juicyslashbladefruit` | DEVVVS 0043 / SUKRIATI | Cepat, tetapi mudah terblokir. Laporan penarikan cair 2 kali: Rp114 dan Rp132; tidak cair 1 kali: Rp33. | Belum dicatat | [x] |
-| 6 | Lucky Match Path Journey | `com.smallclickergamer.luckymatchpathjourney` | DEVVVS 0043 / SUKRIATI | Cepat, tetapi mudah terblokir. Laporan penarikan cair 2 kali: Rp51 dan Rp98; tidak cair 2 kali: Rp35 dan Rp116. | Belum dicatat | [ ] |
-| 7 | Tiny Blast Magic Land | `com.kuaifastfa.tinyblastmagicland` | DEVVVS 0043 / SUKRIATI | Laporan penarikan cair 10 kali (9 nominal tercatat): Rp117, Rp159, Rp239, Rp346, Rp824, sekitar Rp1.000 sebanyak 3 kali, dan sekitar Rp3.000; tidak cair 2 kali: Rp62 dan Rp104. Instalasi kedua tidak bisa tarik. | Lumayan | [ ] |
+| 1 | Blade Slice Master Fruit | `com.diancutter.bladeslicemasterfruit` | DEVVVS 0043 / SUKRIATI | **Peringkat pertama.** Cepat, tetapi mudah terblokir. Laporan penarikan cair 4 kali: Rp65, Rp144, Rp785, dan sekitar Rp3.000; tercatat 2 pencairan: Rp396 dan Rp531. Instalasi kedua tidak bisa tarik padahal 14 rb. | Lumayan | [ ] |
+| 2 | Cut Fruit Blade Master | `com.goodgamecut.cutfruitblademaster` | DEVVVS 0043 / SUKRIATI | **Peringkat kedua.** Laporan penarikan cair 8 kali: Rp67, Rp68, Rp563, Rp632, sekitar Rp1.000, dan sekitar Rp2.000 sebanyak 3 kali; tidak cair 1 kali: sekitar Rp2.000. Instalasi kedua 18 rb pending. | Lumayan | [ ] |
+| 3 | Tile Match Crush Frenzy | `com.tilegamer.tilematchcrushfrenzy` | DEVVVS 0043 / SUKRIATI | Cepat, tetapi mudah terblokir. Laporan penarikan cair 4 kali: Rp79, Rp167, Rp202, dan Rp541; pending 1 kali: Rp41. | Belum dicatat | [ ] |
+| 4 | [Juicy Slash Blade Fruit](juicy-slash-blade-fruit/) | `com.dudufun.juicyslashbladefruit` | DEVVVS 0043 / SUKRIATI | Cepat, tetapi mudah terblokir. Laporan penarikan cair 2 kali: Rp114 dan Rp132; tidak cair 1 kali: Rp33. | Belum dicatat | [x] |
+| 5 | Lucky Match Path Journey | `com.smallclickergamer.luckymatchpathjourney` | DEVVVS 0043 / SUKRIATI | Cepat, tetapi mudah terblokir. Laporan penarikan cair 2 kali: Rp51 dan Rp98; tidak cair 2 kali: Rp35 dan Rp116. | Belum dicatat | [ ] |
+| 6 | Tiny Blast Magic Land | `com.kuaifastfa.tinyblastmagicland` | DEVVVS 0043 / SUKRIATI | Laporan penarikan cair 10 kali (9 nominal tercatat): Rp117, Rp159, Rp239, Rp346, Rp824, sekitar Rp1.000 sebanyak 3 kali, dan sekitar Rp3.000; tidak cair 2 kali: Rp62 dan Rp104. Instalasi kedua tidak bisa tarik. | Lumayan | [ ] |
 
 ## Magic Ocean & Woodland Tile Match — ACM PROJECTS & AUTOMATION LTD / Elias Galvin
 
@@ -220,6 +228,8 @@ Keterangan kategori: game-game ini **susah, tetapi tetap cair**. Data pencairan 
 | 30 | Lucky Gem Merge | `com.luckygem.merge` | ADC Link | Riwayat penarikan tidak ada. |
 | 31 | Snaky Go | `com.terraform.snakygo` | Bigiku.com | Baru 200, iklan sudah tidak bisa dibuka. Package terraform (mirip Patch Panic). |
 | 32 | Golden Cup Spin | `com.goldencup.happyday` | Applied Data Company LLC | Tidak jelas, mungkin terdeteksi sistem jaringan. |
+| 33 | Magic Tile Match Joy | `com.tilefunyou.magictilematchjoy` | DEVVVS 0043 / SUKRIATI | Awal-awal aman tapi sekarang sudah terblokir, kemungkinannya karena tidak bisa rekening yang sama. Ada pencairan sekitar Rp1.000, tetapi 3 penarikan gagal. |
+| 34 | Lucky Block Mathwin | Belum diketahui | Belum diketahui | Penarikan kedua gagal, kemungkinan tidak bisa rekening yang sama. Belum ada catatan penarikan valid dan package belum terverifikasi. |
 
 ## 🏢 Kategori Game Berdasarkan Pengembang
 
