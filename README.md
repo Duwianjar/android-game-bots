@@ -247,6 +247,8 @@ Keterangan kategori: game-game ini **susah, tetapi tetap cair**. Data pencairan 
 | 35 | Lucky Fruit Bubble Dodge | `com.newgameclick.luckyfruitbubbledodge` | DEVVVS 0043 / SUKRIATI | Instalasi kedua tidak cair, kemungkinan tidak bisa rekening sama dan cuma 1 rb. |
 | 36 | Pop Crush Fever | `com.duyifun.popcrushfever` | Duyifun | Instalasi kedua tidak bisa cair, baru penginstalan pertama yang bisa; sama dengan game lain, tidak bisa cair karena rekening harus baru. |
 | 37 | Lucky Fruit Sniper | `com.smallclicker.luckyfruitsniper` | DEVVVS 0043 / SUKRIATI | Sudah dikit tidak cair. |
+| 38 | Gem Pet Blast *(Pets Blast)* | `com.lucky.petsblast` | Tidak tercantum | Sudah susah cair, perlu nonton iklan malah tidak cair. |
+| 39 | Fruit Quest Master | `com.lucky.fruit.quest` | Tidak tercantum | Sudah susah cair, sama seperti Gem Pet Blast (perlu nonton iklan tapi tidak cair). |
 
 ## 🏢 Kategori Game Berdasarkan Pengembang
 
