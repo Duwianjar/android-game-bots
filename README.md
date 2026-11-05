@@ -14,7 +14,7 @@ Urutan ini dibuat dari catatan penarikan yang sudah ada. **Tidak ada data yang m
 | 2 | Bus Jam Parking Master | `com.busjam.parking.master` | 29 kali penarikan; banyak nominal Rp2.000–Rp7.000. Target terbesar sekitar Rp10.000 belum cair. | Di restart kedua: pencairan bisa pending 2 hari dan tidak bisa rekening yang sama. | Instal setelah Zoo Tile; pantau nominal besar. Bot paling aman tapi kurang maksimal. |
 | 3 | Magic Ocean Tile Crush | `com.starlightgame.magicoceantilecrush` | Masuk kelompok pemantauan nominal di atas Rp5.000 tetapi pending; data nominal dan pending belum tercatat. **Rawan terblokir.** | Pencairan DANA aman. | Instal setelah dua prioritas pertama; pantau ketat. Bot tidak aman tapi pencairan DANA aman, tinggal perbaiki bot. |
 | 4 | Woodland Tile Match | `com.starlightgame.woodlandtilematcher` | Masuk kelompok pemantauan nominal di atas Rp5.000 tetapi pending; data nominal dan pending belum tercatat. **Rawan terblokir.** | Aman seperti Magic Ocean (pencairan DANA aman). | Instal setelah dua prioritas pertama; pantau ketat. |
-| 5 | Snake Out Jam | `com.wiwvitsugeh.snack` | Ada penarikan Rp9.237. Setelah penarikan sekitar Rp9.000, proses terasa susah. | - | Instal berikutnya dengan target kecil dulu. |
+| 5 | [Snake Out Jam](snake-out-jam/) | `com.wiwvitsugeh.snack` | Ada penarikan Rp9.237. Setelah penarikan sekitar Rp9.000, proses terasa susah. | - | Instal berikutnya dengan target kecil dulu. ([Panduan Instalasi & Bypass Lisensi](snake-out-jam/README.md)) |
 | 6 | Color Power Pop | `com.giraffeeapp.power` | 19 kali penarikan; Rp1.000 sebanyak 4 kali dan Rp4.000 sekali. | - | Rekomendasi menengah. |
 | 7 | Magical Gems Match 3 | `com.glow.magical.match3` | 13 kali penarikan; ada nominal Rp1.050. | - | Instal dengan target kecil. |
 | 8 | Coin Sort Dash | `com.coin.sortdash.remove` | 3 kali penarikan; ada Rp1.017. **Rawan terblokir iklan.** | - | Instal setelah prioritas utama. |
@@ -100,7 +100,7 @@ Keterangan kategori: game-game ini **susah, tetapi tetap cair**. Data pencairan 
 | No. | Game | Package `com` | Developer / perusahaan | Keterangan | Iklan Slot | Bot |
 |---:|---|---|---|---|---|:---:|
 | 1 | Color Power Pop | `com.giraffeeapp.power` | Giraffee App / Muhammad Ahsan Saleem | **19 kali penarikan:** Rp1.000 sebanyak 4 kali dan Rp4.000 sekali; nominal 14 penarikan lainnya belum dirinci. | Lumayan | [x] |
-| 2 | Snake Out Jam | `com.wiwvitsugeh.snack` | Belum ditemukan di listing publik | **4 kali penarikan:** Rp147, Rp9.237, Rp288, dan Rp51. Setelah penarikan sekitar Rp9.000, proses terasa susah. | Mudah | [ ] |
+| 2 | [Snake Out Jam](snake-out-jam/) | `com.wiwvitsugeh.snack` | Belum ditemukan di listing publik | **4 kali penarikan:** Rp147, Rp9.237, Rp288, dan Rp51. Setelah penarikan sekitar Rp9.000, proses terasa susah. ([Panduan Instalasi](snake-out-jam/README.md)) | Mudah | [ ] |
 | 3 | Beach Soda Sort | `com.apnabankshop.beach` | ApnaBankShop / MRS BLAISE HELEN HAWLEY | **14 kali penarikan (15 nominal tercatat):** Rp642, Rp532, Rp88, Rp17, Rp47, Rp103, Rp93, Rp604, Rp546, Rp1.061, Rp530, Rp136, Rp68, Rp158, dan Rp89. | Lumayan | [ ] |
 | 4 | **NEW — Color Soda Pack** | `com.apnabankshop.soda` | ApnaBankShop / MRS BLAISE HELEN HAWLEY | Developer sama dengan Beach Soda Sort. Game susah; **2 kali penarikan:** Rp58 dan Rp288. | Belum dicatat | [ ] |
 
