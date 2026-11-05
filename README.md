@@ -20,7 +20,7 @@ Urutan ini dibuat dari catatan penarikan yang sudah ada. **Tidak ada data yang m
 | 8 | Color Sand Blast | `com.xteleremobilecompanyltd.ColorSandBlast` | 11 kali penarikan; maksimum Rp2.311. Tidak ada gagal yang dicatat. | DANA aman dan stabil. | Rekomendasi setelah prioritas utama. |
 | 9 | [Coin Sort Dash](coin-dash-shot/) | `com.coin.sortdash.remove` | 3 kali penarikan; ada Rp1.017. **Rawan terblokir iklan.** | DANA normal tapi sedikit kemungkinan karena terakhir. | Instal setelah prioritas utama. |
 | 10 | Veg Cup Blast | `com.xteleremobilecompanyltd.VegCupBlast` | 5 kali penarikan; maksimum Rp2.191. | DANA tetap aman, tapi cuma dapat sedikit karena kemungkinan di akhir. | Rekomendasi setelah prioritas utama. |
-| 11 | Toy Drop | `com.NAMMUNIS.ToyDrop` | 4 kali penarikan; maksimum Rp1.670. | - | Rekomendasi setelah prioritas utama. |
+| 11 | Toy Drop | `com.NAMMUNIS.ToyDrop` | 4 kali penarikan; maksimum Rp1.670. | DANA aman, paling banyak Rp1.300. | Rekomendasi setelah prioritas utama. |
 | 12 | Beach Soda Sort | `com.apnabankshop.beach` | Ada penarikan Rp1.061; catatan jumlah penarikan dan nominal tidak sepenuhnya cocok. | - | Instal dengan pemantauan. |
 | 13 | Crazy Fruit Blade Winner | `com.starlightgame.crazyfruitbladewinner` | Belum ada catatan penarikan. **Sekitar Rp200 per hari di awal, tetapi langsung turun setelahnya; lumayan, tetapi rawan block iklan.** | - | Belum dapat diranking; instal setelah game dengan riwayat cair. |
 | 14 | Tiny Blast Magic Land | `com.kuaifastfa.tinyblastmagicland` | Ada pencairan sekitar Rp3.000, tetapi 2 penarikan tidak cair. | - | Prioritas lebih rendah. |
