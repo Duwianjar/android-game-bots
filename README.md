@@ -39,6 +39,8 @@ Urutan ini dibuat dari catatan penarikan yang sudah ada. **Tidak ada data yang m
 | 13 | Toy Drop | `com.NAMMUNIS.ToyDrop` | 4 kali penarikan; maksimum Rp1.670. | DANA aman, paling banyak Rp1.300. | Rekomendasi setelah prioritas utama. |
 | 14 | Planet Slice Master | `com.smartgames.planetslicemaster` | Belum pernah dicoba. | DANA aman, penarikan kecil sekitar 5.900-an sebanyak 3 kali. | Rekomendasi setelah prioritas utama; coba target penarikan kecil dulu (Rp5.900-an). |
 | 15 | [Soda Jam Puzzle](soda-jam-puzzle/) | `com.armg.sodajam` | Tidak ikut tercatat. | Penarikan 700 aman DANA. | Instalasi kedua aman penarikan 700. |
+| 16 | Harvest Block Crush | `com.harvest.block.crush` | Tidak ikut tercatat. | DANA aman tapi cuma 400. | Instalasi kedua aman tapi nominal kecil (Rp400). |
+| 17 | Mahjong Ajaib *(Magic Mahjong)* | `com.Lucinda.MagicMahjong` | Tidak ikut tercatat. | DANA masih aman 300-an. | Coba target penarikan kecil (sekitar Rp300-an). |
 
 </div>
 
@@ -153,6 +155,7 @@ Keterangan kategori: game-game ini **susah, tetapi tetap cair**. Data pencairan 
 | No. | Game | Package `com` | Developer / perusahaan | Keterangan | Iklan Slot | Bot |
 |---:|---|---|---|---|---|:---:|
 | 1 | Global Carnival Arrow | `com.Lucinda.GlobalCarnivalArrow` | ALEXANDER DEJARNETTE | Tema panah karnaval. **Penarikan 1.000 dua kali DANA aman.** | Belum dicatat | [ ] |
+| 2 | Mahjong Ajaib *(Magic Mahjong)* | `com.Lucinda.MagicMahjong` | ALEXANDER DEJARNETTE | Tema mahjong tile match. Instalasi pertama tidak ikut tercatat. **Instalasi kedua DANA masih aman 300-an.** | Belum dicatat | [ ] |
 
 ### arlon studio
 
@@ -196,6 +199,7 @@ Keterangan kategori: game-game ini **susah, tetapi tetap cair**. Data pencairan 
 |---:|---|---|---|---|---|:---:|
 | 1 | Sweet Block Puzzle Clear | `com.sweet.bloco.quebra` | AS_ZR | Game block puzzle bertema manis. **Penarikan 1.200 sukses DANA.** | Belum dicatat | [ ] |
 | 2 | Fruit Block Sort | `com.fruitblocksort.sortpack.gp` | Bejodev | Game sortir blok buah ke dalam pack. **Penarikan 400 sukses DANA.** | Belum dicatat | [ ] |
+| 3 | Harvest Block Crush | `com.harvest.block.crush` | Muhammad Shabbir Hussain | Game block crush puzzle. Instalasi pertama tidak ikut tercatat. **Instalasi kedua DANA aman tapi cuma 400.** | Belum dicatat | [ ] |
 
 ## Kategori Merge & Block 2048 (Studio Tunggal)
 
@@ -290,6 +294,8 @@ Keterangan kategori: game-game ini **susah, tetapi tetap cair**. Data pencairan 
 - [Animal Blast: Win Prize Game](jungle-animal-eliminate/) — Faisal Developers — `com.jungle.bear.tiger.wild.animal.eliminate`
 - [Magical Gems Match 3](magic-gems-match/) — DKSHUBDeveloper — `com.glow.magical.match3`
 - Planet Slice Master — Go Bananas Studio — `com.smartgames.planetslicemaster`
+- Harvest Block Crush — Muhammad Shabbir Hussain — `com.harvest.block.crush`
+- Mahjong Ajaib — ALEXANDER DEJARNETTE — `com.Lucinda.MagicMahjong`
 
 ### Belum terverifikasi
 
