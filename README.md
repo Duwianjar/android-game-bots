@@ -41,6 +41,7 @@ Urutan ini dibuat dari catatan penarikan yang sudah ada. **Tidak ada data yang m
 | 15 | [Soda Jam Puzzle](soda-jam-puzzle/) | `com.armg.sodajam` | Tidak ikut tercatat. | Penarikan 700 aman DANA. | Instalasi kedua aman penarikan 700. |
 | 16 | Harvest Block Crush | `com.harvest.block.crush` | Tidak ikut tercatat. | DANA aman tapi cuma 400. | Instalasi kedua aman tapi nominal kecil (Rp400). |
 | 17 | Mahjong Ajaib *(Magic Mahjong)* | `com.Lucinda.MagicMahjong` | Tidak ikut tercatat. | DANA masih aman 300-an. | Coba target penarikan kecil (sekitar Rp300-an). |
+| 18 | Magic Merge | `com.xteleremobilecompanyltd.MagicMerge` | Belum ada catatan awal. | DANA masih aman 300-an. | Coba target penarikan kecil (sekitar Rp300-an). |
 
 </div>
 
@@ -97,7 +98,7 @@ Keterangan kategori: game-game ini **cukup cepat setelah Lucky Match, tetapi jar
 | 9 | Fortune Tile Mahjong | `com.NAMMUNIS.FortuneTileMahjong` | Tidak tercantum / Ekanayake Mudiyanselage Prasanna Dilshan Ekanayake | Developer sama dengan Toy Drop. **3 kali penarikan:** Rp212, Rp60, dan Rp20 (Maks Rp212). | Belum dicatat | [ ] |
 | 10 | Mahjong Master: Win Real Cash! | `com.mahong.master.tours.blossom.mingle` | Faisal Developers / Salman Khan | Developer sama dengan Zoo Tile. **1 kali penarikan:** Rp105. | Belum dicatat | [ ] |
 | 11 | Fruit Block-More Gifts | `com.xteleremobilecompanyltd.FruitBlock` | Sporting 2024 / محمد السيد عبدالرحيم محمود | Data penarikan belum tercatat valid/error, tetapi performanya sepertinya lumayan. | Lumayan | [ ] |
-| 12 | Magic Merge | `com.xteleremobilecompanyltd.MagicMerge` | Sporting 2024 / محمد السيد عبدالرحيم محمود | **Kemungkinan Lucky Food.** Belum ada catatan penarikan; cukup cepat setelah Lucky Match, tetapi jarang terdeteksi. | Belum dicatat | [ ] |
+| 12 | Magic Merge | `com.xteleremobilecompanyltd.MagicMerge` | Sporting 2024 / محمد السيد عبدالرحيم محمود | **Kemungkinan Lucky Food.** Cukup cepat setelah Lucky Match, tetapi jarang terdeteksi. **Instalasi kedua DANA masih aman 300-an.** | Belum dicatat | [ ] |
 | 13 | Animal Blast: Win Prize Game | `com.jungle.bear.tiger.wild.animal.eliminate` | Faisal Developers / Salman Khan | Developer sama dengan Zoo Tile. **1 kali penarikan:** Rp397. Keblokir koneksi, tetapi awalnya aman. | Belum dicatat | [x] |
 
 ## Spider Rope
