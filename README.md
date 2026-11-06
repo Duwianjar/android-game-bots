@@ -2,6 +2,28 @@
 
 Koleksi bot otomatis untuk berbagai game Android yang menghasilkan saldo real money.
 
+## Prosedur Wajib Setelah Restart HP
+
+Urutan aplikasi dan bot yang **wajib dipasang & dijalankan** di HP setelah restart:
+
+1. **Bot Blocked Game Detector (`blocked-game-detector/`)**:
+   - **Wajib di-install pertama kali** sebagai sistem proteksi dini di HP Android.
+   - Database detector disinkronkan dengan **Daftar Blocked terbaru (39 game)**.
+   - Berjalan sebagai service watchdog untuk memantau package yang terpasang di HP. Jika ada game berbahaya/blocked terpasang, langsung memunculkan alert agar akun DANA/perangkat tidak ikut terblokir.
+
+2. **Inject Iklan (`inject-iklan/` & `inject-iklan-android/`)**:
+   - **Wajib dijalankan sebelum rotasi game baru** untuk memancing persona Google AdMob dan mengisi cache iklan slot/fintech bernilai tinggi.
+   - **Perbaikan & Cara Inject yang Benar:**
+     1. Pastikan koneksi internet aktif dan stabil di perangkat.
+     2. Jalankan inject iklan lewat terminal: `inject-iklan` atau script `./run_inject_iklan.sh` (atau via launcher Desktop `Inject Iklan.command`).
+     3. Biarkan siklus profiling otomatis berjalan penuh: Chrome membuka Google -> query kata kunci slot/fintech -> interaksi form registrasi tanpa submit -> pemicuan intent app slot -> kembali ke game.
+     4. Jangan menyentuh atau menginterupsi layar saat inject sedang berjalan agar profil akun Google ter-update dengan sempurna.
+
+3. **Bus Jam Parking Master (`bus-jam-parking/`)**:
+   - **Wajib dijalankan ketiga sebagai pengaman produktivitas.**
+   - Game dengan rekor 29 kali penarikan stabil dan risiko blokir sangat minim.
+   - Jika game prioritas lain sedang "ngaret" (iklan habis, stuck, atau reward menurun), langsung jalankan Bus Jam Parking agar perangkat tetap produktif menghasilkan saldo tanpa risiko ban akun.
+
 ## Tabel Check
 
 Game-game yang memiliki riwayat pencairan berhasil di awal namun bermasalah di instalasi kedua (seperti penarikan nominal besar tertahan/pending atau tidak bisa tarik). Disarankan mencoba penarikan nominal kecil terlebih dahulu.
@@ -25,8 +47,8 @@ Urutan ini dibuat dari catatan penarikan yang sudah ada. **Tidak ada data yang m
 | Prioritas | Game | Package `com` | Instalasi Pertama | Instalasi Kedua | Saran instalasi |
 |---:|---|---|---|---|---|
 | 1 | [Lucky Arrow Escape](lucky-arrow-escaper/) | `com.starlightgame.luckyarrowescaper` | Tersedia bot guardian otomatis. | Penarikan 25 dan 27 aman DANA. | **Instal paling pertama.** Coba tunggu gede dulu atau 25k baru tarik. |
-| 2 | Tangkap Hewan Lucu / Zoo Tile | `com.zoo.tile.cute.animal.elephant.mouse.fox` | **15 kali lancar semua**, maksimum Rp8.022. | Restart kedua 3.000 dan masih DANA aman pencairan. | Instal setelah Lucky Arrow Escape. |
-| 3 | Bus Jam Parking Master | `com.busjam.parking.master` | 29 kali penarikan; banyak nominal Rp2.000–Rp7.000. Target terbesar sekitar Rp10.000 belum cair. | Di restart kedua: pencairan bisa pending 2 hari dan tidak bisa rekening yang sama. | Instal setelah prioritas atas; pantau nominal besar. Bot paling aman tapi kurang maksimal. |
+| 2 | Bus Jam Parking Master | `com.busjam.parking.master` | 29 kali penarikan; banyak nominal Rp2.000–Rp7.000. Target terbesar sekitar Rp10.000 belum cair. | Di restart kedua: pencairan bisa pending 2 hari dan tidak bisa rekening yang sama. | Instal setelah Lucky Arrow Escape; pantau nominal besar. Bot paling aman tapi kurang maksimal. |
+| 3 | [Tangkap Hewan Lucu / Zoo Tile](zoo-tile/) | `com.zoo.tile.cute.animal.elephant.mouse.fox` | **15 kali lancar semua**, maksimum Rp8.022. | Restart kedua 3.000 dan masih DANA aman pencairan. **Hati-hati terblokir koneksi.** | Instal setelah Bus Jam Parking Master; waspada dan pantau koneksi di instalasi kedua. |
 | 4 | Magic Ocean Tile Crush | `com.starlightgame.magicoceantilecrush` | Masuk kelompok pemantauan nominal di atas Rp5.000 tetapi pending; data nominal dan pending belum tercatat. **Rawan terblokir.** | Pencairan DANA aman. | Pantau ketat. Bot tidak aman tapi pencairan DANA aman, tinggal perbaiki bot. |
 | 5 | Woodland Tile Match | `com.starlightgame.woodlandtilematcher` | Masuk kelompok pemantauan nominal di atas Rp5.000 tetapi pending; data nominal dan pending belum tercatat. **Rawan terblokir.** | Aman seperti Magic Ocean (pencairan DANA aman). | Pantau ketat. |
 | 6 | [Crazy Fruit Blade Winner](crazy-fruit-blade-winner/) | `com.starlightgame.crazyfruitbladewinner` | Belum ada catatan penarikan. **Sekitar Rp200 per hari di awal, tetapi langsung turun setelahnya; lumayan, tetapi rawan block iklan.** | Tetap DANA dan awalnya bisa capai Rp15.000. | Rekomendasi menengah. |
@@ -48,6 +70,8 @@ Urutan ini dibuat dari catatan penarikan yang sudah ada. **Tidak ada data yang m
 | 22 | Tangkap Tile Zoo *(Catch Zoo Tiles)* | `com.agmalik.CatchZooTiles` | Belum ada catatan (kosong). | DANA aman 300-an. | Coba target penarikan kecil (sekitar Rp300-an). |
 | 23 | Cuan Maze | Belum dicatat | Belum ada catatan (kosong). | DANA aman 300-an. | Coba target penarikan kecil (sekitar Rp300-an). |
 | 24 | Panah Sentuh *(Arrow Tap)* | Belum dicatat | Belum ada catatan (kosong). | DANA aman 800-an. | Target kedua lumayan (sekitar Rp800-an aman DANA). |
+| 25 | [Dragon Arrow Escape *(Naga Panah)*](dragon-arrow-escape/) | `com.dragonarrowescape.game` | Belum ada catatan awal. | DANA aman 1.000-an (2 kali). | Target kedua aman (sekitar Rp1.000-an). |
+| 26 | Fortune Tile Mahjong | `com.NAMMUNIS.FortuneTileMahjong` | 3 kali penarikan (maks Rp212). | DANA masih aman 500-an. | Coba target penarikan kecil (sekitar Rp500-an). |
 
 </div>
 
@@ -93,7 +117,7 @@ Keterangan kategori: game-game ini **cukup cepat setelah Lucky Match, tetapi jar
 
 | No. | Game | Package `com` | Developer / perusahaan | Keterangan | Iklan Slot | Bot |
 |---:|---|---|---|---|---|:---:|
-| 1 | [Tangkap Hewan Lucu: Permainan Tile *(Zoo Tile: Win Mega Rewards!)*](zoo-tile/) | `com.zoo.tile.cute.animal.elephant.mouse.fox` | Faisal Developers / Salman Khan | **15 kali penarikan dan lancar semua.** Nominal dari kecil ke besar: Rp20, Rp50, Rp70, Rp104, Rp214, Rp279, Rp307, Rp597, Rp639, Rp964, Rp1.226, Rp1.594, Rp1.772, Rp1.866, dan Rp8.022. | Mudah | [x] |
+| 1 | [Tangkap Hewan Lucu: Permainan Tile *(Zoo Tile: Win Mega Rewards!)*](zoo-tile/) | `com.zoo.tile.cute.animal.elephant.mouse.fox` | Faisal Developers / Salman Khan | **15 kali penarikan dan lancar semua.** Nominal dari kecil ke besar: Rp20 s/d Rp8.022. Restart kedua 3.000 DANA masih aman, tetapi **hati-hati terblokir koneksi**. | Mudah | [x] |
 | 2 | Color Sand Blast | `com.xteleremobilecompanyltd.ColorSandBlast` | Sporting 2024 / محمد السيد عبدالرحيم محمود | **11 kali penarikan:** Rp20, Rp296, Rp662, Rp2.311, Rp124, Rp315, Rp368, Rp479, Rp537, Rp664, dan Rp924 (Maks Rp2.311). Cukup cepat setelah Lucky Match, tetapi jarang terdeteksi. | Lumayan | [ ] |
 | 3 | Veg Cup Blast | `com.xteleremobilecompanyltd.VegCupBlast` | Sporting 2024 / محمد السيد عبدالرحيم محمود | **5 kali penarikan:** Rp179, Rp2.191, Rp242, Rp208, dan Rp269 (Maks Rp2.191). Cukup cepat setelah Lucky Match, tetapi jarang terdeteksi. | Mendingan | [ ] |
 | 4 | Toy Drop | `com.NAMMUNIS.ToyDrop` | Tidak tercantum / Ekanayake Mudiyanselage Prasanna Dilshan Ekanayake | **4 kali penarikan:** Rp20, Rp65, Rp1.670, dan Rp254 (Maks Rp1.670). Cukup cepat setelah Lucky Match, tetapi jarang terdeteksi. | Lumayan | [ ] |
@@ -101,7 +125,7 @@ Keterangan kategori: game-game ini **cukup cepat setelah Lucky Match, tetapi jar
 | 6 | Fortune Merge World | `com.NAMMUNIS.FortuneMergeWorld` | NAMMUNIS / Ekanayake Mudiyanselage Prasanna Dilshan Ekanayake | Developer sama dengan Toy Drop. Tema merge puzzle. **500 aman.** | Belum dicatat | [ ] |
 | 7 | Belle Bolt Jam | `com.NAMMUNIS.BelleBoltJam` | NAMMUNIS / Ekanayake Mudiyanselage Prasanna Dilshan Ekanayake | Developer sama dengan Toy Drop. Tema baut/screw jam puzzle. **300 aman.** | Belum dicatat | [ ] |
 | 8 | Fish Flow | `com.NAMMUNIS.FishFlow` | NAMMUNIS / Ekanayake Mudiyanselage Prasanna Dilshan Ekanayake | Developer sama dengan Toy Drop. Tema flow puzzle ikan. **300 penarikan aman.** | Belum dicatat | [ ] |
-| 9 | Fortune Tile Mahjong | `com.NAMMUNIS.FortuneTileMahjong` | Tidak tercantum / Ekanayake Mudiyanselage Prasanna Dilshan Ekanayake | Developer sama dengan Toy Drop. **3 kali penarikan:** Rp212, Rp60, dan Rp20 (Maks Rp212). | Belum dicatat | [ ] |
+| 9 | Fortune Tile Mahjong | `com.NAMMUNIS.FortuneTileMahjong` | Tidak tercantum / Ekanayake Mudiyanselage Prasanna Dilshan Ekanayake | Developer sama dengan Toy Drop. **3 kali penarikan:** Rp212, Rp60, dan Rp20 (Maks Rp212). **Instalasi kedua DANA masih aman 500-an.** | Belum dicatat | [ ] |
 | 10 | Mahjong Master: Win Real Cash! | `com.mahong.master.tours.blossom.mingle` | Faisal Developers / Salman Khan | Developer sama dengan Zoo Tile. **1 kali penarikan:** Rp105. | Belum dicatat | [ ] |
 | 11 | Fruit Block-More Gifts | `com.xteleremobilecompanyltd.FruitBlock` | Sporting 2024 / محمد السيد عبدالرحيم محمود | Data penarikan belum tercatat valid/error, tetapi performanya sepertinya lumayan. | Lumayan | [ ] |
 | 12 | Magic Merge | `com.xteleremobilecompanyltd.MagicMerge` | Sporting 2024 / محمد السيد عبدالرحيم محمود | **Kemungkinan Lucky Food.** Cukup cepat setelah Lucky Match, tetapi jarang terdeteksi. **Instalasi kedua DANA masih aman 300-an.** | Belum dicatat | [ ] |
@@ -202,6 +226,7 @@ Keterangan kategori: game-game ini **susah, tetapi tetap cair**. Data pencairan 
 | 6 | Panah Penghasil Uang *(Panah Lepas)* | `com.pelangiarena.panahlepas` | Sub Akademi Game | Puzzle panah / arrow unblock penghasil saldo. Instalasi pertama tidak ada catatan. **Instalasi kedua DANA aman 200-an.** | Belum dicatat | [ ] |
 | 7 | Cuan Maze | Belum dicatat | Belum dicatat | Game puzzle labirin/maze cuan. Instalasi pertama tidak ada catatan. **Instalasi kedua DANA aman 300-an.** | Belum dicatat | [ ] |
 | 8 | Panah Sentuh *(Arrow Tap)* | Belum dicatat | Belum dicatat | Game ketuk panah / tap arrow puzzle. Instalasi pertama belum ada catatan. **Instalasi kedua DANA aman 800-an.** | Belum dicatat | [ ] |
+| 9 | [Dragon Arrow Escape *(Naga Panah)*](dragon-arrow-escape/) | `com.dragonarrowescape.game` | Tidak tercantum | Game panah putar / dragon arrow unblock. Tersedia bot otomatis. Instalasi pertama belum ada catatan. **Instalasi kedua DANA aman 1.000-an (2 kali).** | Belum dicatat | [x] |
 
 ## Kategori Tile, Match & Sort (Studio Tunggal)
 
