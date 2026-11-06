@@ -2,7 +2,7 @@
 """
 Bus Jam Parking Automation Bot (com.busjam.parking.master)
 Multi-Device Parallel Engine - Precision Floor-Masked Bus Detection, Matching Queue Colors,
-Auto Fail Recovery ('Main lagi'), Smart Reward OCR, Iklan 30s & DANA Withdrawal
+Auto Fail Recovery ('Main lagi'), Smart Reward OCR, Iklan 10s & DANA Withdrawal
 """
 import subprocess
 import multiprocessing
@@ -52,8 +52,8 @@ def send_telegram_async(text):
 LAUNCH_ACTIVITY = "com.busjam.parking.master/.LauncherAty"
 OCR_HELPER_PATH = "/Users/macbookair/ocr_helper"
 CLICK_REWARD_DURING_AD_WAIT = False  # Jangan klik OCR selama iklan; proses Koleksi dilakukan setelah kembali ke game
-AD_WAIT_SECONDS = 10         # Menonton iklan selama 10 detik
-MIN_WITHDRAWAL_RP = int(os.environ.get('MIN_WITHDRAWAL_RP', '10000'))   # Target saldo =Rp di atas 10000 untuk penarikan
+AD_WAIT_SECONDS = 30         # Menonton iklan wajib minimal 30 detik
+MIN_WITHDRAWAL_RP = int(os.environ.get('MIN_WITHDRAWAL_RP', '100000'))  # Target saldo =Rp di atas 100000 untuk penarikan
 FAILED_TAP_RESET_THRESHOLD = 6  # Reset jika 6 klik berturut-turut tidak mengubah layar
 FAILED_TAP_RESET_COOLDOWN = 120.0  # Hindari reset berulang dalam 2 menit
 
@@ -183,6 +183,8 @@ class BusParkingDashRunner:
         self.recently_tapped_points = []
         self.failed_tap_streak = 0
         self.last_data_reset_ts = 0.0
+        self.last_parking_ad_slot_tap_ts = 0.0
+        self.parking_ad_slot_retry_after_ts = 0.0
         self.latest_game_data = self.load_cached_state()
         if not self.latest_game_data:
             self.latest_game_data = {
@@ -375,10 +377,82 @@ class BusParkingDashRunner:
         except Exception:
             return ""
 
+    def inspect_recents(self):
+        """Memeriksa urutan task di dumpsys activity recents. Mengembalikan (index, task_id)."""
+        out = self.run_adb(["shell", "dumpsys", "activity", "recents"], timeout=4.0)
+        if not out:
+            return None, None
+
+        # 1. Cari Visible recent tasks
+        vis_match = re.search(r'Visible recent tasks.*?(?=\n\s*\n|\Z)', out, re.DOTALL)
+        if vis_match:
+            tasks = re.findall(
+                r'RecentTaskInfo #(\d+):\s+id=(\d+).*?cmp=([^/\s]+)',
+                vis_match.group(0),
+                re.DOTALL,
+            )
+            for idx_str, tid, pkg in tasks:
+                if PACKAGE_NAME in pkg:
+                    return int(idx_str), tid
+
+        # 2. Fallback cari di Recent tasks
+        recent_tasks = re.findall(
+            r'\* Recent #(\d+):\s+TaskRecord\{[^ ]+ #(\d+) A=([^ \n]+)',
+            out,
+        )
+        for idx_str, tid, pkg in recent_tasks:
+            if PACKAGE_NAME in pkg:
+                return int(idx_str), tid
+
+        return None, None
+
     def bring_game_to_foreground(self):
-        """Membawa aplikasi Bus Jam Parking kembali ke layar depan secara aman."""
-        self.run_adb(["shell", "am", "start", "-n", f"{PACKAGE_NAME}/.LauncherAty"])
-        self.run_adb(["shell", "monkey", "-p", PACKAGE_NAME, "-c", "android.intent.category.LAUNCHER", "1"])
+        """
+        Membawa aplikasi Bus Jam Parking kembali ke layar depan lewat RIWAYAT (Recent Apps),
+        BUKAN me-restart game dari awal agar progres bermain tetap berlanjut.
+        """
+        cur_focus = self.get_foreground_focus()
+        if PACKAGE_NAME in cur_focus:
+            return
+
+        target_idx, target_tid = self.inspect_recents()
+        print(f"{self.tag} [⟲] Membuka game dari riwayat aplikasi (posisi task #{target_idx if target_idx is not None else '?'})...", flush=True)
+
+        card_cx = int(360 * self.scale_x)
+        card_cy = int(728 * self.scale_y)
+
+        if "quickstep" in cur_focus.lower() or "recents" in cur_focus.lower():
+            # Layar Recents sudah terbuka di layar -> langsung ketuk kartu tengah
+            self.tap(card_cx, card_cy)
+            time.sleep(0.6)
+        elif target_idx == 1:
+            # Game tepat di urutan sebelumnya (misal tertutup Play Store/Chrome)
+            # Gunakan Quick Switch riwayat cepat (double tap App Switch: 187 x 2)
+            self.run_adb(["shell", "input keyevent 187 && sleep 0.12 && input keyevent 187"])
+            time.sleep(0.6)
+            if PACKAGE_NAME not in self.get_foreground_focus():
+                # Jika belum masuk, buka recents lalu ketuk kartu
+                self.run_adb(["shell", "input", "keyevent", "187"])
+                time.sleep(0.4)
+                self.tap(card_cx, card_cy)
+                time.sleep(0.5)
+        elif target_idx == 0:
+            # Game di posisi paling atas riwayat (misal di Home screen)
+            self.run_adb(["shell", "input", "keyevent", "187"])
+            time.sleep(0.45)
+            self.tap(card_cx, card_cy)
+            time.sleep(0.6)
+        elif target_idx is not None and target_idx >= 2:
+            # Game ada di riwayat tapi lebih dalam
+            self.run_adb(["shell", "input", "keyevent", "187"])
+            time.sleep(0.45)
+            self.tap(card_cx, card_cy)
+            time.sleep(0.5)
+        else:
+            # Hanya jika game sama sekali belum pernah dibuka / tidak ada di riwayat
+            print(f"{self.tag} [!] Game belum ada di riwayat task. Membuka baru dari launcher...", flush=True)
+            self.run_adb(["shell", "monkey", "-p", PACKAGE_NAME, "-c", "android.intent.category.LAUNCHER", "1"])
+            time.sleep(2.0)
 
     def clear_game_data_and_restart(self, reason="klik bus tidak merespons"):
         """Bersihkan data game dengan pm clear lalu buka ulang."""
@@ -711,8 +785,8 @@ class BusParkingDashRunner:
             else:
                 self.aggressive_ad_dismiss_count += 1
                 if self.aggressive_ad_dismiss_count >= 3:
-                    print(f"\n{self.tag} [!] Layar iklan masih aktif berulang ({self.aggressive_ad_dismiss_count}x). Kembali menunggu iklan 10 detik sampai selesai...", flush=True)
-                    self.wait_ad_and_close_ad("Iklan Masih Berjalan (Re-wait 10s)")
+                    print(f"\n{self.tag} [!] Layar iklan masih aktif berulang ({self.aggressive_ad_dismiss_count}x). Kembali menunggu iklan {AD_WAIT_SECONDS} detik sampai selesai...", flush=True)
+                    self.wait_ad_and_close_ad(f"Iklan Masih Berjalan (Re-wait {AD_WAIT_SECONDS}s)")
                     self.aggressive_ad_dismiss_count = 0
                     return False
 
@@ -1296,6 +1370,55 @@ class BusParkingDashRunner:
             return True
         return False
 
+    def find_right_parking_ad_button(self, img):
+        """Cari tombol biru berikon play/AD untuk membuka slot parkir di kanan."""
+        if img is None or img.size == 0:
+            return None
+
+        sx, sy = self.scale_x, self.scale_y
+        height, width = img.shape[:2]
+        x1, x2 = int(395 * sx), min(width, int(715 * sx))
+        y1, y2 = int(430 * sy), min(height, int(610 * sy))
+        roi = img[y1:y2, x1:x2]
+        if roi.size == 0:
+            return None
+
+        hsv = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
+        # Tombol play iklan pada slot parkir berwarna cyan/biru terang.
+        blue_mask = cv2.inRange(
+            hsv,
+            np.array([85, 90, 110]),
+            np.array([120, 255, 255]),
+        )
+        blue_mask = cv2.morphologyEx(
+            blue_mask,
+            cv2.MORPH_CLOSE,
+            cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3)),
+            iterations=2,
+        )
+
+        candidates = []
+        contours, _ = cv2.findContours(blue_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        for contour in contours:
+            x, y, w, h = cv2.boundingRect(contour)
+            area = cv2.contourArea(contour)
+            if not (250 <= area <= 2200):
+                continue
+            if not (18 * sx <= w <= 70 * sx and 14 * sy <= h <= 60 * sy):
+                continue
+            aspect = w / float(max(h, 1))
+            if not 0.7 <= aspect <= 2.4:
+                continue
+            candidates.append((x1 + x + w // 2, y1 + y + h // 2, area))
+
+        if not candidates:
+            return None
+
+        # Buka slot paling kiri dulu supaya penambahan parkir berlangsung berurutan.
+        candidates.sort(key=lambda item: item[0])
+        cx, cy, area = candidates[0]
+        return cx, cy, f"Tombol Iklan Slot Parkir Biru (area={int(area)})"
+
     def play_step(self):
         self.step_counter += 1
 
@@ -1376,11 +1499,51 @@ class BusParkingDashRunner:
             time.sleep(0.4)
             return
 
-        # 7. Periksa Saldo =Rp di Header (Target >= 150)
+        # 7. Prioritas buka/perluas parkiran: klik tombol biru play/AD di kanan
+        # sebelum memilih bus, agar slot parkir tambahan langsung tersedia.
+        parking_ad_button = self.find_right_parking_ad_button(img)
+        if parking_ad_button and time.time() >= self.parking_ad_slot_retry_after_ts:
+            bx, by, desc = parking_ad_button
+            self.last_parking_ad_slot_tap_ts = time.time()
+            print(f"{self.tag} [★] MENEMUKAN {desc} di ({bx}, {by})! Mencoba membuka/perluas parkiran...", flush=True)
+
+            # Sentuh pusat ikon play dan area tombol di sekitarnya. Sebagian
+            # versi game memakai hitbox slot yang sedikit bergeser dari ikon.
+            tap_points = [
+                (bx, by),
+                (bx + int(14 * sx), by),
+                (bx + int(14 * sx), by - int(12 * sy)),
+                (bx - int(10 * sx), by - int(6 * sy)),
+            ]
+            ad_opened = False
+            for tap_x, tap_y in tap_points:
+                self.tap(tap_x, tap_y)
+                time.sleep(0.35)
+                focus_after = self.get_foreground_focus().lower()
+                ad_markers = [
+                    "rewardvideo", "adactivity", "applovin", "mbridge", "mintegral",
+                    "unity3d", "adcolony", "vungle", "ironsource", "pangle", "bytedance",
+                ]
+                if any(marker in focus_after for marker in ad_markers):
+                    ad_opened = True
+                    self.wait_ad_and_close_ad("Iklan Buka / Perluas Slot Parkir")
+                    return
+
+            if not ad_opened:
+                # Tombol tetap terlihat tetapi SDK iklan tidak memberi respons.
+                # Jangan spam tap yang sama; lanjut main dan coba lagi nanti.
+                self.parking_ad_slot_retry_after_ts = time.time() + 45.0
+                print(
+                    f"{self.tag} [!] Tombol slot parkir tidak membuka iklan. "
+                    "Menunda percobaan ulang 45 detik dan melanjutkan permainan.",
+                    flush=True,
+                )
+
+        # 8. Periksa Saldo =Rp di Header (Target >= 150)
         if self.check_and_handle_top_rp(ocr_items):
             return
 
-        # 8. Periksa Tombol Reward Modal Nyata Berbasis OCR ('Bebas Klik', 'Koleksi', 'Klaim', 'Menarik')
+        # 9. Periksa Tombol Reward Modal Nyata Berbasis OCR ('Bebas Klik', 'Koleksi', 'Klaim', 'Menarik')
         # Aktif dengan cooldown agar tombol Koleksi tidak dispam dan tidak memicu loop iklan.
         popup_btn = detect_popup_reward_button_ocr(ocr_items, self.scale_y)
         if popup_btn:
@@ -1574,8 +1737,11 @@ def main():
     print("==================================================================", flush=True)
     active_processes = {}
     main_pid = os.getpid()
+    adb_only = os.environ.get("BUSJAM_ADB_ONLY", "").strip().lower() in {"1", "true", "yes"}
     print("[+] Memindai semua perangkat Android yang terhubung via ADB...", flush=True)
     print(f"[+] Target Game: Bus Jam Parking (com.busjam.parking.master)", flush=True)
+    if adb_only:
+        print("[+] Mode ADB saja aktif: scrcpy tidak akan dijalankan.", flush=True)
     print(f"[+] Aturan Aktif: Floor-Masked Bus Match, Main Lagi, Iklan {AD_WAIT_SECONDS}s, DANA (>= {MIN_WITHDRAWAL_RP}).\n", flush=True)
     print("[+] Tekan Ctrl+C untuk berhenti kapan saja.\n", flush=True)
 
@@ -1598,7 +1764,8 @@ def main():
                             pass
 
                     print(f"\n[+] Perangkat terdeteksi: {serial}", flush=True)
-                    ensure_scrcpy_running(serial)
+                    if not adb_only:
+                        ensure_scrcpy_running(serial)
                     p = multiprocessing.Process(target=run_device_worker, args=(serial, main_pid), daemon=True)
                     p.start()
                     active_processes[serial] = p
