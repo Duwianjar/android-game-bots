@@ -44,6 +44,7 @@ Urutan ini dibuat dari catatan penarikan yang sudah ada. **Tidak ada data yang m
 | 18 | Magic Merge | `com.xteleremobilecompanyltd.MagicMerge` | Belum ada catatan awal. | DANA masih aman 300-an. | Coba target penarikan kecil (sekitar Rp300-an). |
 | 19 | [Soda Pack Puzzle](soda-pack-puzzle/) | `com.soda.pack.puzzle` | Ada bot otomatis (belum dites botnya). | DANA masih aman 200-an. | Coba target penarikan kecil (sekitar Rp200-an); bot belum dites. |
 | 20 | Magic Star Crush Journey **[RAWAN TERBLOKIR]** | `com.starlightgame.magicstarcrushjourney` | 1 kali penarikan Rp951; rawan terblokir. | Penarikan kedua DANA masih aman 600-an. | Pantau ketat (rawan terblokir); target kedua sekitar Rp600-an aman DANA. |
+| 21 | Panah Penghasil Uang *(Panah Lepas)* | `com.pelangiarena.panahlepas` | Tidak ada catatan awal. | DANA aman 200-an. | Coba target penarikan kecil (sekitar Rp200-an). |
 
 </div>
 
@@ -195,6 +196,7 @@ Keterangan kategori: game-game ini **susah, tetapi tetap cair**. Data pencairan 
 | 3 | Arrow Zen Cash | `com.goods.admin.arrow.zen.cash` | Goods Administration | Game panah bertema reward / cash. **Penarikan 200 aman.** | Belum dicatat | [ ] |
 | 4 | Bus Jam Rush | `putulive.app.bus` | StudyPort | Game bus jam penumpang warna. **Penarikan 200 aman.** | Belum dicatat | [ ] |
 | 5 | [Soda Jam Puzzle](soda-jam-puzzle/) | `com.armg.sodajam` | Muhammad Armghan Abbas | Game soda jam puzzle. Tersedia bot otomatis. Instalasi pertama tidak ikut tercatat. **Instalasi kedua penarikan 700 aman DANA.** | Belum dicatat | [x] |
+| 6 | Panah Penghasil Uang *(Panah Lepas)* | `com.pelangiarena.panahlepas` | Sub Akademi Game | Puzzle panah / arrow unblock penghasil saldo. Instalasi pertama tidak ada catatan. **Instalasi kedua DANA aman 200-an.** | Belum dicatat | [ ] |
 
 ## Kategori Tile, Match & Sort (Studio Tunggal)
 
@@ -300,6 +302,7 @@ Keterangan kategori: game-game ini **susah, tetapi tetap cair**. Data pencairan 
 - Planet Slice Master — Go Bananas Studio — `com.smartgames.planetslicemaster`
 - Harvest Block Crush — Muhammad Shabbir Hussain — `com.harvest.block.crush`
 - Mahjong Ajaib — ALEXANDER DEJARNETTE — `com.Lucinda.MagicMahjong`
+- Panah Penghasil Uang *(Panah Lepas)* — Sub Akademi Game — `com.pelangiarena.panahlepas`
 
 ### Belum terverifikasi
 
