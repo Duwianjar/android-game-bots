@@ -37,6 +37,7 @@ Urutan ini dibuat dari catatan penarikan yang sudah ada. **Tidak ada data yang m
 | 11 | [Coin Sort Dash](coin-dash-shot/) | `com.coin.sortdash.remove` | 3 kali penarikan; ada Rp1.017. **Rawan terblokir iklan.** | DANA normal tapi sedikit kemungkinan karena terakhir. | Instal setelah prioritas utama. |
 | 12 | Veg Cup Blast | `com.xteleremobilecompanyltd.VegCupBlast` | 5 kali penarikan; maksimum Rp2.191. | DANA tetap aman, tapi cuma dapat sedikit karena kemungkinan di akhir. | Rekomendasi setelah prioritas utama. |
 | 13 | Toy Drop | `com.NAMMUNIS.ToyDrop` | 4 kali penarikan; maksimum Rp1.670. | DANA aman, paling banyak Rp1.300. | Rekomendasi setelah prioritas utama. |
+| 14 | Planet Slice Master | `com.smartgames.planetslicemaster` | Belum pernah dicoba. | DANA aman, penarikan kecil sekitar 5.900-an sebanyak 3 kali. | Rekomendasi setelah prioritas utama; coba target penarikan kecil dulu (Rp5.900-an). |
 
 </div>
 
@@ -206,6 +207,7 @@ Keterangan kategori: game-game ini **susah, tetapi tetap cair**. Data pencairan 
 |---:|---|---|---|---|---|:---:|
 | 1 | Fortuna Bubble Shooter | `com.fortuna.bubble` | UniteGrand Auto | Game tembak gelembung warna. **Penarikan 700 DANA aman.** | Belum dicatat | [ ] |
 | 2 | Orchard Trio | `com.wiwitsugeh.orchardtrio` | M.S Max | Package mirip awalan com.wiwvitsugeh.snack (Snake Out Jam). **Penarikan 500 aman.** | Belum dicatat | [ ] |
+| 3 | Planet Slice Master | `com.smartgames.planetslicemaster` | Go Bananas Studio | Game potong planet / slice. **Penarikan kecil sekitar 5.900-an (3 kali) aman DANA di instalasi kedua.** | Belum dicatat | [ ] |
 
 ## Daftar Blocked
 
@@ -284,6 +286,7 @@ Keterangan kategori: game-game ini **susah, tetapi tetap cair**. Data pencairan 
 - [Color Power Pop](color-power-pop/) — Giraffee App — `com.giraffeeapp.power`
 - [Animal Blast: Win Prize Game](jungle-animal-eliminate/) — Faisal Developers — `com.jungle.bear.tiger.wild.animal.eliminate`
 - [Magical Gems Match 3](magic-gems-match/) — DKSHUBDeveloper — `com.glow.magical.match3`
+- Planet Slice Master — Go Bananas Studio — `com.smartgames.planetslicemaster`
 
 ### Belum terverifikasi
 
