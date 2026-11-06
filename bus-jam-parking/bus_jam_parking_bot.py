@@ -611,8 +611,9 @@ class BusParkingDashRunner:
                 _, bx, by = right_cands[0]
                 return (bx, by, f"Kontur Kanan Atas ({bx},{by})")
 
-        # 3. Cek kontur presisi di Pojok Kiri Atas (x: 20..145, y: 45..140)
-        lx1, lx2 = int(20 * sx), int(145 * sx)
+        # 3. Cek kontur presisi di Pojok Kiri Atas (x: 50..145, y: 45..140)
+        # Hindari x < 50 agar tidak salah klik lencana AdChoices/info yang membuka browser
+        lx1, lx2 = int(50 * sx), int(145 * sx)
         crop_l = img[min_y:max_y, lx1:lx2]
         if crop_l.size > 0:
             gray = cv2.cvtColor(crop_l, cv2.COLOR_BGR2GRAY)
