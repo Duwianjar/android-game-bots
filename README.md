@@ -45,6 +45,9 @@ Urutan ini dibuat dari catatan penarikan yang sudah ada. **Tidak ada data yang m
 | 19 | [Soda Pack Puzzle](soda-pack-puzzle/) | `com.soda.pack.puzzle` | Ada bot otomatis (belum dites botnya). | DANA masih aman 200-an. | Coba target penarikan kecil (sekitar Rp200-an); bot belum dites. |
 | 20 | Magic Star Crush Journey **[RAWAN TERBLOKIR]** | `com.starlightgame.magicstarcrushjourney` | 1 kali penarikan Rp951; rawan terblokir. | Penarikan kedua DANA masih aman 600-an. | Pantau ketat (rawan terblokir); target kedua sekitar Rp600-an aman DANA. |
 | 21 | Panah Penghasil Uang *(Panah Lepas)* | `com.pelangiarena.panahlepas` | Tidak ada catatan awal. | DANA aman 200-an. | Coba target penarikan kecil (sekitar Rp200-an). |
+| 22 | Tangkap Tile Zoo *(Catch Zoo Tiles)* | `com.agmalik.CatchZooTiles` | Belum ada catatan (kosong). | DANA aman 300-an. | Coba target penarikan kecil (sekitar Rp300-an). |
+| 23 | Cuan Maze | Belum dicatat | Belum ada catatan (kosong). | DANA aman 300-an. | Coba target penarikan kecil (sekitar Rp300-an). |
+| 24 | Panah Sentuh *(Arrow Tap)* | Belum dicatat | Belum ada catatan (kosong). | DANA aman 800-an. | Target kedua lumayan (sekitar Rp800-an aman DANA). |
 
 </div>
 
@@ -197,6 +200,8 @@ Keterangan kategori: game-game ini **susah, tetapi tetap cair**. Data pencairan 
 | 4 | Bus Jam Rush | `putulive.app.bus` | StudyPort | Game bus jam penumpang warna. **Penarikan 200 aman.** | Belum dicatat | [ ] |
 | 5 | [Soda Jam Puzzle](soda-jam-puzzle/) | `com.armg.sodajam` | Muhammad Armghan Abbas | Game soda jam puzzle. Tersedia bot otomatis. Instalasi pertama tidak ikut tercatat. **Instalasi kedua penarikan 700 aman DANA.** | Belum dicatat | [x] |
 | 6 | Panah Penghasil Uang *(Panah Lepas)* | `com.pelangiarena.panahlepas` | Sub Akademi Game | Puzzle panah / arrow unblock penghasil saldo. Instalasi pertama tidak ada catatan. **Instalasi kedua DANA aman 200-an.** | Belum dicatat | [ ] |
+| 7 | Cuan Maze | Belum dicatat | Belum dicatat | Game puzzle labirin/maze cuan. Instalasi pertama tidak ada catatan. **Instalasi kedua DANA aman 300-an.** | Belum dicatat | [ ] |
+| 8 | Panah Sentuh *(Arrow Tap)* | Belum dicatat | Belum dicatat | Game ketuk panah / tap arrow puzzle. Instalasi pertama belum ada catatan. **Instalasi kedua DANA aman 800-an.** | Belum dicatat | [ ] |
 
 ## Kategori Tile, Match & Sort (Studio Tunggal)
 
@@ -206,6 +211,7 @@ Keterangan kategori: game-game ini **susah, tetapi tetap cair**. Data pencairan 
 | 2 | Fruit Block Sort | `com.fruitblocksort.sortpack.gp` | Bejodev | Game sortir blok buah ke dalam pack. **Penarikan 400 sukses DANA.** | Belum dicatat | [ ] |
 | 3 | Harvest Block Crush | `com.harvest.block.crush` | Muhammad Shabbir Hussain | Game block crush puzzle. Instalasi pertama tidak ikut tercatat. **Instalasi kedua DANA aman tapi cuma 400.** | Belum dicatat | [ ] |
 | 4 | [Soda Pack Puzzle](soda-pack-puzzle/) | `com.soda.pack.puzzle` | AbkAppStore / Abubakar Ahmad Yusuf | Game sortir soda pack. Ada bot otomatis tetapi belum dites botnya. **Instalasi kedua DANA masih aman 200-an.** | Belum dicatat | [x] |
+| 5 | Tangkap Tile Zoo *(Catch Zoo Tiles)* | `com.agmalik.CatchZooTiles` | Agmalik006 | Game match 3 tile tema hewan zoo. Instalasi pertama kosong / belum dicatat. **Instalasi kedua DANA aman 300-an.** | Belum dicatat | [ ] |
 
 ## Kategori Merge & Block 2048 (Studio Tunggal)
 
@@ -303,11 +309,14 @@ Keterangan kategori: game-game ini **susah, tetapi tetap cair**. Data pencairan 
 - Harvest Block Crush — Muhammad Shabbir Hussain — `com.harvest.block.crush`
 - Mahjong Ajaib — ALEXANDER DEJARNETTE — `com.Lucinda.MagicMahjong`
 - Panah Penghasil Uang *(Panah Lepas)* — Sub Akademi Game — `com.pelangiarena.panahlepas`
+- Tangkap Tile Zoo *(Catch Zoo Tiles)* — Agmalik006 — `com.agmalik.CatchZooTiles`
 
 ### Belum terverifikasi
 
 - [Dragon Arrow Escape](dragon-arrow-escape/) — package lokal `com.dragonarrowescape.game`; pengembang/perusahaan belum ditemukan pada listing Google Play publik.
 - [Candy Crush](candy-crush/) — package dan pengembang belum teridentifikasi dari file bot yang ada.
+- Cuan Maze — package dan pengembang belum dicatat di listing publik.
+- Panah Sentuh — package dan pengembang belum dicatat di listing publik.
 
 ## 🏆 Peringkat Game Rekomendasi
 
