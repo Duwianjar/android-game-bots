@@ -72,6 +72,7 @@ Urutan ini dibuat dari catatan penarikan yang sudah ada. **Tidak ada data yang m
 | 24 | Panah Sentuh *(Arrow Tap)* | Belum dicatat | Belum ada catatan (kosong). | DANA aman 800-an. | Target kedua lumayan (sekitar Rp800-an aman DANA). |
 | 25 | [Dragon Arrow Escape *(Naga Panah)*](dragon-arrow-escape/) | `com.dragonarrowescape.game` | Belum ada catatan awal. | DANA aman 1.000-an (2 kali). | Target kedua aman (sekitar Rp1.000-an). |
 | 26 | Fortune Tile Mahjong | `com.NAMMUNIS.FortuneTileMahjong` | 3 kali penarikan (maks Rp212). | DANA masih aman 500-an. | Coba target penarikan kecil (sekitar Rp500-an). |
+| 27 | Cut Fruit Winner | `com.starlightgame.cutfruitwinner` | Tidak ada catatan awal. | DANA aman sekitar 1.000-an. | Target kedua lumayan aman (sekitar Rp1.000-an). |
 
 </div>
 
@@ -110,6 +111,7 @@ Keterangan kategori: game-game ini terasa paling cepat, tetapi relatif mudah ter
 | 2 | Woodland Tile Match **[RAWAN TERBLOKIR]** | `com.starlightgame.woodlandtilematcher` | ACM PROJECTS & AUTOMATION LTD / Elias Galvin | Belum ada catatan penarikan; rawan terblokir. | Belum dicatat | [x] |
 | 3 | Crazy Tile Match Winner | `com.moonshotcube.crazytilematchwinner` | Elias Galvin | Penarikan 500 cair DANA. | Belum dicatat | [ ] |
 | 4 | Lucky Pop Crush | `com.starlightgame.luckypopcrusher` | ACM PROJECTS & AUTOMATION LTD / Elias Galvin | Penarikan 300 cair DANA. | Belum dicatat | [ ] |
+| 5 | Cut Fruit Winner | `com.starlightgame.cutfruitwinner` | ACM PROJECTS & AUTOMATION LTD / Elias Galvin | Game iris buah / fruit cutter. Instalasi pertama tidak ada catatan. **Instalasi kedua DANA aman sekitar 1.000-an.** | Belum dicatat | [ ] |
 
 ## Lucky Food
 
@@ -308,6 +310,7 @@ Keterangan kategori: game-game ini **susah, tetapi tetap cair**. Data pencairan 
 - [Crazy Fruit Blade Winner](crazy-fruit-blade-winner/) **[RAWAN BLOCK IKLAN]** — `com.starlightgame.crazyfruitbladewinner` — Sekitar Rp200 per hari di awal, tetapi langsung turun setelahnya; lumayan, tetapi rawan block iklan.
 - [Fruit Blade Pop Crush](fruit-blade-pop-crush/) — `com.starlightgame.fruitbladepopcrush`
 - [Lucky Arrow Escape](lucky-arrow-escaper/) — `com.starlightgame.luckyarrowescaper`
+- Cut Fruit Winner — `com.starlightgame.cutfruitwinner`
 
 ### DEVVVS 0043 — SUKRIATI
 
