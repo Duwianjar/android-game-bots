@@ -42,6 +42,8 @@ Urutan ini dibuat dari catatan penarikan yang sudah ada. **Tidak ada data yang m
 | 16 | Harvest Block Crush | `com.harvest.block.crush` | Tidak ikut tercatat. | DANA aman tapi cuma 400. | Instalasi kedua aman tapi nominal kecil (Rp400). |
 | 17 | Mahjong Ajaib *(Magic Mahjong)* | `com.Lucinda.MagicMahjong` | Tidak ikut tercatat. | DANA masih aman 300-an. | Coba target penarikan kecil (sekitar Rp300-an). |
 | 18 | Magic Merge | `com.xteleremobilecompanyltd.MagicMerge` | Belum ada catatan awal. | DANA masih aman 300-an. | Coba target penarikan kecil (sekitar Rp300-an). |
+| 19 | [Soda Pack Puzzle](soda-pack-puzzle/) | `com.soda.pack.puzzle` | Ada bot otomatis (belum dites botnya). | DANA masih aman 200-an. | Coba target penarikan kecil (sekitar Rp200-an); bot belum dites. |
+| 20 | Magic Star Crush Journey **[RAWAN TERBLOKIR]** | `com.starlightgame.magicstarcrushjourney` | 1 kali penarikan Rp951; rawan terblokir. | Penarikan kedua DANA masih aman 600-an. | Pantau ketat (rawan terblokir); target kedua sekitar Rp600-an aman DANA. |
 
 </div>
 
@@ -141,7 +143,7 @@ Keterangan kategori: game-game ini **susah, tetapi tetap cair**. Data pencairan 
 
 | No. | Game | Package `com` | Developer / perusahaan | Keterangan | Iklan Slot | Bot |
 |---:|---|---|---|---|---|:---:|
-| 1 | Magic Star Crush Journey **[RAWAN TERBLOKIR]** | `com.starlightgame.magicstarcrushjourney` | ACM PROJECTS & AUTOMATION LTD / Elias Galvin | **1 kali penarikan:** Rp951. Rawan terblokir. | Belum dicatat | [ ] |
+| 1 | Magic Star Crush Journey **[RAWAN TERBLOKIR]** | `com.starlightgame.magicstarcrushjourney` | ACM PROJECTS & AUTOMATION LTD / Elias Galvin | **1 kali penarikan:** Rp951. Rawan terblokir. **Penarikan kedua DANA masih aman 600-an.** | Belum dicatat | [ ] |
 
 ## Fruit Blade Pop Crush — Elias Galvin / ACM PROJECTS & AUTOMATION LTD [RAWAN TERBLOKIR]
 
@@ -201,6 +203,7 @@ Keterangan kategori: game-game ini **susah, tetapi tetap cair**. Data pencairan 
 | 1 | Sweet Block Puzzle Clear | `com.sweet.bloco.quebra` | AS_ZR | Game block puzzle bertema manis. **Penarikan 1.200 sukses DANA.** | Belum dicatat | [ ] |
 | 2 | Fruit Block Sort | `com.fruitblocksort.sortpack.gp` | Bejodev | Game sortir blok buah ke dalam pack. **Penarikan 400 sukses DANA.** | Belum dicatat | [ ] |
 | 3 | Harvest Block Crush | `com.harvest.block.crush` | Muhammad Shabbir Hussain | Game block crush puzzle. Instalasi pertama tidak ikut tercatat. **Instalasi kedua DANA aman tapi cuma 400.** | Belum dicatat | [ ] |
+| 4 | [Soda Pack Puzzle](soda-pack-puzzle/) | `com.soda.pack.puzzle` | AbkAppStore / Abubakar Ahmad Yusuf | Game sortir soda pack. Ada bot otomatis tetapi belum dites botnya. **Instalasi kedua DANA masih aman 200-an.** | Belum dicatat | [x] |
 
 ## Kategori Merge & Block 2048 (Studio Tunggal)
 

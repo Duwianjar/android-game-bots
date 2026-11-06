@@ -2,6 +2,17 @@
 
 Bot otomatis untuk game Soda Pack Puzzle yang bisa farming saldo hingga auto withdraw ke DANA.
 
+## 1. Catatan Penarikan & Analisis Monetisasi
+
+| Parameter | Keterangan |
+|---|---|
+| **Instalasi Pertama** | Ada bot otomatis, tetapi belum dites botnya. |
+| **Instalasi Kedua** | **DANA masih aman 200-an.** |
+| **Rekomendasi Instalasi** | **Prioritas 19.** Coba target penarikan kecil (sekitar Rp200-an); bot belum diuji penuh di instalasi kedua. |
+| **Metode Pencairan** | DANA. |
+
+---
+
 ## ✨ Features
 
 - ✅ **Auto Play Game** - Tap botol otomatis sesuai warna kotak
