@@ -1811,6 +1811,13 @@ def run_device_worker(serial, parent_pid):
     except Exception as e:
         print(f"[{serial}] [!] Worker error: {e}", flush=True)
     finally:
+        try:
+            # Tutup pop up / dialog di layar saat bot berhenti
+            print(f"[{serial}] [⟲] Menutup pop up / dialog di layar saat bot berhenti...", flush=True)
+            runner.press_back()
+            runner.run_adb(["shell", "am", "broadcast", "-a", "com.openclaw.busjam.ACTION_DISMISS_POPUP"], timeout=2.0)
+        except Exception:
+            pass
         runner.send_shutdown_telegram()
 
 def main():
@@ -1826,6 +1833,7 @@ def main():
         print("[+] Mode ADB saja aktif: scrcpy tidak akan dijalankan.", flush=True)
     print(f"[+] Aturan Aktif: Floor-Masked Bus Match, Main Lagi, Iklan {AD_WAIT_SECONDS}s, DANA (>= {MIN_WITHDRAWAL_RP}).\n", flush=True)
     print("[+] Tekan Ctrl+C untuk berhenti kapan saja.\n", flush=True)
+    last_no_dev_log = 0.0
 
     try:
         while True:
@@ -1853,12 +1861,20 @@ def main():
                     active_processes[serial] = p
 
             if not current_devices:
-                print("[!] Tidak ada HP Android terhubung via ADB. Menunggu perangkat...", end="\r", flush=True)
+                now_t = time.time()
+                if now_t - last_no_dev_log > 10.0:
+                    print("[!] Tidak ada HP Android terhubung via ADB. Menunggu perangkat terhubung...", flush=True)
+                    last_no_dev_log = now_t
 
             time.sleep(2.0)
     except KeyboardInterrupt:
         print("\n[+] Menghentikan semua bot worker...", flush=True)
-        for p in active_processes.values():
+        for s, p in active_processes.items():
+            try:
+                subprocess.run(["adb", "-s", s, "shell", "input", "keyevent", "4"], timeout=2.0)
+                subprocess.run(["adb", "-s", s, "shell", "am", "broadcast", "-a", "com.openclaw.busjam.ACTION_DISMISS_POPUP"], timeout=2.0)
+            except Exception:
+                pass
             try:
                 p.terminate()
                 p.join(timeout=1.0)

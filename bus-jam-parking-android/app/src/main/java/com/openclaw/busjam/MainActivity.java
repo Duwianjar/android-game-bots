@@ -61,6 +61,12 @@ public class MainActivity extends Activity {
         stop.setText("Hentikan Bot");
         stop.setOnClickListener(v -> {
             stopService(new Intent(this, BotForegroundService.class));
+            BotAccessibilityService.removeBotLog();
+            sendBroadcast(new Intent(BotAccessibilityService.ACTION_DISMISS_POPUP));
+            BotAccessibilityService service = BotAccessibilityService.getInstance();
+            if (service != null) {
+                service.pressBack();
+            }
             setStatus("Bot dihentikan.");
         });
         root.addView(stop, new LinearLayout.LayoutParams(-1, -2));

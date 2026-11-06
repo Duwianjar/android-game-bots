@@ -50,9 +50,13 @@ public final class ScreenAnalyzer {
         public boolean playAgainVisible;
         public boolean adScreenLikely;
         public boolean adCloseButtonVisible;
+        public float adCloseButtonX = -1;
         public int adCloseButtonY = -1;
         public boolean adSkipButtonVisible;
+        public float adSkipButtonX = -1;
+        public float adSkipButtonY = -1;
         public boolean adSeeNextVisible;
+        public float adSeeNextY = -1;
         public int parkingAdX = -1;
         public int parkingAdY = -1;
     }
@@ -67,17 +71,35 @@ public final class ScreenAnalyzer {
         // Kontrol iklan hanya akan dipakai oleh BotForegroundService saat activity/screen
         // iklan terkonfirmasi. Menghitungnya di awal membuat varian iklan yang tidak
         // punya letterbox hitam tetap dapat ditutup.
-        result.adCloseButtonY = findAdCloseButtonY(bitmap, sx, sy);
-        result.adCloseButtonVisible = result.adCloseButtonY > 0;
-        result.adSkipButtonVisible = hasAdSkipButton(bitmap, sx, sy);
-        result.adSeeNextVisible = hasAdSeeNextButton(bitmap, sx, sy);
-        result.adScreenLikely = looksLikeAdScreen(bitmap);
-        // Popup game dapat sangat gelap sehingga mirip iklan secara visual. Status ini
-        // dipakai BotForegroundService bersama activity yang sedang aktif.
+        float[] closeBtn = findAdCloseButton(bitmap, sx, sy);
+        if (closeBtn != null) {
+            result.adCloseButtonVisible = true;
+            result.adCloseButtonX = closeBtn[0];
+            result.adCloseButtonY = (int) closeBtn[1];
+        }
+        float[] skipBtn = findAdSkipButton(bitmap, sx, sy);
+        if (skipBtn != null) {
+            result.adSkipButtonVisible = true;
+            result.adSkipButtonX = skipBtn[0];
+            result.adSkipButtonY = skipBtn[1];
+        }
+        int seeNextY = findAdSeeNextButtonY(bitmap, sx, sy);
+        result.adSeeNextVisible = seeNextY > 0;
+        result.adSeeNextY = seeNextY > 0 ? seeNextY : (int)(1105 * sy);
+
         result.playAgainVisible = hasPlayAgainButton(bitmap, sx, sy);
+        result.adScreenLikely = looksLikeAdScreen(bitmap);
+
+        // PENTING: Jika tombol 'Main lagi' terdeteksi, layar ini PASTI dialog gagal game,
+        // BUKAN IKLAN! Jangan biarkan adScreenLikely menimpa status ini.
+        if (result.playAgainVisible) {
+            result.adScreenLikely = false;
+            return result;
+        }
+
         // Saat layar iklan visual terdeteksi, berhenti total di sini. Jangan sampai
-        // warna tombol/ilustrasi iklan dianggap sebagai bus, Koleksi, atau Main lagi.
-        if (result.adScreenLikely || result.playAgainVisible) return result;
+        // warna tombol/ilustrasi iklan dianggap sebagai bus atau Koleksi.
+        if (result.adScreenLikely) return result;
 
         // Deteksi popup game hanya dilakukan setelah layar dipastikan bukan iklan.
         result.collectRewardVisible = hasCollectRewardButton(bitmap, sx, sy);
@@ -246,72 +268,98 @@ public final class ScreenAnalyzer {
                 }
             }
         }
-        return total > 0 && brightGreen * 100 >= total * 25;
+        return total > 0 && brightGreen * 100 >= total * 20;
     }
 
     /**
-     * Tombol X AppLovin yang aktif berada di kanan-atas, sekitar (650, 200).
-     * Deteksi hanya dipakai setelah countdown selesai dan BACK sudah dicoba.
+     * Cari tombol X di pojok kanan atas atau kiri atas.
      */
-    private static int findAdCloseButtonY(Bitmap bitmap, float sx, float sy) {
-        int left = clamp((int) (620 * sx), 0, bitmap.getWidth());
-        int right = clamp((int) (680 * sx), 0, bitmap.getWidth());
-        int top = clamp((int) (125 * sy), 0, bitmap.getHeight());
-        int bottom = clamp((int) (230 * sy), 0, bitmap.getHeight());
+    private static float[] findAdCloseButton(Bitmap bitmap, float sx, float sy) {
+        // Cek pojok kanan atas
+        int rLeft = clamp((int) (590 * sx), 0, bitmap.getWidth());
+        int rRight = clamp((int) (705 * sx), 0, bitmap.getWidth());
+        int rTop = clamp((int) (40 * sy), 0, bitmap.getHeight());
+        int rBottom = clamp((int) (235 * sy), 0, bitmap.getHeight());
+        float[] rCoord = scanCornerButton(bitmap, rLeft, rTop, rRight, rBottom);
+        if (rCoord != null) return rCoord;
+
+        // Cek pojok kiri atas
+        int lLeft = clamp((int) (15 * sx), 0, bitmap.getWidth());
+        int lRight = clamp((int) (135 * sx), 0, bitmap.getWidth());
+        int lTop = clamp((int) (40 * sy), 0, bitmap.getHeight());
+        int lBottom = clamp((int) (235 * sy), 0, bitmap.getHeight());
+        return scanCornerButton(bitmap, lLeft, lTop, lRight, lBottom);
+    }
+
+    /**
+     * Cari tombol skip/panah (>, >>, >|) di pojok kanan atas atau kiri atas.
+     */
+    private static float[] findAdSkipButton(Bitmap bitmap, float sx, float sy) {
+        // Cek pojok kanan atas
+        int rLeft = clamp((int) (590 * sx), 0, bitmap.getWidth());
+        int rRight = clamp((int) (705 * sx), 0, bitmap.getWidth());
+        int rTop = clamp((int) (40 * sy), 0, bitmap.getHeight());
+        int rBottom = clamp((int) (230 * sy), 0, bitmap.getHeight());
+        float[] rCoord = scanCornerButton(bitmap, rLeft, rTop, rRight, rBottom);
+        if (rCoord != null) return rCoord;
+
+        // Cek pojok kiri atas
+        int lLeft = clamp((int) (15 * sx), 0, bitmap.getWidth());
+        int lRight = clamp((int) (135 * sx), 0, bitmap.getWidth());
+        int lTop = clamp((int) (40 * sy), 0, bitmap.getHeight());
+        int lBottom = clamp((int) (230 * sy), 0, bitmap.getHeight());
+        return scanCornerButton(bitmap, lLeft, lTop, lRight, lBottom);
+    }
+
+    private static float[] scanCornerButton(Bitmap bitmap, int left, int top, int right, int bottom) {
         int total = 0;
         int white = 0;
-        int upperWhite = 0;
-        int lowerWhite = 0;
-        int middleY = (top + bottom) / 2;
+        long sumX = 0;
+        long sumY = 0;
         for (int y = top; y < bottom; y += 2) {
             for (int x = left; x < right; x += 2) {
                 int pixel = bitmap.getPixel(x, y);
                 total++;
                 if (Color.red(pixel) > 190 && Color.green(pixel) > 190 && Color.blue(pixel) > 190) {
                     white++;
-                    if (y < middleY) upperWhite++;
-                    else lowerWhite++;
+                    sumX += x;
+                    sumY += y;
                 }
             }
         }
-        // X kecil pada iklan ByteDance hanya mengisi sekitar 1.5% area pemindai,
-        // sedangkan X AppLovin lebih rendah. Keduanya dipilih berdasarkan kelompok
-        // piksel putih terbesar, lalu klik tepat di pusat tombolnya.
-        if (total == 0 || white * 100 < total) return -1;
-        return upperWhite >= lowerWhite ? (int) (165 * sy) : (int) (200 * sy);
-    }
-
-    /** Tombol lewati/lanjut berbentuk ">>" pada iklan ByteDance di kanan-atas. */
-    private static boolean hasAdSkipButton(Bitmap bitmap, float sx, float sy) {
-        int left = clamp((int) (630 * sx), 0, bitmap.getWidth());
-        int right = clamp((int) (690 * sx), 0, bitmap.getWidth());
-        int top = clamp((int) (130 * sy), 0, bitmap.getHeight());
-        int bottom = clamp((int) (185 * sy), 0, bitmap.getHeight());
-        return brightRatio(bitmap, left, top, right, bottom) >= 4;
+        if (white >= 18 && total > 0) {
+            return new float[]{(float) sumX / white, (float) sumY / white};
+        }
+        return null;
     }
 
     /** Tombol "See Next" adalah tombol abu-abu lebar di tengah-bawah iklan. */
-    private static boolean hasAdSeeNextButton(Bitmap bitmap, float sx, float sy) {
+    private static int findAdSeeNextButtonY(Bitmap bitmap, float sx, float sy) {
         int left = clamp((int) (48 * sx), 0, bitmap.getWidth());
         int right = clamp((int) (672 * sx), 0, bitmap.getWidth());
-        int top = clamp((int) (1065 * sy), 0, bitmap.getHeight());
-        int bottom = clamp((int) (1145 * sy), 0, bitmap.getHeight());
-        int total = 0;
-        int neutralGray = 0;
-        for (int y = top; y < bottom; y += 2) {
-            for (int x = left; x < right; x += 2) {
-                int pixel = bitmap.getPixel(x, y);
-                int red = Color.red(pixel);
-                int green = Color.green(pixel);
-                int blue = Color.blue(pixel);
-                total++;
-                if (Math.abs(red - green) <= 10 && Math.abs(green - blue) <= 10
-                        && red >= 115 && red <= 210) {
-                    neutralGray++;
+        for (int testY = (int)(1060 * sy); testY <= (int)(1200 * sy); testY += (int)(30 * sy)) {
+            int top = clamp(testY - (int)(25 * sy), 0, bitmap.getHeight());
+            int bottom = clamp(testY + (int)(25 * sy), 0, bitmap.getHeight());
+            int total = 0;
+            int neutralGray = 0;
+            for (int y = top; y < bottom; y += 2) {
+                for (int x = left; x < right; x += 2) {
+                    int pixel = bitmap.getPixel(x, y);
+                    int red = Color.red(pixel);
+                    int green = Color.green(pixel);
+                    int blue = Color.blue(pixel);
+                    total++;
+                    if (Math.abs(red - green) <= 12 && Math.abs(green - blue) <= 12
+                            && red >= 110 && red <= 215) {
+                        neutralGray++;
+                    }
                 }
             }
+            if (total > 0 && neutralGray * 100 >= total * 48) {
+                return testY;
+            }
         }
-        return total > 0 && neutralGray * 100 >= total * 55;
+        return -1;
     }
 
     private static String detectFrontColor(Bitmap bitmap, float sx, float sy) {

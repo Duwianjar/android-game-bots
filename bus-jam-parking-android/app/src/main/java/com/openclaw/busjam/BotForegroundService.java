@@ -3,6 +3,7 @@ package com.openclaw.busjam;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
@@ -32,6 +33,7 @@ public class BotForegroundService extends Service {
     public static final String EXTRA_RESULT_CODE = "result_code";
     public static final String EXTRA_RESULT_DATA = "result_data";
     public static final String GAME_PACKAGE = "com.busjam.parking.master";
+    public static final String ACTION_STOP = "com.openclaw.busjam.ACTION_STOP";
     private static final String CHANNEL_ID = "bus_jam_bot";
     private static final int NOTIFICATION_ID = 7042;
     private static final long BUS_MOVE_WAIT_MS = 1_800L;
@@ -93,10 +95,16 @@ public class BotForegroundService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
+        if (intent != null && ACTION_STOP.equals(intent.getAction())) {
+            BotAccessibilityService.removeBotLog();
+            stopSelf();
+            return START_NOT_STICKY;
+        }
         if (running) {
             return START_STICKY;
         }
         if (intent == null || !intent.hasExtra(EXTRA_RESULT_DATA)) {
+            BotAccessibilityService.removeBotLog();
             stopSelf();
             return START_NOT_STICKY;
         }
@@ -106,6 +114,7 @@ public class BotForegroundService extends Service {
                 (MediaProjectionManager) getSystemService(MEDIA_PROJECTION_SERVICE);
         projection = manager.getMediaProjection(resultCode, resultData);
         if (projection == null) {
+            BotAccessibilityService.removeBotLog();
             stopSelf();
             return START_NOT_STICKY;
         }
@@ -206,48 +215,97 @@ public class BotForegroundService extends Service {
         float sx = result.width / 720f;
         float sy = result.height / 1640f;
 
+        // PRIORITAS UTAMA: Deteksi tombol 'Main lagi' saat level gagal (dialog Habis Ruang / Anda Gagal)
+        // Dialog ini adalah milik game (BUKAN IKLAN). Reset status iklan dan langsung ketuk Main lagi!
+        if (result.playAgainVisible) {
+            fullscreenAdSeenAt = 0;
+            adClosingStartedAt = 0;
+            lastAdCloseButtonTapAt = 0;
+            lastAdNavigationTapAt = 0;
+            countdownWasSeen = false;
+            adTimerReader.reset();
+            if (now >= nextActionAt) {
+                accessibility.tap(360f * sx, 1225f * sy);
+                nextActionAt = now + 2_500;
+                log("Tombol 'Main lagi' terdeteksi! Memulai ulang level di (" + (int)(360f * sx) + "," + (int)(1225f * sy) + ").");
+            }
+            return;
+        }
+
         // Activity utama game adalah pembeda utama antara popup game yang gelap dan
         // layar iklan. Jangan pernah menganggap popup Main lagi sebagai iklan.
         boolean gameActivity = isGameActivityActive();
         boolean adDetected = !gameActivity && (result.adScreenLikely || isFullscreenAd());
         if (adDetected || adClosingStartedAt > 0) {
+            // Sinkronkan deteksi tombol skip (>, >>, >|) dan close (X) dari OCR AdTimerReader dan visual ScreenAnalyzer
+            boolean skipVisible = result.adSkipButtonVisible || adTimerReader.hasRecentSkipButton();
+            float skipTapX = adTimerReader.hasRecentSkipButton() && adTimerReader.getSkipButtonX() > 0
+                    ? adTimerReader.getSkipButtonX() : result.adSkipButtonX;
+            float skipTapY = adTimerReader.hasRecentSkipButton() && adTimerReader.getSkipButtonY() > 0
+                    ? adTimerReader.getSkipButtonY() : result.adSkipButtonY;
+
+            boolean closeVisible = result.adCloseButtonVisible || adTimerReader.hasRecentCloseButton();
+            float closeTapX = adTimerReader.hasRecentCloseButton() && adTimerReader.getCloseButtonX() > 0
+                    ? adTimerReader.getCloseButtonX() : result.adCloseButtonX;
+            float closeTapY = adTimerReader.hasRecentCloseButton() && adTimerReader.getCloseButtonY() > 0
+                    ? adTimerReader.getCloseButtonY() : (float) result.adCloseButtonY;
+
+            boolean hasActionBtn = (skipVisible && skipTapX > 0) || (closeVisible && closeTapX > 0) || result.adSeeNextVisible;
+
             if (adDetected) {
                 if (fullscreenAdSeenAt == 0) {
                     fullscreenAdSeenAt = now;
                     countdownWasSeen = false;
                     lastLoggedAdSeconds = -1;
                     adTimerReader.reset();
-                    log("Halaman iklan terdeteksi. Tidak mengeklik layar.");
+                    log("Halaman iklan terdeteksi. Menunggu wajib 30 detik tanpa klik...");
                 }
+                long elapsed = now - fullscreenAdSeenAt;
                 int remainingSeconds = adTimerReader.recentRemainingSeconds();
                 if (remainingSeconds > 0) {
                     countdownWasSeen = true;
-                    updateNotification("Iklan: sisa " + remainingSeconds + " detik");
+                }
+
+                // ATURAN 1 (INSTRUKSI USER): Jika masih ada countdown (> 0) dan BELUM ada tombol X atau > / >> / >|:
+                // JANGAN TERKLIK APAPUN SAMA SEKALI! Layar dibiarkan tenang tanpa tap apapun.
+                if (remainingSeconds > 0 && !hasActionBtn) {
+                    updateNotification("Iklan: countdown " + remainingSeconds + "s | berjalan " + (elapsed / 1000) + "s / 30s");
                     if (remainingSeconds != lastLoggedAdSeconds) {
                         lastLoggedAdSeconds = remainingSeconds;
                         BotAccessibilityService.showBotLog(
-                                "Countdown iklan " + remainingSeconds + " detik. Menunggu.");
+                                "Countdown iklan " + remainingSeconds + " detik. Menunggu tanpa klik.");
                     }
+                    return; // Diam mutlak, tidak klik apapun
+                }
+
+                // ATURAN 2 (INSTRUKSI USER): Wajib tunggu minimal 30 detik saat menemukan iklan
+                long requiredWaitMs = 30_000L;
+                if (elapsed < requiredWaitMs) {
+                    long sisaDetik = (requiredWaitMs - elapsed + 999) / 1000;
+                    updateNotification("Iklan: wajib tunggu " + sisaDetik + "s lagi (total 30s)");
+                    // Hanya izinkan menutup jika ada tombol skip/close yang jelas dan countdown sudah habis
+                    if (hasActionBtn && (remainingSeconds == 0 || elapsed >= 15_000L)) {
+                        // Tombol skip / close di pojok atas siap diklik
+                    } else {
+                        // Belum 30 detik: DIAM TOTAL, tidak klik apapun di layar
+                        return;
+                    }
+                }
+
+                // ATURAN 3: Jika sudah 30s tetapi countdown masih ada (> 0) dan belum ada tombol skip/close:
+                if (remainingSeconds > 0 && !hasActionBtn) {
+                    updateNotification("Iklan: menunggu countdown selesai (" + remainingSeconds + "s)");
                     return;
                 }
-                boolean waitComplete = remainingSeconds == 0
-                        || now - fullscreenAdSeenAt >= 10_000;
-                if (!waitComplete) {
-                    updateNotification("Iklan terdeteksi - menunggu waktu selesai");
-                    return;
-                }
+
                 if (adClosingStartedAt == 0) {
                     adClosingStartedAt = now;
                     lastAdBackAt = 0;
-                    log("Waktu iklan selesai. Menekan BACK sampai halaman utama.");
+                    log("Waktu tunggu iklan 30s & countdown selesai. Menutup iklan...");
                 }
             }
-            // Setelah countdown selesai, hanya gunakan BACK. Jangan pernah mengetuk isi
-            // iklan karena dapat membuka Chrome, Play Store, atau aplikasi lain.
-            // Activity game yang aktif berarti BACK sebelumnya sudah berhasil menutup
-            // iklan. Hentikan di sini walaupun frame pertama game masih berupa popup atau
-            // animasi dan papan bus belum terbaca; jika tidak, BACK berikutnya dapat
-            // membawa pengguna sampai launcher.
+
+            // Setelah iklan hilang dan kembali ke game
             if (!adDetected && isGameActivityActive()) {
                 fullscreenAdSeenAt = 0;
                 adClosingStartedAt = 0;
@@ -259,8 +317,8 @@ public class BotForegroundService extends Service {
                 log("Iklan ditutup. Kembali ke halaman utama game.");
                 return;
             }
-            // Iklan telah hilang tetapi BACK sebelumnya membawa layar ke launcher atau
-            // aplikasi lain. Jangan tekan BACK lagi; langsung pulihkan game.
+
+            // Iklan telah hilang tetapi BACK membawa ke launcher atau aplikasi lain
             if (!adDetected && (mustReturnToGame() || isBotActivityActive())) {
                 fullscreenAdSeenAt = 0;
                 adClosingStartedAt = 0;
@@ -274,32 +332,41 @@ public class BotForegroundService extends Service {
                 log("Iklan selesai. Membuka kembali Bus Jam Parking.");
                 return;
             }
-            if (now - lastAdBackAt >= 700) {
+
+            // EKSEKUSI PENUTUPAN IKLAN:
+            // 1. Prioritas 1: Tombol skip (>, >>, >|) di pojok kanan atas atau kiri atas
+            if (adDetected && skipVisible && skipTapX > 0 && skipTapY > 0 && now - lastAdNavigationTapAt >= 2_000) {
+                accessibility.tap(skipTapX, skipTapY);
+                lastAdNavigationTapAt = now;
+                String corner = skipTapX < (result.width / 2f) ? "kiri atas" : "kanan atas";
+                log("Tombol skip (>, >>, >|) terdeteksi di " + corner + " (" + (int)skipTapX + "," + (int)skipTapY + "). Mengetuk tombol.");
+                return;
+            }
+
+            // 2. Prioritas 2: Tombol X (close) di pojok kanan atas atau kiri atas
+            if (adDetected && closeVisible && closeTapX > 0 && closeTapY > 0 && now - lastAdCloseButtonTapAt >= 2_000) {
+                accessibility.tap(closeTapX, closeTapY);
+                lastAdCloseButtonTapAt = now;
+                String corner = closeTapX < (result.width / 2f) ? "kiri atas" : "kanan atas";
+                log("Tombol X (close) terdeteksi di " + corner + " (" + (int)closeTapX + "," + (int)closeTapY + "). Mengetuk tombol.");
+                return;
+            }
+
+            // 3. Prioritas 3: Tombol See Next di tengah bawah iklan
+            if (adDetected && result.adSeeNextVisible && now - lastAdNavigationTapAt >= 2_000) {
+                float seeNextY = result.adSeeNextY > 0 ? result.adSeeNextY : (1105f * sy);
+                accessibility.tap(360f * sx, seeNextY);
+                lastAdNavigationTapAt = now;
+                restartAdWait(now);
+                log("Tombol 'See Next' terdeteksi di (" + (int)(360f * sx) + "," + (int)seeNextY + "). Mengetuk tombol See Next.");
+                return;
+            }
+
+            // 4. Fallback: Hanya jika tidak ada tombol > / >> / >| / X / See Next setelah waktu 30s + countdown selesai, gunakan BACK
+            if (now - lastAdBackAt >= 1_200) {
                 accessibility.pressBack();
                 lastAdBackAt = now;
-            }
-            if (adDetected && now - lastAdNavigationTapAt >= 3_000) {
-                if (result.adSkipButtonVisible) {
-                    accessibility.tap(660f * sx, 160f * sy);
-                    restartAdWait(now);
-                    log("Tombol >> iklan terlihat. Menekan lanjut.");
-                    return;
-                }
-                if (result.adSeeNextVisible) {
-                    accessibility.tap(360f * sx, 1105f * sy);
-                    restartAdWait(now);
-                    log("Tombol See Next terlihat. Menekan lanjut.");
-                    return;
-                }
-            }
-            // Beberapa iklan AppLovin menolak BACK. Sesudah menunggu waktu iklan dan
-            // mencoba BACK, sentuh hanya tombol X yang sudah terdeteksi secara visual.
-            if (adDetected && result.adCloseButtonVisible
-                    && now - adClosingStartedAt >= 2_000
-                    && now - lastAdCloseButtonTapAt >= 3_000) {
-                accessibility.tap(650f * sx, result.adCloseButtonY);
-                lastAdCloseButtonTapAt = now;
-                log("Tombol tutup iklan terlihat. Menutup iklan.");
+                log("Waktu tunggu 30s & countdown selesai. Menekan tombol BACK.");
             }
             return;
         }
@@ -313,15 +380,7 @@ public class BotForegroundService extends Service {
             log("Kembali ke halaman utama game.");
         }
 
-        // Deteksi ini baru boleh berjalan setelah mode iklan benar-benar selesai.
-        if (result.playAgainVisible) {
-            if (now >= nextActionAt) {
-                accessibility.tap(360f * sx, 1210f * sy);
-                nextActionAt = now + 2_500;
-                log("Tombol Main lagi terdeteksi. Memulai ulang level.");
-            }
-            return;
-        }
+        // (Pemeriksaan playAgainVisible telah dipindahkan ke awal runOneStep untuk prioritas tertinggi)
 
         /*
         if (isFullscreenAd()) {
@@ -548,10 +607,15 @@ public class BotForegroundService extends Service {
     private boolean isGameActivityActive() {
         String foreground = BotAccessibilityService.getForegroundPackage();
         String activity = BotAccessibilityService.getForegroundClass();
-        return GAME_PACKAGE.equals(foreground)
-                && activity != null
-                && (activity.toLowerCase().contains("hmeactivity")
-                || activity.toLowerCase().contains("launcheraty"));
+        if (GAME_PACKAGE.equals(foreground)) {
+            if (activity == null || activity.isEmpty()) return true;
+            String actLower = activity.toLowerCase();
+            if (actLower.contains("hmeactivity") || actLower.contains("launcheraty")) {
+                return true;
+            }
+            return !isFullscreenAd();
+        }
+        return false;
     }
 
     private boolean isBotActivityActive() {
@@ -623,12 +687,33 @@ public class BotForegroundService extends Service {
     }
 
     private Notification notification(String text) {
-        return new Notification.Builder(this, CHANNEL_ID)
+        Intent stopIntent = new Intent(this, BotForegroundService.class);
+        stopIntent.setAction(ACTION_STOP);
+        PendingIntent stopPendingIntent = PendingIntent.getService(
+                this, 1, stopIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT | (Build.VERSION.SDK_INT >= 23 ? PendingIntent.FLAG_IMMUTABLE : 0)
+        );
+
+        Intent mainIntent = new Intent(this, MainActivity.class);
+        PendingIntent mainPendingIntent = PendingIntent.getActivity(
+                this, 0, mainIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT | (Build.VERSION.SDK_INT >= 23 ? PendingIntent.FLAG_IMMUTABLE : 0)
+        );
+
+        Notification.Builder builder = new Notification.Builder(this, CHANNEL_ID)
                 .setContentTitle("Bus Jam Bot")
                 .setContentText(text)
                 .setSmallIcon(android.R.drawable.ic_media_play)
-                .setOngoing(true)
-                .build();
+                .setContentIntent(mainPendingIntent)
+                .setOngoing(true);
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT_WATCH) {
+            Notification.Action stopAction = new Notification.Action.Builder(
+                    android.R.drawable.ic_menu_close_clear_cancel, "Hentikan Bot", stopPendingIntent
+            ).build();
+            builder.addAction(stopAction);
+        }
+        return builder.build();
     }
 
     private void updateNotification(String text) {
@@ -657,6 +742,7 @@ public class BotForegroundService extends Service {
     @Override
     public void onDestroy() {
         running = false;
+        BotAccessibilityService.removeBotLog();
         if (botThread != null) botThread.interrupt();
         if (virtualDisplay != null) virtualDisplay.release();
         if (imageReader != null) imageReader.close();
