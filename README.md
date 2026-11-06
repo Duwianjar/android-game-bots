@@ -23,6 +23,7 @@ Urutan aplikasi dan bot yang **wajib dipasang & dijalankan** di HP setelah resta
    - **Wajib dijalankan ketiga sebagai pengaman produktivitas.**
    - Game dengan rekor 29 kali penarikan stabil dan risiko blokir sangat minim.
    - Jika game prioritas lain sedang "ngaret" (iklan habis, stuck, atau reward menurun), langsung jalankan Bus Jam Parking agar perangkat tetap produktif menghasilkan saldo tanpa risiko ban akun.
+   - **Catatan saat hentikan bot:** Saat menghentikan bot, pastikan pop up atau dialog reward di layar tertutup (tekan tombol BACK atau selesaikan popup) agar layar kembali bersih dan tidak mengganggu alur berikutnya.
 
 ## Tabel Check
 
