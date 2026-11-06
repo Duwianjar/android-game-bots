@@ -38,6 +38,7 @@ Urutan ini dibuat dari catatan penarikan yang sudah ada. **Tidak ada data yang m
 | 12 | Veg Cup Blast | `com.xteleremobilecompanyltd.VegCupBlast` | 5 kali penarikan; maksimum Rp2.191. | DANA tetap aman, tapi cuma dapat sedikit karena kemungkinan di akhir. | Rekomendasi setelah prioritas utama. |
 | 13 | Toy Drop | `com.NAMMUNIS.ToyDrop` | 4 kali penarikan; maksimum Rp1.670. | DANA aman, paling banyak Rp1.300. | Rekomendasi setelah prioritas utama. |
 | 14 | Planet Slice Master | `com.smartgames.planetslicemaster` | Belum pernah dicoba. | DANA aman, penarikan kecil sekitar 5.900-an sebanyak 3 kali. | Rekomendasi setelah prioritas utama; coba target penarikan kecil dulu (Rp5.900-an). |
+| 15 | [Soda Jam Puzzle](soda-jam-puzzle/) | `com.armg.sodajam` | Tidak ikut tercatat. | Penarikan 700 aman DANA. | Instalasi kedua aman penarikan 700. |
 
 </div>
 
@@ -50,6 +51,7 @@ Game semi rekomendasi dengan opsi pencairan alternatif atau ketentuan akun/reken
 | No. | Game | Package `com` | Instalasi Pertama | Instalasi Kedua / Catatan | Saran instalasi |
 |---:|---|---|---|---|---|
 | 1 | [Bus Parking Dash](bus-parking-dash/) | `com.bus.parking.dash` | Tersedia bot otomatis. | Instalasi kedua cuma bisa selain rekening yang sudah (seperti Bus Jam Parking), atau bisa OVO. | Semi rekomendasi; gunakan opsi OVO atau rekening baru. |
+| 2 | [Fruit Blade Pop Crush](fruit-blade-pop-crush/) **[RAWAN TERBLOKIR]** | `com.starlightgame.fruitbladepopcrush` | Tersedia bot guardian otomatis; rawan terblokir. | Penarikan kedua perlu pakai OVO atau tidak bisa rekening yang sama. | Semi rekomendasi; gunakan opsi OVO atau rekening baru di instalasi kedua. |
 
 </div>
 
@@ -142,7 +144,7 @@ Keterangan kategori: game-game ini **susah, tetapi tetap cair**. Data pencairan 
 
 | No. | Game | Package `com` | Developer / perusahaan | Keterangan | Iklan Slot | Bot |
 |---:|---|---|---|---|---|:---:|
-| 1 | Fruit Blade Pop Crush **[RAWAN TERBLOKIR]** | `com.starlightgame.fruitbladepopcrush` | ACM PROJECTS & AUTOMATION LTD / Elias Galvin | Belum ada catatan penarikan; rawan terblokir. | Belum dicatat | [x] |
+| 1 | [Fruit Blade Pop Crush](fruit-blade-pop-crush/) **[RAWAN TERBLOKIR]** | `com.starlightgame.fruitbladepopcrush` | ACM PROJECTS & AUTOMATION LTD / Elias Galvin | Belum ada catatan penarikan; rawan terblokir. **Penarikan kedua perlu pakai OVO atau tidak bisa rekening yang sama.** | Belum dicatat | [x] |
 
 ## Developer Baru dengan Koleksi Multi-Game di HP
 
@@ -186,6 +188,7 @@ Keterangan kategori: game-game ini **susah, tetapi tetap cair**. Data pencairan 
 | 2 | Snail Arrows Twist | `com.factoid.snailarrows` | factoid | Game panah putar model siput. **Penarikan 500 aman.** | Belum dicatat | [ ] |
 | 3 | Arrow Zen Cash | `com.goods.admin.arrow.zen.cash` | Goods Administration | Game panah bertema reward / cash. **Penarikan 200 aman.** | Belum dicatat | [ ] |
 | 4 | Bus Jam Rush | `putulive.app.bus` | StudyPort | Game bus jam penumpang warna. **Penarikan 200 aman.** | Belum dicatat | [ ] |
+| 5 | [Soda Jam Puzzle](soda-jam-puzzle/) | `com.armg.sodajam` | Muhammad Armghan Abbas | Game soda jam puzzle. Tersedia bot otomatis. Instalasi pertama tidak ikut tercatat. **Instalasi kedua penarikan 700 aman DANA.** | Belum dicatat | [x] |
 
 ## Kategori Tile, Match & Sort (Studio Tunggal)
 
