@@ -25,20 +25,6 @@ Urutan aplikasi dan bot yang **wajib dipasang & dijalankan** di HP setelah resta
    - Jika game prioritas lain sedang "ngaret" (iklan habis, stuck, atau reward menurun), langsung jalankan Bus Jam Parking agar perangkat tetap produktif menghasilkan saldo tanpa risiko ban akun.
    - **Catatan saat hentikan bot:** Saat menghentikan bot, pastikan pop up atau dialog reward di layar tertutup (tekan tombol BACK atau selesaikan popup) agar layar kembali bersih dan tidak mengganggu alur berikutnya.
 
-## Tabel Check
-
-Game-game yang memiliki riwayat pencairan berhasil di awal namun bermasalah di instalasi kedua (seperti penarikan nominal besar tertahan/pending atau tidak bisa tarik). Disarankan mencoba penarikan nominal kecil terlebih dahulu.
-
-<div style="overflow-x: auto;">
-
-| No. | Game | Package `com` | Instalasi Pertama | Instalasi Kedua | Saran instalasi |
-|---:|---|---|---|---|---|
-| 1 | Blade Slice Master Fruit | `com.diancutter.bladeslicemasterfruit` | Ada pencairan sekitar Rp3.000, tetapi data juga mencatat pencairan lain Rp396 dan Rp531. | Instalasi kedua tidak bisa tarik padahal 14 rb. | Coba tarik kecil dulu. |
-| 2 | Cut Fruit Blade Master | `com.goodgamecut.cutfruitblademaster` | Ada pencairan sekitar Rp2.000, tetapi 1 penarikan sekitar Rp2.000 tidak cair. | 18 rb pending. | Coba tarik kecil dulu. |
-| 3 | LuckyScrewSort | Belum diketahui | Perlu dicek. | Penarikan 6 rb dua kali gagal, kemungkinan tidak bisa rekening sama (DANA). | Coba tarik kecil dulu. |
-
-</div>
-
 ## Rekomendasi Instalasi
 
 Urutan ini dibuat dari catatan penarikan yang sudah ada. **Tidak ada data yang membuktikan cair semua sampai Rp10.000.** Zoo Tile adalah catatan paling kuat karena 15 kali penarikan disebut lancar semua dengan maksimum Rp8.022. Bus Jam memiliki nominal sekitar Rp10.000, tetapi nominal terbesar tersebut belum cair. Dalam kelompok analisis yang sama, game yang bot-nya tersedia ditempatkan lebih atas. Game Blocked tidak dimasukkan dalam rekomendasi instalasi.
@@ -97,12 +83,10 @@ Keterangan kategori: game-game ini terasa paling cepat, tetapi relatif mudah ter
 
 | No. | Game | Package `com` | Developer / perusahaan | Keterangan | Iklan Slot | Bot |
 |---:|---|---|---|---|---|:---:|
-| 1 | Blade Slice Master Fruit | `com.diancutter.bladeslicemasterfruit` | DEVVVS 0043 / SUKRIATI | **Peringkat pertama.** Cepat, tetapi mudah terblokir. Laporan penarikan cair 4 kali: Rp65, Rp144, Rp785, dan sekitar Rp3.000; tercatat 2 pencairan: Rp396 dan Rp531. Instalasi kedua tidak bisa tarik padahal 14 rb. | Lumayan | [ ] |
-| 2 | Cut Fruit Blade Master | `com.goodgamecut.cutfruitblademaster` | DEVVVS 0043 / SUKRIATI | **Peringkat kedua.** Laporan penarikan cair 8 kali: Rp67, Rp68, Rp563, Rp632, sekitar Rp1.000, dan sekitar Rp2.000 sebanyak 3 kali; tidak cair 1 kali: sekitar Rp2.000. Instalasi kedua 18 rb pending. | Lumayan | [ ] |
-| 3 | Tile Match Crush Frenzy | `com.tilegamer.tilematchcrushfrenzy` | DEVVVS 0043 / SUKRIATI | Cepat, tetapi mudah terblokir. Laporan penarikan cair 4 kali: Rp79, Rp167, Rp202, dan Rp541; pending 1 kali: Rp41. | Belum dicatat | [ ] |
-| 4 | [Juicy Slash Blade Fruit](juicy-slash-blade-fruit/) | `com.dudufun.juicyslashbladefruit` | DEVVVS 0043 / SUKRIATI | Cepat, tetapi mudah terblokir. Laporan penarikan cair 2 kali: Rp114 dan Rp132; tidak cair 1 kali: Rp33. | Belum dicatat | [x] |
-| 5 | Lucky Match Path Journey | `com.smallclickergamer.luckymatchpathjourney` | DEVVVS 0043 / SUKRIATI | Cepat, tetapi mudah terblokir. Laporan penarikan cair 2 kali: Rp51 dan Rp98; tidak cair 2 kali: Rp35 dan Rp116. | Belum dicatat | [ ] |
-| 6 | Tiny Blast Magic Land | `com.kuaifastfa.tinyblastmagicland` | DEVVVS 0043 / SUKRIATI | Laporan penarikan cair 10 kali (9 nominal tercatat): Rp117, Rp159, Rp239, Rp346, Rp824, sekitar Rp1.000 sebanyak 3 kali, dan sekitar Rp3.000; tidak cair 2 kali: Rp62 dan Rp104. Instalasi kedua tidak bisa tarik. | Lumayan | [ ] |
+| 1 | Tile Match Crush Frenzy | `com.tilegamer.tilematchcrushfrenzy` | DEVVVS 0043 / SUKRIATI | Cepat, tetapi mudah terblokir. Laporan penarikan cair 4 kali: Rp79, Rp167, Rp202, dan Rp541; pending 1 kali: Rp41. | Belum dicatat | [ ] |
+| 2 | [Juicy Slash Blade Fruit](juicy-slash-blade-fruit/) | `com.dudufun.juicyslashbladefruit` | DEVVVS 0043 / SUKRIATI | Cepat, tetapi mudah terblokir. Laporan penarikan cair 2 kali: Rp114 dan Rp132; tidak cair 1 kali: Rp33. | Belum dicatat | [x] |
+| 3 | Lucky Match Path Journey | `com.smallclickergamer.luckymatchpathjourney` | DEVVVS 0043 / SUKRIATI | Cepat, tetapi mudah terblokir. Laporan penarikan cair 2 kali: Rp51 dan Rp98; tidak cair 2 kali: Rp35 dan Rp116. | Belum dicatat | [ ] |
+| 4 | Tiny Blast Magic Land | `com.kuaifastfa.tinyblastmagicland` | DEVVVS 0043 / SUKRIATI | Laporan penarikan cair 10 kali (9 nominal tercatat): Rp117, Rp159, Rp239, Rp346, Rp824, sekitar Rp1.000 sebanyak 3 kali, dan sekitar Rp3.000; tidak cair 2 kali: Rp62 dan Rp104. Instalasi kedua tidak bisa tarik. | Lumayan | [ ] |
 
 ## Magic Ocean & Woodland Tile Match — ACM PROJECTS & AUTOMATION LTD / Elias Galvin
 
