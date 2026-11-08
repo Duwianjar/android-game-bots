@@ -8,7 +8,7 @@ Urutan aplikasi dan bot yang **wajib dipasang & dijalankan** di HP setelah resta
 
 1. **Bot Blocked Game Detector (`blocked-game-detector/`)**:
    - **Wajib di-install pertama kali** sebagai sistem proteksi dini di HP Android.
-   - Database detector disinkronkan dengan **Daftar Blocked terbaru (39 game)**.
+   - Database detector disinkronkan dengan **Daftar Blocked terbaru (42 game)**.
    - Berjalan sebagai service watchdog untuk memantau package yang terpasang di HP. Jika ada game berbahaya/blocked terpasang, langsung memunculkan alert agar akun DANA/perangkat tidak ikut terblokir.
 
 2. **Inject Iklan (`inject-iklan/` & `inject-iklan-android/`)**:
@@ -299,6 +299,9 @@ Keterangan kategori: game-game ini **susah, tetapi tetap cair**. Data pencairan 
 | 37 | Lucky Fruit Sniper | `com.smallclicker.luckyfruitsniper` | DEVVVS 0043 / SUKRIATI | Sudah dikit tidak cair. |
 | 38 | Gem Pet Blast *(Pets Blast)* | `com.lucky.petsblast` | Tidak tercantum | Sudah susah cair, perlu nonton iklan malah tidak cair. |
 | 39 | Fruit Quest Master | `com.lucky.fruit.quest` | Tidak tercantum | Sudah susah cair, sama seperti Gem Pet Blast (perlu nonton iklan tapi tidak cair). |
+| 40 | Blade Slice Master Fruit | `com.diancutter.bladeslicemasterfruit` | Belum diketahui | Instalasi kedua tidak bisa tarik meski saldo sekitar Rp14.000. |
+| 41 | Cut Fruit Blade Master | `com.goodgamecut.cutfruitblademaster` | Belum diketahui | Instalasi kedua memiliki penarikan Rp18.000 yang pending. |
+| 42 | LuckyScrewSort | Belum diketahui | Belum diketahui | Penarikan Rp6.000 gagal dua kali; diduga tidak bisa memakai rekening DANA yang sama. |
 
 ## 🏢 Kategori Game Berdasarkan Pengembang
 
