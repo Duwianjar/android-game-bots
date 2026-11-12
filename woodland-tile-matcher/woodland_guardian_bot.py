@@ -16,6 +16,7 @@ from __future__ import annotations
 import argparse
 import html
 import json
+import math
 import os
 import re
 import subprocess
@@ -28,6 +29,8 @@ from typing import Optional, Tuple
 
 TARGET_PACKAGE = "com.starlightgame.woodlandtilematcher"
 TARGET_NAME = "Woodland Tile Matcher"
+
+ENABLE_SLOT_SEEDING_AFTER_AD = os.environ.get("ENABLE_SLOT_SEEDING_AFTER_AD", "0") == "1"  # Default nonaktif: injeksi web/app slot pasca-iklan
 
 # App yang sering terbuka karena iklan / redirect.
 BLOCKED_PACKAGES = {
@@ -57,7 +60,7 @@ BUBBLE_TAP_COOLDOWN = 0.0
 # Area scan/tap gelembung Woodland:
 # mulai dari bawah tombol menu garis-3 kiri atas sampai hampir dasar layar.
 BUBBLE_SCAN_TOP_RATIO = 0.235
-BUBBLE_SCAN_BOTTOM_RATIO = 0.985
+BUBBLE_SCAN_BOTTOM_RATIO = 0.55
 AD_ACTIVITY_KEYWORDS = (
     "ads",
     "adplayer",
@@ -140,12 +143,16 @@ class WoodlandGuardian:
         self.seeding_slot_routine = False
         self.last_chrome_seed_ts = 0.0
         self.last_tile_tap_ts = 0.0
+        self.last_tile_board_missing_log_ts = 0.0
         self.last_gagal_check_ts = 0.0
         self.last_gagal_tap_ts = 0.0
         self._ocr_cache_ts = 0.0
         self._ocr_cache_entries = None
         self.tile_tap_index = 0
         self.completed_ads_count = 0
+        self.bad_bubble_coords: list[Tuple[float, int, int]] = []
+        self.buka_tap_count = 0
+        self.bubble_fail_count = 0
 
     def log(self, message: str) -> None:
         ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -255,49 +262,61 @@ class WoodlandGuardian:
             if point not in unique_points:
                 unique_points.append(point)
 
+        pts = unique_points[:9] if color == "red" else unique_points[:220]
         marker_diam = 22 if color == "red" else 34
         marker_dur = 1.2 if color == "red" else 1.8
-        self.show_tap_marker([(x, y, color, marker_dur, marker_diam) for x, y in unique_points[:220]])
+        self.show_tap_marker([(x, y, color, marker_dur, marker_diam) for x, y in pts])
 
         if self.dry_run:
-            self.log(f"DRY RUN: burst tap {unique_points}")
+            self.log(f"DRY RUN: burst tap {pts}")
             return
 
-        # Untuk tap gelembung (marker merah) harus sangat cepat/brutal.
-        delay_ms = 0 if color == "red" else 3
-        self.monkey_burst(unique_points, delay_ms=delay_ms, timeout=timeout)
+        # Untuk tap gelembung (marker merah) beri jeda 15ms agar tidak spam input berlebih.
+        delay_ms = 15 if color == "red" else 3
+        self.monkey_burst(pts, delay_ms=delay_ms, timeout=timeout)
 
     def tap_bubble_until_ad(self, points: list[Tuple[int, int]]) -> bool:
-        """Tap gelembung SUPER BRUTAL via monkey burst; wave 1 + wave 2 + triple-check."""
+        """Tap terfokus di sekitar gelembung dan berhenti bila layar berubah."""
         if not points:
             return False
-        batch = points[:800]
-        self.log(f"TAP BATCH GELEMBUNG SUPER BRUTAL: {len(batch)} titik presisi cepat")
-        self.tap_many(batch, timeout=8, color="red")
+        batch = points[:7]
+        self.log(f"TAP GELEMBUNG TERFOKUS: {len(batch)} titik di sekitar target")
+        self.tap_many(batch, timeout=5, color="red")
         self.last_dobel_check_ts = 0.0
-        # Cek cepat; kalau belum buka iklan, tembak wave kedua.
+
         time.sleep(0.30)
         app = self.get_foreground_app()
-        if app and (self.is_game_ad(app) or app.package != TARGET_PACKAGE):
-            self.log(f"STOP TAP GELEMBUNG: foreground berubah ({app.package}/{app.activity})")
+        if app and self.is_game_ad(app):
+            self.log(f"STOP TAP GELEMBUNG: iklan terbuka ({app.package}/{app.activity})")
             return True
+        if app and app.package != TARGET_PACKAGE:
+            bx, by = points[0]
+            self.bad_bubble_coords.append((time.time() + 50.0, bx, by))
+            self.log(
+                f"BLACKLIST KOORDINAT BUBBLE ({bx},{by}) selama 50s karena redirect ke {app.package} | "
+                "TAP GELEMBUNG DIBATALKAN: layar berpindah ke aktivitas non-iklan "
+                f"({app.package}/{app.activity}); tidak meneruskan tap."
+            )
+            return False
 
-        second_wave = list(reversed(points[:700]))
+        second_wave = list(reversed(batch))
         if second_wave:
-            self.log(f"TAP GELEMBUNG WAVE 2 BRUTAL: {len(second_wave)} titik tambahan")
-            self.tap_many(second_wave, timeout=7, color="red")
+            self.log(f"TAP GELEMBUNG RETRY TERFOKUS: {len(second_wave)} titik")
+            self.tap_many(second_wave, timeout=4, color="red")
 
-        # Triple-check: catch slow ads.
         time.sleep(0.30)
         app = self.get_foreground_app()
-        if app and (self.is_game_ad(app) or app.package != TARGET_PACKAGE):
-            self.log(f"STOP TAP GELEMBUNG (check2): foreground berubah ({app.package}/{app.activity})")
+        if app and self.is_game_ad(app):
+            self.log(f"STOP TAP GELEMBUNG: iklan terbuka setelah retry ({app.package}/{app.activity})")
             return True
-        time.sleep(0.30)
-        app = self.get_foreground_app()
-        if app and (self.is_game_ad(app) or app.package != TARGET_PACKAGE):
-            self.log(f"STOP TAP GELEMBUNG (check3): foreground berubah ({app.package}/{app.activity})")
-            return True
+        if app and app.package != TARGET_PACKAGE:
+            bx, by = points[0]
+            self.bad_bubble_coords.append((time.time() + 50.0, bx, by))
+            self.log(
+                f"BLACKLIST KOORDINAT BUBBLE ({bx},{by}) selama 50s karena redirect ke {app.package} | "
+                "TAP GELEMBUNG DIBATALKAN SETELAH RETRY: layar non-iklan "
+                f"({app.package}/{app.activity})."
+            )
         return False
 
     @staticmethod
@@ -390,11 +409,11 @@ class WoodlandGuardian:
             self.log(f"DRY RUN: buka {TARGET_NAME}{reason_msg}")
             return
         self.log(f"Membuka {TARGET_NAME}{reason_msg}")
-        # monkey paling stabil untuk launch activity utama dari manifest.
         self.adb_out([
-            "shell", "monkey", "-p", TARGET_PACKAGE,
-            "-c", "android.intent.category.LAUNCHER", "1",
-        ], timeout=12)
+            "shell", "am", "start", "-n",
+            f"{TARGET_PACKAGE}/com.unity3d.player.UnityPlayerActivity",
+            "--activity-reorder-to-front",
+        ], timeout=8)
 
     def close_blocked_app_and_return(self, package: str) -> None:
         if getattr(self, "seeding_slot_routine", False):
@@ -580,6 +599,9 @@ class WoodlandGuardian:
         elif "vungle" in act_lower:
             network = "Vungle (Liftoff)"
             ad_type = "Fullscreen Ad"
+        elif "facebook" in act_lower or "audiencenetwork" in act_lower:
+            network = "Meta (Facebook Audience Network)"
+            ad_type = "Audience Network Fullscreen"
         else:
             network = "Game Ad Network"
             ad_type = "Fullscreen Activity"
@@ -587,11 +609,21 @@ class WoodlandGuardian:
         short_id = activity.split(".")[-1] if "." in activity else activity
         return network, ad_type, short_id
 
+    def is_meta_ad(self, app: Optional[ForegroundApp]) -> bool:
+        if not app:
+            return False
+        act_lower = (app.activity or "").lower()
+        if any(token in act_lower for token in ("facebook", "audiencenetwork", "meta")):
+            return True
+        if getattr(self, "_is_current_ad_meta", False):
+            return True
+        return False
+
     def on_ad_finished(self, activity: str, duration: float) -> None:
         self.completed_ads_count += 1
         now = time.time()
         # Setelah iklan selesai: buka 2 web slot di Chrome lalu buka 1 aplikasi slot acak (rr33, k68, fj99)
-        if now - self.last_chrome_seed_ts >= 25.0:
+        if ENABLE_SLOT_SEEDING_AFTER_AD and now - self.last_chrome_seed_ts >= 25.0:
             self.last_chrome_seed_ts = now
             self.run_slot_seeding_and_app_routine()
 
@@ -951,6 +983,8 @@ class WoodlandGuardian:
 
     def run_slot_seeding_and_app_routine(self) -> None:
         """Setelah iklan: buka web slot di Chrome, scroll & klik beberapa situs, klik tombol daftar jika ada, buka 1 aplikasi slot acak (rr33, k68, fj99), lalu kembali ke game."""
+        if not ENABLE_SLOT_SEEDING_AFTER_AD:
+            return
         self.seeding_slot_routine = True
         self.log("=== MEMULAI SIKLUS INJEKSI SLOT: GOOGLE SEARCH + SCROLL BEBERAPA SITUS + KLIK DAFTAR + 1 APLIKASI SLOT ACAK ===")
         try:
@@ -981,13 +1015,21 @@ class WoodlandGuardian:
             self.adb_out(["shell", "am", "force-stop", "com.android.chrome"], timeout=4)
             time.sleep(0.4)
 
-            # 3. Buka salah satu aplikasi slot acak: RR33, K68, atau FJ99
+            # 3. Buka salah satu aplikasi slot acak yang terinstall
             slot_apps = [
                 {"name": "RR33", "pkg": "RR33.COM"},
                 {"name": "K68", "pkg": "com.k68.id.xulsfy"},
                 {"name": "FJ99", "pkg": "org.chromium.webapk.a1ffa4016fb2cda0c_v2"},
             ]
-            chosen_app = random.choice(slot_apps)
+            installed_list = self.adb_out(["shell", "pm", "list", "packages"]).splitlines()
+            installed_set = {p.replace("package:", "").strip() for p in installed_list}
+            eligible = [a for a in slot_apps if a["pkg"] in installed_set]
+            chosen_app = random.choice(eligible) if eligible else slot_apps[0]
+
+            # Jika layanan Inject Iklan terpasang, picu siklus latar belakangnya
+            if "com.openclaw.injectiklan" in installed_set:
+                self.log("[INJECT IKLAN SERVICE]: Memicu InjectForegroundService untuk penguatan persona...")
+                self.adb_out(["shell", "am", "start-foreground-service", "-a", "com.openclaw.injectiklan.RUN_ONCE", "com.openclaw.injectiklan/.InjectForegroundService"], timeout=5)
             app_name = chosen_app["name"]
             app_pkg = chosen_app["pkg"]
             self.log(f"[APLIKASI SLOT ACAK]: Membuka aplikasi {app_name} ({app_pkg})...")
@@ -1042,8 +1084,11 @@ class WoodlandGuardian:
                 self.ad_close_last_btn_key = ""
                 self.ad_activity = app.activity
                 self.last_ad_log_second = 0
+                self._is_current_ad_meta = any(token in app.activity.lower() for token in ("facebook", "audiencenetwork", "meta"))
                 net, ad_type, short_id = self.get_ad_info(app.activity)
-                target_str = " | target 40s" if "applovin" in app.activity.lower() else ""
+                is_meta = self.is_meta_ad(app)
+                is_applovin = "applovin" in app.activity.lower()
+                target_str = " | target 60s (Meta)" if is_meta else (" | target 40s (AppLovin)" if is_applovin else "")
                 self.log(f"IKLAN TERBUKA [NETWORK: {net} | TIPE: {ad_type} | ID: {short_id}]: {app.activity} | durasi {self.format_duration(0)}{target_str}")
                 source = "DOBEL" if self.dobel_visible else ("GELEMBUNG" if self.bubble_watch_active else "DETEKSI GAME")
                 if source == "DOBEL" and self.handle_dobel_ad_opened(app.activity):
@@ -1062,7 +1107,9 @@ class WoodlandGuardian:
             if elapsed_second != self.last_ad_log_second:
                 self.last_ad_log_second = elapsed_second
                 net, ad_type, short_id = self.get_ad_info(app.activity)
-                target_str = " / target 40s" if "applovin" in app.activity.lower() else ""
+                is_meta = self.is_meta_ad(app)
+                is_applovin = "applovin" in app.activity.lower()
+                target_str = " / target 60s (Meta)" if is_meta else (" / target 40s (AppLovin)" if is_applovin else "")
                 self.log(f"IKLAN DITONTON [NETWORK: {net} | ID: {short_id}]: durasi {self.format_duration(elapsed)}{target_str}")
             return
 
@@ -1073,6 +1120,7 @@ class WoodlandGuardian:
             self.log(f"IKLAN SELESAI [NETWORK: {net} | ID: {short_id}]: {finished_ad} | total durasi {self.format_duration(elapsed)}")
             self.ad_start_ts = None
             self.ad_activity = ""
+            self._is_current_ad_meta = False
             self.last_ad_log_second = -1
             self.last_ad_close_check_ts = 0.0
             self.on_ad_finished(finished_ad, elapsed)
@@ -1782,9 +1830,11 @@ class WoodlandGuardian:
         elapsed = now - self.ad_start_ts
         act_lower = (app.activity or "").lower()
         is_applovin = "applovin" in act_lower
+        is_meta = self.is_meta_ad(app)
 
-        # Jika iklan AppLovin, tunggu 40 detik sebelum mencari & mengklik tombol tutup (X/panah)
-        target_watch = 40.0 if is_applovin else AD_CLOSE_MIN_SECONDS
+        # Jika iklan Meta (Facebook Audience Network), tunggu 1 menit (60 detik) sebelum klik X atau >|
+        # Jika iklan AppLovin, tunggu 40 detik
+        target_watch = 60.0 if is_meta else (40.0 if is_applovin else AD_CLOSE_MIN_SECONDS)
         if elapsed < target_watch:
             return
 
@@ -1794,7 +1844,7 @@ class WoodlandGuardian:
 
         found = self.find_ad_finish_button()
         if not found:
-            fallback_limit = (target_watch + 15) if is_applovin else 28
+            fallback_limit = (target_watch + 15) if (is_meta or is_applovin) else 28
             if elapsed > fallback_limit and (now - self.last_ad_close_tap_ts >= 4):
                 self.last_ad_close_tap_ts = now
                 self.log(f"FALLBACK CLOSE: iklan terbuka {self.format_duration(elapsed)} belum ada tombol tutup, kirim BACK")
@@ -2115,6 +2165,7 @@ class WoodlandGuardian:
             return
 
         if dobel:
+            self.buka_tap_count = 0
             text, bbox, x, y = dobel
             screen_w, _screen_h = self.get_screen_size()
             # OCR memberi titik tengah tulisan "DOBEL", bukan selalu titik tengah tombol.
@@ -2146,13 +2197,21 @@ class WoodlandGuardian:
             self.log(f"MENEMUKAN TOMBOL BUKA (PRIORITAS BUKA, JANGAN NOW NOT): '{text}' | bbox={bbox} | ocr=({x},{y}) | tap=({tap_x},{tap_y})")
             if (not hasattr(self, "last_buka_tap_ts")) or (now - self.last_buka_tap_ts >= 1.2):
                 self.last_buka_tap_ts = now
-                self.log(f"KLIK TOMBOL BUKA di ({tap_x},{tap_y})")
-                self.tap(tap_x, tap_y, color="green")
+                self.buka_tap_count = getattr(self, "buka_tap_count", 0) + 1
+                if self.buka_tap_count >= 4 and not_now:
+                    nx_text, nbbox, nx, ny = not_now
+                    self.log(f"TOMBOL BUKA TIDAK MERESPONS ({self.buka_tap_count}x tap): fallback klik NOW NOT di ({nx},{ny})")
+                    self.tap(nx, ny)
+                    self.buka_tap_count = 0
+                else:
+                    self.log(f"KLIK TOMBOL BUKA di ({tap_x},{tap_y}) [count={self.buka_tap_count}]")
+                    self.tap(tap_x, tap_y, color="green")
             self.dobel_visible = False
             self.not_now_visible = False
             self.bubble_watch_active = False
 
         elif not_now:
+            self.buka_tap_count = 0
             text, bbox, x, y = not_now
             if not self.not_now_visible:
                 self.log(f"TIDAK ADA DOBEL/BUKA, MENEMUKAN TOMBOL NOW NOT/NOT NOW: '{text}' | bbox={bbox} | tap=({x},{y})")
@@ -2169,6 +2228,7 @@ class WoodlandGuardian:
             self.not_now_visible = True
             self.dobel_visible = False
         else:
+            self.buka_tap_count = 0
             self.dobel_visible = False
             self.not_now_visible = False
 
@@ -2240,6 +2300,10 @@ class WoodlandGuardian:
             center_y = y + h // 2
             if center_y < scan_top or center_y > scan_bottom:
                 continue
+
+            # Abaikan koordinat yang baru saja menyebabkan redirect/bad ad
+            if any(math.hypot(center_x - bx, center_y - by) < 70 for _, bx, by in getattr(self, "bad_bubble_coords", [])):
+                continue
             if center_x < 30 or center_x > width - 30:
                 continue
 
@@ -2284,6 +2348,7 @@ class WoodlandGuardian:
             vx, vy = 0.0, -160.0
             m1 = cv2.moments(target1)
             dt_pair = max(0.001, second_ts - first_ts)
+            calc_vx, calc_vy = 0.0, 0.0
             if m1["m00"] > 0 and m2["m00"] > 0:
                 old_x = int(rx1 + m1["m10"] / m1["m00"])
                 old_y = int(ry1 + m1["m01"] / m1["m00"])
@@ -2291,6 +2356,16 @@ class WoodlandGuardian:
                 calc_vy = (latest_y - old_y) / dt_pair
                 if abs(calc_vx) < 900 and abs(calc_vy) < 1200:
                     vx, vy = calc_vx, calc_vy
+
+            # Filter objek statis / pulsing yang tidak benar-benar bergerak
+            if math.hypot(calc_vx, calc_vy) < 18.0:
+                continue
+
+            # Filter koordinat yang baru saja menyebabkan redirect/bad ad
+            now_t = time.time()
+            self.bad_bubble_coords = [item for item in self.bad_bubble_coords if item[0] > now_t]
+            if any(math.hypot(latest_x - bx, latest_y - by) < 70 for _, bx, by in self.bad_bubble_coords):
+                continue
 
             lead = 0.34
             pred_x = int(latest_x + vx * lead)
@@ -2400,121 +2475,47 @@ class WoodlandGuardian:
         return int(x), int(y), info
 
     def build_bubble_burst_points(self, x: int, y: int, width: int, height: int) -> list[Tuple[int, int]]:
-        """Titik tap brutal: bubble + sweep area aman. Sama brutalnya dengan Magic Ocean."""
-        import math
+        """Titik tap aman dan rapat di sekitar gelembung yang sudah terdeteksi.
+
+        Gunakan 7 titik presisi rapat (radius 10 px) di sekitar pusat gelembung,
+        bukan puluhan titik menyebar agar tidak memicu tombol sistem / redirect Play Store.
+        """
         now = time.time()
         cx, cy = int(x), int(y)
-        pair_v = getattr(self, "last_bubble_pair_velocity", None) or (0.0, -180.0)
-        vx, vy = pair_v
-        if abs(vx) < 20 and abs(vy) < 20:
-            vy = -180.0
         self.prev_bubble_detection = (now, cx, cy)
-
         points: list[Tuple[int, int]] = []
         seen: set[Tuple[int, int]] = set()
 
-        # Zona exclude: Penarikan kanan atas, menu kiri atas, puzzle tengah
         withdraw_rect = (int(width * 0.58), int(height * 0.055), width - 12, int(height * 0.145))
         menu_rect = (0, int(height * 0.145), int(width * 0.18), int(height * 0.235))
-        center_tiles_rect = (int(width * 0.30), int(height * 0.33), int(width * 0.72), int(height * 0.58))
 
-        def in_rect(px, py, rect):
+        def in_rect(px: int, py: int, rect: Tuple[int, int, int, int]) -> bool:
             x1, y1, x2, y2 = rect
             return x1 <= px <= x2 and y1 <= py <= y2
 
-        def safe(px, py):
+        def add_point(px: int, py: int) -> None:
             px, py = int(px), int(py)
             if px < 18 or px > width - 18:
-                return False
-            if py < int(height * BUBBLE_SCAN_TOP_RATIO) or py > int(height * BUBBLE_SCAN_BOTTOM_RATIO):
-                return False
-            if in_rect(px, py, withdraw_rect):
-                return False
-            if in_rect(px, py, menu_rect):
-                return False
-            return True
-
-        def add_p(px, py):
-            px, py = int(px), int(py)
-            if not safe(px, py):
                 return
-            pt = (px, py)
-            if pt not in seen:
-                seen.add(pt)
-                points.append(pt)
+            if py < int(height * BUBBLE_SCAN_TOP_RATIO) or py > int(height * BUBBLE_SCAN_BOTTOM_RATIO):
+                return
+            if in_rect(px, py, withdraw_rect) or in_rect(px, py, menu_rect):
+                return
+            point = (px, py)
+            if point not in seen:
+                seen.add(point)
+                points.append(point)
 
-        # 1) Pusat bubble + prediksi jalur gerak
-        centers = [(cx, cy)]
-        for lead in (0.06, 0.12, 0.18, 0.26, 0.36, 0.50, 0.66, 0.84, 1.05):
-            px = int(cx + vx * lead)
-            py = int(cy + vy * lead)
-            if abs(px - cx) <= 220 and abs(py - cy) <= 260:
-                centers.append((px, py))
-        for dy in (-20, -38, -58, -82, -112, -150, -195, -245):
-            centers.append((cx, cy + dy))
-
-        for px, py in centers:
-            add_p(px, py)
-            for dx, dy in (
-                (18, 0), (-18, 0), (0, 18), (0, -18),
-                (14, 14), (-14, 14), (14, -14), (-14, -14),
-            ):
-                add_p(px + dx, py + dy)
-
-        # 2) Sweep area aman
-        step = 24
-        y_start = int(height * BUBBLE_SCAN_TOP_RATIO)
-        y_end = int(height * BUBBLE_SCAN_BOTTOM_RATIO)
-        # Jangan top-down saja: urutkan baris selang-seling atas/bawah supaya
-        # batch 800 pertama juga sudah menyentuh area bawah layar.
-        rows = list(range(y_start, y_end, step))
-        ordered_rows: list[int] = []
-        lo, hi = 0, len(rows) - 1
-        while lo <= hi:
-            ordered_rows.append(rows[lo])
-            if lo != hi:
-                ordered_rows.append(rows[hi])
-            lo += 1
-            hi -= 1
-        row = 0
-        for gy in ordered_rows:
-            offset = 0 if row % 2 == 0 else step // 2
-            for gx in range(24 + offset, width - 20, step):
-                add_p(gx, gy)
-            row += 1
-
-        # 3) Ring ekstra dan jalur vertikal
-        for px, py in centers:
-            for radius in (26, 42, 62, 86, 112):
-                steps = max(10, int(2 * math.pi * radius / 16))
-                for i in range(steps):
-                    angle = 2 * math.pi * i / steps
-                    add_p(int(px + radius * math.cos(angle)), int(py + radius * math.sin(angle)))
-
-        for dy in range(0, int(height * 0.75), 18):
-            add_p(cx, cy - dy)
-            add_p(cx, cy + dy)
-            add_p(cx - 24, cy - dy)
-            add_p(cx + 24, cy - dy)
-            add_p(cx - 48, cy - dy)
-            add_p(cx + 48, cy - dy)
-            add_p(cx - 24, cy + dy)
-            add_p(cx + 24, cy + dy)
-            add_p(cx - 48, cy + dy)
-            add_p(cx + 48, cy + dy)
-
-        # 4) Crosshair rapat
-        for offset in range(-150, 151, 18):
-            add_p(cx + offset, cy)
-            add_p(cx, cy + offset)
-            add_p(cx + offset, cy - 36)
-            add_p(cx + offset, cy + 36)
+        add_point(cx, cy)
+        for angle_deg in range(0, 360, 60):
+            rad = math.radians(angle_deg)
+            add_point(cx + int(10 * math.cos(rad)), cy + int(10 * math.sin(rad)))
 
         self.log(
-            "BUILD BURST GELEMBUNG BRUTAL: "
-            f"{len(points)} titik | exclude penarikan={withdraw_rect}, menu={menu_rect}"
+            "BUILD TAP GELEMBUNG TERFOKUS: "
+            f"{len(points)} titik presisi | target=({cx},{cy}) | exclude penarikan/menu"
         )
-        return points[:1400]
+        return points[:7] if points else [(cx, cy)]
 
     def generate_woodland_tile_points(self) -> list[Tuple[int, int]]:
         """Titik tap di area board kotak-kotak ubin Woodland Tile Matcher (720x1640)."""
@@ -2559,11 +2560,14 @@ class WoodlandGuardian:
             return []
 
     def do_gameplay_tile_tap(self) -> None:
-        """Tap kotak-kotak ubin di halaman utama untuk mencocokkan ubin & memicu pop-up hadiah/iklan."""
+        """Tap hanya ubin yang terdeteksi pada papan game yang siap.
+
+        Tidak memakai koordinat grid cadangan. Pada layar loading/blank, koordinat tersebut
+        dapat mengenai tautan iklan dan mengirim game berulang kali ke Play Store.
+        """
         now = time.time()
         if now - self.last_tile_tap_ts < 0.7:
             return
-        self.last_tile_tap_ts = now
 
         screenshot = self.capture_screenshot()
         tiles = []
@@ -2571,13 +2575,18 @@ class WoodlandGuardian:
             png_data, width, height = screenshot
             tiles = self.find_gameplay_tiles(png_data, width, height)
 
-        if tiles:
-            tap_points = tiles[:3]
-            self.log(f"TAP KOTAK UBIN TERDETEKSI: tap {len(tap_points)} ubin {tap_points} untuk memicu iklan/hadiah")
-        else:
-            tap_points = self.generate_woodland_tile_points()
-            self.log(f"TAP KOTAK UBIN GRID: tap {len(tap_points)} ubin {tap_points} untuk memicu iklan/hadiah")
+        if not tiles:
+            if now - self.last_tile_board_missing_log_ts >= 5.0:
+                self.last_tile_board_missing_log_ts = now
+                self.log(
+                    "TAP UBIN DILEWATI: papan game belum terdeteksi; "
+                    "menunggu layar siap agar tidak membuka Play Store."
+                )
+            return
 
+        self.last_tile_tap_ts = now
+        tap_points = tiles[:3]
+        self.log(f"TAP KOTAK UBIN TERDETEKSI: tap {len(tap_points)} ubin {tap_points} untuk memicu iklan/hadiah")
         for x, y in tap_points:
             self.tap(x, y, color="yellow")
             time.sleep(0.06)
@@ -2614,7 +2623,7 @@ class WoodlandGuardian:
                 self.last_bubble_tap_ts = now
                 screen_w, screen_h = getattr(self, "last_bubble_screen_size", self.get_screen_size())
                 points = self.build_bubble_burst_points(x, y, screen_w, screen_h)
-                self.log(f"TAP GELEMBUNG TERFOKUS: {len(points)} titik rapat tepat di badan & jalur ({x},{y})")
+                self.log(f"SIAP TAP GELEMBUNG TERFOKUS: {len(points)} titik aman di sekitar target ({x},{y})")
                 tap_start_ts = time.time()
                 opened = self.tap_bubble_until_ad(points)
                 tap_ms = int((time.time() - tap_start_ts) * 1000)
@@ -2626,6 +2635,13 @@ class WoodlandGuardian:
                     self.notify_ad_opened(activity, source="GELEMBUNG", info=info)
                     self.bubble_watch_active = False
                     self.prev_bubble_detection = None
+                    self.bubble_fail_count = 0
+                else:
+                    self.bubble_fail_count = getattr(self, "bubble_fail_count", 0) + 1
+                    cooldown = 12.0 if self.bubble_fail_count >= 2 else 3.0
+                    self.last_bubble_tap_ts = time.time() + cooldown
+                    self.log(f"TAP GELEMBUNG TIDAK MEMBUKA IKLAN (gagal #{self.bubble_fail_count}): cooldown {cooldown:.1f}s, lanjut gameplay tap")
+                    self.do_gameplay_tile_tap()
             return
 
         if not self.bubble_watch_active:
@@ -2648,6 +2664,11 @@ class WoodlandGuardian:
             self.update_dobel_log(None)
             self.launch_game(reason="foreground tidak terbaca")
             return "launch_unknown_foreground", None
+
+        if app.package == "com.transsion.XOSLauncher":
+            self.launch_game(reason="terlempar ke launcher")
+            self.last_action = "returned_from_launcher"
+            return "returned_from_launcher", app
 
         if app.package != self.last_foreground:
             self.last_foreground = app.package
@@ -2700,6 +2721,7 @@ class WoodlandGuardian:
     def run(self, once: bool = False) -> int:
         self.log(f"Bot aktif untuk {TARGET_NAME} ({TARGET_PACKAGE})")
         self.log(f"Log: {LOG_FILE}")
+        self.log(f"Status Injeksi Iklan Slot: {"AKTIF" if ENABLE_SLOT_SEEDING_AFTER_AD else "NONAKTIF"}")
         if not self.has_device():
             return 2
         if not self.is_target_installed():
@@ -2723,7 +2745,13 @@ def main() -> int:
     parser.add_argument("--interval", "-i", type=float, default=DEFAULT_INTERVAL, help="Interval cek foreground dalam detik")
     parser.add_argument("--once", action="store_true", help="Cek sekali lalu keluar")
     parser.add_argument("--dry-run", action="store_true", help="Log aksi tanpa mengeksekusi force-stop/launch")
+    parser.add_argument("--inject", dest="enable_inject", action="store_true", default=None, help="Aktifkan siklus injeksi iklan slot pasca-iklan")
+    parser.add_argument("--no-inject", dest="enable_inject", action="store_false", default=None, help="Matikan siklus injeksi iklan slot pasca-iklan")
     args = parser.parse_args()
+
+    global ENABLE_SLOT_SEEDING_AFTER_AD
+    if args.enable_inject is not None:
+        ENABLE_SLOT_SEEDING_AFTER_AD = args.enable_inject
 
     bot = WoodlandGuardian(serial=args.serial, interval=max(0.2, args.interval), dry_run=args.dry_run)
     return bot.run(once=args.once)

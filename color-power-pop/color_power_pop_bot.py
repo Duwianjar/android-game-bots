@@ -25,11 +25,12 @@ PACKAGE_KEYWORDS = ["color", "colour", "power", "pop"]
 OCR_HELPER_PATH = "/Users/macbookair/ocr_helper"
 TAP_MARKER_PATH = "/Users/macbookair/scrcpy_tap_marker"
 CLICK_REWARD_DURING_AD_WAIT = False  # Nonaktif: jangan klik Koleksi/Klaim/Unduh saat menunggu iklan
-AD_WAIT_SECONDS = 6           # Menonton iklan selama 6 detik
+AD_WAIT_SECONDS = int(os.environ.get('AD_WAIT_SECONDS', '15'))  # Wajib diam penuh 15 detik sebelum bot boleh memberi input ke iklan
 AD_TIMER_STUCK_REPEAT_LIMIT = 4  # Jika OCR timer sama terus, anggap bukan countdown valid
-MIN_WITHDRAWAL_RP = 200        # Target saldo =Rp minimal untuk penarikan
-ENABLE_AUTO_WITHDRAWAL = False  # Nonaktif: jangan klik =Rp atau Menarik
-ENABLE_SLOT_SEEDING_AFTER_AD = False  # Nonaktif sementara: search web slot & buka aplikasi slot setelah iklan
+MIN_WITHDRAWAL_RP = int(os.environ.get('MIN_WITHDRAWAL_RP', '5000'))  # Minimal saldo =Rp untuk penarikan (>= 5000)
+ENABLE_AUTO_WITHDRAWAL = True   # Aktif: lakukan penarikan hanya jika saldo >= 5000
+ENABLE_SLOT_SEEDING_AFTER_AD = False  # Dinonaktifkan: jangan jalankan injeksi iklan slot
+INJECT_AD_INTERVAL_SECONDS = 10 * 60  # Satu siklus setiap 10 menit
 ENABLE_FLOATING_REWARD_DETECTION = False  # Color Power Pop tidak pakai reward/bubble melayang
 ENABLE_AUTO_CLOSE_UNKNOWN_MODAL = False    # Matikan spam klik X modal palsu
 DEBUG_COLOR_MARKERS_ONLY = False           # False = klik kartu atas sesuai warna kotak/wadah bawah
@@ -101,12 +102,26 @@ def detect_popup_reward_button_ocr(ocr_items, scale_y=1.0):
     modal_indicators = ["selamat", "hadiah", "congratulations", "reward", "koin", "bonus", "menang", "gandakan", "klaim", "koleksi"]
     has_reward_modal = any(k in all_text for k in modal_indicators)
 
-    # 1. Deteksi langsung teks tombol klaim/reward
-    reward_keywords = ["bebas klik", "koleksi", "klaim", "claim", "collect", "gandakan", "dapatkan", "ambil", "terima"]
+    # 1. Deteksi langsung teks tombol klaim/reward dengan memprioritaskan tombol pengganda/multiplier
+    # Batasi area tombol di y 850..1160 agar tidak salah klik footer/teks bawah
+    multiplier_keywords = ["gandakan", "dobel", "double", "x2", "2x", "tonton video", "tonton iklan"]
+    standard_keywords = ["klaim", "koleksi", "bebas klik", "claim", "collect", "dapatkan", "ambil", "terima"]
+    footer_phrases = ["lebih banyak video", "bonus tambahan", "syarat", "ketentuan"]
+    candidates = []
     for it in ocr_items:
         t = it["text"].lower()
-        if any(kw in t for kw in reward_keywords) and it["cy"] > int(500 * scale_y):
-            return it["cx"], it["cy"], f"Tombol Reward '{it['text']}'"
+        cy = it["cy"]
+        if int(850 * scale_y) <= cy <= int(1160 * scale_y):
+            if any(fp in t for fp in footer_phrases):
+                continue
+            if any(kw in t for kw in multiplier_keywords):
+                candidates.append((0, it["cx"], cy, f"Tombol Multiplier '{it['text']}'"))
+            elif any(kw in t for kw in standard_keywords):
+                candidates.append((1, it["cx"], cy, f"Tombol Reward '{it['text']}'"))
+    if candidates:
+        candidates.sort(key=lambda c: (c[0], c[2]))
+        _, cx, cy, desc = candidates[0]
+        return cx, cy, desc
 
     # 2. Tombol Menarik adalah alur penarikan, bukan tombol reward.
     # Jangan masukkan ke kandidat saat penarikan otomatis dinonaktifkan.
@@ -142,11 +157,17 @@ def detect_popup_reward_button_fast(ocr_items, img, scale_x=1.0, scale_y=1.0):
         return None
 
     all_text = " ".join([it["text"].lower() for it in ocr_items])
+    if any(k in all_text for k in ["pengaturan", "musik", "suara"]):
+        return None
+
     modal_indicators = [
         "selamat", "hadiah", "congratulations", "reward", "koin", "bonus", "menang",
-        "gandakan", "klaim", "koleksi", "claim", "collect", "dapatkan", "ambil", "terima"
+        "gandakan", "klaim", "koleksi", "claim", "collect", "dapatkan", "ambil", "terima",
+        "tonton", "gratis"
     ]
     has_modal_hint = any(k in all_text for k in modal_indicators)
+    if not has_modal_hint:
+        return None
 
     h, w = img.shape[:2]
     x1, x2 = int(80 * scale_x), min(w, int(650 * scale_x))
@@ -315,16 +336,23 @@ class CanSortRunner:
         self.package_checked = False
         self.last_bottom_cards_log = ""
         self.last_slot_cards_log = ""
+        self.latest_left_rp = 0
         self.slot_marker_counter = 0
         # Riwayat titik reward yang sudah disentuh agar tidak diklik berulang.
         self.recently_tapped_points = []
         self.last_reward_click_at = 0.0
         self.last_reward_click_coord = None
         self.external_redirect_loop_count = 0
+        # Pengaman tap kartu atas yang tidak merespons.
+        self.last_card_tap_key = None
+        self.same_card_tap_count = 0
+        self.blocked_top_slots = {}
         self.feedback_false_loop_count = 0
         self.last_external_redirect_at = 0.0
         self.completed_ads_count = 0
-        self.last_chrome_seed_ts = 0.0
+        # Siklus pertama dimulai setelah 10 menit bot aktif agar tidak mengganggu
+        # pembukaan game atau iklan yang sedang berjalan.
+        self.last_chrome_seed_ts = time.time()
         self.seeding_slot_routine = False
 
     def is_coord_recent(self, cx, cy, threshold_dist=35):
@@ -1120,7 +1148,6 @@ class CanSortRunner:
         # 2. Cek via deteksi kontur tombol X di pojok kanan ATAU kiri atas (dibatasi header y<=135 agar tidak salah klik banner/info di y=148).
         y1, y2 = int(40 * sy), int(135 * sy)
         corner_regions = [
-            ("kiri", int(10 * sx), int(145 * sx)),
             ("kanan", int(580 * sx), int(710 * sx)),
         ]
         all_candidates = []
@@ -1168,11 +1195,46 @@ class CanSortRunner:
         self.tap_burst(top_right_x_pts, delay=0.03)
         return True
 
+    def detect_and_click_confirm_to_close(self, img, ocr_items=None):
+        """Pada popup 'Confirm to close', pilih Continue agar iklan tidak ditutup paksa."""
+        if img is None:
+            return False
+        items = ocr_items if ocr_items is not None else self.run_full_ocr(img)
+        dialog_text = " ".join(item["text"].lower() for item in items)
+        confirm_markers = (
+            "confirm to close", "confirm close", "konfirmasi tutup",
+            "close it", "will not be rewarded", "tidak akan mendapat",
+            "lose your reward", "kehilangan hadiah",
+        )
+        if not any(marker in dialog_text for marker in confirm_markers):
+            return False
+
+        continue_markers = ("continue", "continui", "continu", "lanjutkan", "resume", "teruskan")
+        candidates = [
+            item for item in items
+            if item["cy"] > int(200 * self.scale_y)
+            and any(marker in item["text"].lower() for marker in continue_markers)
+        ]
+        if not candidates:
+            return False
+        candidates.sort(key=lambda item: item["cy"], reverse=True)
+        target = candidates[0]
+        print(
+            f"{self.tag} [★] Popup Confirm to Close terdeteksi. "
+            f"Mengeklik tombol Continue '{target['text']}' di ({target['cx']}, {target['cy']}).",
+            flush=True,
+        )
+        self.tap(target["cx"], target["cy"])
+        time.sleep(0.45)
+        return True
+
     def close_ad_screen_thoroughly(self):
         """Menutup iklan secara menyeluruh: BACK -> Jika muncul peringatan (Continue vs Close It) klik CONTINUE -> Endcard X -> Kembali Game."""
         sx, sy = self.scale_x, self.scale_y
         img0 = self.get_screenshot()
         if img0 is not None and self.detect_and_close_feedback_modal(img0):
+            return
+        if img0 is not None and self.detect_and_click_confirm_to_close(img0):
             return
 
         self.press_back()
@@ -1183,15 +1245,8 @@ class CanSortRunner:
             if self.detect_and_close_feedback_modal(img):
                 return
             ocr_items = self.run_full_ocr(img)
-            # 1. Jika muncul dialog peringatan (misal: 'Confirm to close?', 'You will not be rewarded', dsb)
-            # dan ada tombol Continue / Continui / Lanjutkan, klik CONTINUE!
-            for it in ocr_items:
-                t = it["text"].lower()
-                if any(k in t for k in ["continue", "continui", "continu", "lanjutkan", "resume"]) and it["cy"] > int(200 * sy):
-                    print(f"{self.tag} [+] Terdeteksi dialog peringatan iklan. Mengeklik 'Continue' di ({it['cx']}, {it['cy']})...", flush=True)
-                    self.tap_burst([(it["cx"], it["cy"]), (it["cx"], it["cy"])], delay=0.01)
-                    time.sleep(0.45)
-                    break
+            if self.detect_and_click_confirm_to_close(img, ocr_items):
+                return
 
         # 2. Tap titik tombol X pojok kanan atas & kiri atas (posisi umum endcard / banner close)
         close_points = [
@@ -1232,108 +1287,100 @@ class CanSortRunner:
         self.bring_game_to_foreground()
         time.sleep(0.25)
 
+    def is_confirmed_ad_screen(self, img=None):
+        """Pastikan layar adalah iklan, bukan papan kotak/kartu game."""
+        if img is None:
+            img = self.get_screenshot()
+        if img is None:
+            return False, "screenshot belum tersedia"
+
+        focus = self.get_foreground_focus().lower()
+        ad_keywords = (
+            "mbrewardvideoactivity", "applovinfullscreenactivity", "adactivity",
+            "companionadactivity", "bigo", "bytedance", "pangle", "unity3d",
+            "applovin", "adcolony", "kwad", "mbridge", "vungle", "ironsource",
+            "mintegral", "rewardvideo",
+        )
+        if any(keyword in focus for keyword in ad_keywords):
+            # Iklan video sering memiliki bidang warna/kartu yang mirip papan game.
+            # Activity SDK iklan adalah bukti lebih kuat daripada deteksi warna visual.
+            return True, "activity SDK iklan"
+
+        has_bottom, has_top = self.get_board_presence(img)
+        if has_bottom or has_top:
+            detected = []
+            if has_bottom:
+                detected.append("kotak bawah")
+            if has_top:
+                detected.append("kartu atas")
+            return False, "papan game masih terbaca (" + ", ".join(detected) + ")"
+
+        # Timer adalah bukti visual tambahan untuk iklan yang dirender di activity game.
+        if self.detect_ad_countdown_seconds(img):
+            return True, "countdown iklan terlihat"
+        return False, "papan hilang tetapi iklan belum terkonfirmasi"
+
     def wait_ad_and_close_ad(self, reason="Iklan Video Reward", initial_remaining=None):
-        """Menunggu iklan/reward. Jika timer iklan di pojok kiri atas terdeteksi, waktu tunggu disamakan."""
-        print(f"\n{self.tag} [⏳] {reason} terdeteksi! Menunggu iklan (cek timer pojok kiri/kanan atas, tanpa klik reward saat iklan)...", flush=True)
-        clicked_reward_during_wait = False
-        remaining = int(initial_remaining) if initial_remaining and initial_remaining > 0 else AD_WAIT_SECONDS
-        last_timer_seen = None
-        same_timer_seen_count = 0
-        same_timer_first_seen_at = 0.0
+        """Diam total selama 15 detik pertama pada halaman iklan, baru menutupnya."""
+        del initial_remaining  # Timer iklan tidak boleh mengurangi masa diam wajib.
+        is_ad, evidence = self.is_confirmed_ad_screen()
+        if not is_ad:
+            print(
+                f"{self.tag} [.] Mode diam iklan TIDAK dijalankan: {evidence}.",
+                flush=True,
+            )
+            return False
 
-        if "Koleksi / Bebas Klik" in reason:
-            slot1_x = int(188 * self.scale_x)
-            slot1_y = int(TOP_SLOT_MARKER_Y * self.scale_y)
-            print(f"{self.tag} [+] Setelah klik Koleksi/Bebas Klik: tap Slot 1 SATU KALI di ({slot1_x}, {slot1_y}) karena tombol/aksi ada di belakangnya.", flush=True)
-            self.tap(slot1_x, slot1_y)
-            time.sleep(0.05)
+        wait_until = time.monotonic() + AD_WAIT_SECONDS
+        last_reported = None
+        print(
+            f"\n{self.tag} [⏳] {reason} terkonfirmasi ({evidence}). DIAM TOTAL selama "
+            f"{AD_WAIT_SECONDS} detik: tidak mengetuk, BACK, skip, X, atau tombol apa pun.",
+            flush=True,
+        )
 
-        while remaining > 0:
-            if self.handle_external_redirect_during_ad():
-                print(f"{self.tag} [✔] Sudah dikembalikan dari Play Store/Chrome ke game. Mengakhiri tunggu iklan agar tidak loop.", flush=True)
-                self.ensure_back_to_card_board()
+        # Jangan panggil fungsi penutup/redirect/OCR tombol dalam blok ini karena
+        # semuanya berpotensi mengirim input ke layar iklan.
+        while True:
+            remaining = max(0, int(wait_until - time.monotonic() + 0.999))
+            if remaining == 0:
+                break
+            # Jika iklan sudah menutup sendiri dan papan utama kembali, tidak perlu
+            # meneruskan mode tunggu. Pemeriksaan ini hanya membaca screenshot,
+            # tanpa mengirim klik/BACK/input apa pun.
+            img_during_wait = self.get_screenshot()
+            if img_during_wait is not None:
+                still_ad, _ = self.is_confirmed_ad_screen(img_during_wait)
+                has_bottom, has_top = self.get_board_presence(img_during_wait)
+                if not still_ad and (has_bottom or has_top):
+                    print(
+                        f"{self.tag} [✔] Halaman utama game sudah kembali. "
+                        "Membatalkan sisa mode diam iklan.",
+                        flush=True,
+                    )
+                    self.on_ad_finished()
+                    return True
+            if remaining != last_reported and (remaining % 5 == 0 or remaining <= 3):
+                print(f"{self.tag}    -> Mode diam iklan: sisa {remaining} detik, tanpa input.", flush=True)
+                last_reported = remaining
+            time.sleep(min(1.0, max(0.05, wait_until - time.monotonic())))
+
+        print(f"{self.tag} [✔] Masa diam iklan selesai. Baru memeriksa cara menutup iklan.", flush=True)
+        img_wait = self.get_screenshot()
+        if img_wait is not None:
+            still_ad, _ = self.is_confirmed_ad_screen(img_wait)
+            has_bottom, has_top = self.get_board_presence(img_wait)
+            if not still_ad and (has_bottom or has_top):
+                print(f"{self.tag} [✔] Board game sudah kembali setelah masa diam.", flush=True)
+                self.on_ad_finished()
                 return
 
-            img_wait = self.get_screenshot()
+            # Setelah masa diam terpenuhi, ikuti countdown nyata bila masih ada.
+            detected_timer = self.detect_ad_countdown_seconds(img_wait)
+            if detected_timer and detected_timer > 1:
+                print(f"{self.tag} [⏱] Countdown iklan masih {detected_timer}s. Tetap menunggu tanpa klik.", flush=True)
+                time.sleep(detected_timer)
 
-            if img_wait is not None:
-                has_bottom, has_top = self.get_board_presence(img_wait)
-                if has_bottom or has_top:
-                    print(f"{self.tag} [✔] Board game sudah kembali (iklan sudah ditutup)! Selesai tunggu iklan.", flush=True)
-                    self.on_ad_finished()
-                    return
-
-                if self.detect_and_close_feedback_modal(img_wait):
-                    print(f"{self.tag} [✔] Feedback ditutup saat menunggu iklan. Lanjut cek kembali ke game...", flush=True)
-                    self.ensure_back_to_card_board()
-                    return
-
-                detected_timer = self.detect_ad_countdown_seconds(img_wait)
-                if detected_timer and 1 <= detected_timer <= 90:
-                    # Jika OCR timer sama terus (contoh 80,80,80...), itu biasanya bukan countdown detik.
-                    # Jangan loop menunggu angka palsu; BACK lalu restart game.
-                    now = time.time()
-                    if last_timer_seen == detected_timer:
-                        same_timer_seen_count += 1
-                    else:
-                        same_timer_seen_count = 1
-                        same_timer_first_seen_at = now
-
-                    if (
-                        same_timer_seen_count >= AD_TIMER_STUCK_REPEAT_LIMIT
-                        and now - same_timer_first_seen_at >= 5.0
-                    ):
-                        self.reset_stuck_ad_timer_to_game(detected_timer, same_timer_seen_count)
-                        return
-
-                    # Samakan dengan timer iklan yang tampil, terutama jika lebih lama dari default.
-                    if last_timer_seen != detected_timer:
-                        print(f"{self.tag} [⏱] Timer iklan terdeteksi di pojok atas: {detected_timer} detik. Menyamakan waktu tunggu...", flush=True)
-                    remaining = detected_timer
-                    last_timer_seen = detected_timer
-
-                # Kalau iklan menampilkan tahap berikutnya atau tombol >> / skip:
-                if self.detect_and_click_ad_fast_forward_or_skip_button(img_wait):
-                    time.sleep(0.5)
-                    img_wait = self.get_screenshot()
-                    if img_wait is not None:
-                        has_b, has_t = self.get_board_presence(img_wait)
-                        if has_b or has_t:
-                            print(f"{self.tag} [✔] Board game langsung kembali setelah klik >>! Selesai tunggu iklan.", flush=True)
-                            self.on_ad_finished()
-                            return
-                    remaining = min(remaining, 3)
-
-                # See Next di tengah/bawah, atau >>/X di atas teks Iklan 1/3, 2/3, 3/3.
-                if self.detect_and_click_ad_sequence_button(img_wait):
-                    remaining = max(remaining, AD_WAIT_SECONDS)
-                    img_wait = self.get_screenshot()
-                    if img_wait is not None:
-                        new_timer = self.detect_ad_countdown_seconds(img_wait)
-                        if new_timer and 1 <= new_timer <= 90:
-                            remaining = new_timer
-                            last_timer_seen = new_timer
-                            same_timer_seen_count = 1
-                            same_timer_first_seen_at = time.time()
-
-                # Klik Koleksi/Klaim/Unduh saat tunggu iklan DINONAKTIFKAN.
-                # Bot hanya memeriksa timer dan menunggu iklan hingga selesai.
-
-            print(f"{self.tag}    -> Menonton iklan: sisa {remaining} detik...", flush=True)
-            sleep_for = 2 if remaining >= 2 else remaining
-            time.sleep(sleep_for)
-            remaining -= sleep_for
-
-            focus = self.get_foreground_focus().lower()
-            if "com.android.vending" in focus or "com.android.chrome" in focus:
-                if self.handle_external_redirect_during_ad():
-                    print(f"{self.tag} [✔] Redirect iklan eksternal sudah ditutup. Mengakhiri tunggu iklan.", flush=True)
-                    self.ensure_back_to_card_board()
-                    self.on_ad_finished()
-                    return
-
-        if clicked_reward_during_wait:
-            print(f"{self.tag} [✔] Tombol reward sempat diklik saat menunggu. Melanjutkan penutupan iklan...", flush=True)
         print(f"{self.tag} [✔] Waktu tunggu iklan selesai! Menutup iklan (BACK + Tap X pojok)...", flush=True)
         self.close_ad_screen_thoroughly()
         if self.withdrawn_pending_ad:
@@ -1382,8 +1429,17 @@ class CanSortRunner:
                 continue
 
             img_check = self.get_screenshot()
+            if img_check is not None:
+                ocr_items = self.run_full_ocr(img_check)
+                all_txt = " ".join([it["text"].lower() for it in ocr_items])
+                if any(k in all_txt for k in ["pengaturan", "musik", "suara"]):
+                    print(f"{self.tag} [!] Dialog Pengaturan terdeteksi saat recovery. Menutup via tombol X...", flush=True)
+                    self.tap(int(645 * self.scale_x), int(545 * self.scale_y))
+                    time.sleep(0.35)
+                    continue
+
             has_bottom, has_top = self.get_board_presence(img_check)
-            if has_bottom and has_top:
+            if has_bottom or has_top:
                 print(f"{self.tag} [✔] Sudah kembali ke halaman kartu/kotak game.", flush=True)
                 return True
 
@@ -1511,8 +1567,8 @@ class CanSortRunner:
             has_konfirmasi = any(any(k in it["text"].lower() for k in ["konfirmasi", "confirm", "setuju"]) and it["cy"] > int(450 * self.scale_y) for it in ocr_quick)
             has_withdr_text = any(k in quick_text for k in ["informasi sudah benar", "pastikan informasi", "periksa akun", "nomor rekening", "nomor akun", "pilih metode"])
             if has_konfirmasi or has_withdr_text:
-                if not ENABLE_AUTO_WITHDRAWAL:
-                    print(f"{self.tag} [BLOCK] Dialog penarikan terdeteksi; tidak klik konfirmasi/Menarik.", flush=True)
+                if not ENABLE_AUTO_WITHDRAWAL or (self.latest_left_rp > 0 and self.latest_left_rp < MIN_WITHDRAWAL_RP):
+                    print(f"{self.tag} [BLOCK] Dialog penarikan terdeteksi namun saldo ({self.latest_left_rp}) belum >= {MIN_WITHDRAWAL_RP}; lewati penarikan.", flush=True)
                     return False
                 print(f"{self.tag} [★] Terdeteksi dialog Konfirmasi Penarikan di layar (Bukan Iklan)! Melanjutkan alur penarikan...", flush=True)
                 self.handle_withdrawal_modal_flow()
@@ -1974,7 +2030,13 @@ class CanSortRunner:
                 {"name": "K68", "pkg": "com.k68.id.xulsfy"},
                 {"name": "FJ99", "pkg": "org.chromium.webapk.a1ffa4016fb2cda0c_v2"},
             ]
-            chosen_app = random.choice(slot_apps)
+            installed_list = self.run_adb(["shell", "pm", "list", "packages"]).splitlines()
+            installed_set = {p.replace("package:", "").strip() for p in installed_list}
+            eligible = [a for a in slot_apps if a["pkg"] in installed_set]
+            chosen_app = random.choice(eligible) if eligible else slot_apps[0]
+
+            if "com.openclaw.injectiklan" in installed_set:
+                self.run_adb(["shell", "am", "start-foreground-service", "-a", "com.openclaw.injectiklan.RUN_ONCE", "com.openclaw.injectiklan/.InjectForegroundService"], timeout=5)
             app_name = chosen_app["name"]
             app_pkg = chosen_app["pkg"]
             print(f"{self.tag} [APLIKASI SLOT ACAK]: Membuka aplikasi {app_name} ({app_pkg})...", flush=True)
@@ -1999,13 +2061,24 @@ class CanSortRunner:
 
     def on_ad_finished(self):
         self.completed_ads_count += 1
-        now = time.time()
         print(f"{self.tag} [✔] Iklan selesai ditonton (Total iklan: {self.completed_ads_count}).", flush=True)
-        if not ENABLE_SLOT_SEEDING_AFTER_AD:
-            return
-        if now - self.last_chrome_seed_ts >= 25.0:
-            self.last_chrome_seed_ts = now
-            self.run_slot_seeding_and_app_routine()
+
+    def run_periodic_ad_injection_if_due(self):
+        """Jalankan satu siklus inject iklan setiap 10 menit saat papan game aktif."""
+        if not ENABLE_SLOT_SEEDING_AFTER_AD or self.seeding_slot_routine:
+            return False
+        now = time.time()
+        remaining = INJECT_AD_INTERVAL_SECONDS - (now - self.last_chrome_seed_ts)
+        if remaining > 0:
+            return False
+        self.last_chrome_seed_ts = now
+        print(
+            f"{self.tag} [⏰] Jadwal 10 menit tercapai. "
+            "Memulai siklus Inject Iklan sebelum melanjutkan game.",
+            flush=True,
+        )
+        self.run_slot_seeding_and_app_routine()
+        return True
 
     def run_full_ocr(self, img, crop=None):
         if not os.path.exists(OCR_HELPER_PATH) or img is None:
@@ -2608,6 +2681,55 @@ class CanSortRunner:
         clickable_slots.sort(key=lambda c: c["slot"])
         return clickable_slots[:4]
 
+    def apply_unresponsive_slot_guard(self, front_cans, img):
+        """Jika tap kartu yang sama tidak mengubah layar 3x, klik slot 1,2,3 lain berurutan."""
+        now = time.monotonic()
+        self.blocked_top_slots = {s: t for s, t in self.blocked_top_slots.items() if t > now}
+        allowed = [c for c in front_cans if c.get("slot") not in self.blocked_top_slots]
+        slot_cards = self.detect_lowest_slot_cards(img)
+        board_state = tuple((c.get("slot"), c.get("color") or "KOSONG") for c in slot_cards)
+        tap_key = tuple((c.get("slot"), c.get("color"), c.get("cx"), c.get("cy")) for c in allowed)
+        key = (tap_key, board_state)
+
+        if allowed and key == self.last_card_tap_key:
+            self.same_card_tap_count += 1
+        else:
+            self.last_card_tap_key = key if allowed else None
+            self.same_card_tap_count = 1 if allowed else 0
+
+        if allowed and self.same_card_tap_count <= 3:
+            return allowed
+
+        stuck_slots = {c.get("slot") for c in (allowed or front_cans)}
+        for slot in stuck_slots:
+            self.blocked_top_slots[slot] = now + 8.0
+        by_slot = {c.get("slot"): c for c in slot_cards}
+        alternatives = []
+        for slot in [1, 2, 3]:
+            if slot in stuck_slots:
+                continue
+            c = by_slot.get(slot)
+            if c and c.get("cx") is not None and c.get("cy") is not None:
+                alternatives.append((slot, c.get("color") or "KOSONG", int(c["cx"]), int(c["cy"])))
+
+        stuck_desc = ",".join([f"S{s}" for s in sorted(stuck_slots)])
+        if alternatives:
+            alt_desc = ", ".join([f"S{s}={col}@({x},{y})" for s, col, x, y in alternatives])
+            print(
+                f"{self.tag} [!] Tap {stuck_desc} berulang 3x tanpa perubahan layar. "
+                f"Blokir {stuck_desc} 8 detik, klik kotak lain berurutan: {alt_desc}",
+                flush=True,
+            )
+            for _, _, x, y in alternatives:
+                self.tap(x, y)
+                time.sleep(0.15)
+        else:
+            print(f"{self.tag} [!] Tap {stuck_desc} macet, tetapi tidak ada slot 1-3 alternatif.", flush=True)
+        self.last_card_tap_key = None
+        self.same_card_tap_count = 0
+        time.sleep(0.15)
+        return []
+
     def detect_floating_reward_bubble(self, ocr_items, img=None):
         """Mendeteksi Kado Terbang, Uang/Koin, dan Gelembung Balon Iklan dengan ukuran fleksibel di mana pun melintas."""
         sx, sy = self.scale_x, self.scale_y
@@ -2726,6 +2848,11 @@ class CanSortRunner:
         if not self.handle_app_focus_and_ads():
             return
 
+        # Jalankan inject hanya sesudah dipastikan bukan halaman iklan/redirect.
+        # Dengan ini siklus tidak pernah memotong masa diam iklan wajib.
+        if self.run_periodic_ad_injection_if_due():
+            return
+
         # 2. Ambil screenshot
         img = self.get_screenshot()
         if img is None:
@@ -2738,6 +2865,9 @@ class CanSortRunner:
         sx, sy = self.scale_x, self.scale_y
         self.log_bottom_cards_once(img)
         self.log_lowest_slot_cards_once(img)
+
+        if self.detect_and_click_confirm_to_close(img, ocr_items):
+            return
 
         # 4. Deteksi tombol 'CONTINUE' / 'CONTINUI' / 'LANJUTKAN'
         continue_keywords = ["continue", "continui", "continu", "lanjutkan", "lanjut", "teruskan"]
@@ -2815,8 +2945,16 @@ class CanSortRunner:
                 time.sleep(0.3)
                 return
 
-        # 7. Periksa Saldo =Rp di Header (Target >= MIN_WITHDRAWAL_RP / 200)
+        # 7. Periksa Saldo =Rp di Header (Minimal MIN_WITHDRAWAL_RP / 5000)
         if self.check_and_handle_top_rp(ocr_items):
+            return
+
+        # 7b. Periksa Modal Pengaturan / Dialog Non-Game
+        all_screen_text = " ".join([it["text"].lower() for it in ocr_items])
+        if any(k in all_screen_text for k in ["pengaturan", "musik", "suara"]):
+            print(f"{self.tag} [!] Dialog Pengaturan terdeteksi terbuka. Menutup via tombol X dialog...", flush=True)
+            self.tap(int(645 * self.scale_x), int(545 * self.scale_y))
+            time.sleep(0.3)
             return
 
         # 8. Periksa Tombol Reward Modal Nyata ('Bebas Klik', 'Koleksi', 'Klaim', 'Menarik')
@@ -2945,6 +3083,9 @@ class CanSortRunner:
 
         # 11. MODE BEBAS TURBO: Klik kotak/blok warna yang terdeteksi
         if front_cans:
+            front_cans = self.apply_unresponsive_slot_guard(front_cans, img)
+            if not front_cans:
+                return
             tap_points = [(c["cx"], c["cy"]) for c in front_cans]
             cols_desc = ", ".join([f"{c.get('color','?')} S{c.get('slot', c.get('col'))} klik@({c['cx']},{c['cy']}) raw_y={c.get('raw_cy','-')}" for c in front_cans])
             if DEBUG_COLOR_MARKERS_ONLY:

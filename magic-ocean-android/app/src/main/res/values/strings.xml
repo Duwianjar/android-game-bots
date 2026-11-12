@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">Magic Ocean Bot</string>
+    <string name="accessibility_service_description">Layanan otomatisasi mandiri untuk game Magic Ocean Tile Crush. Melakukan auto-tap ubin, tangkap gelembung bergerak, klaim reward DOBEL/BUKA, dan tutup iklan otomatis.</string>
+</resources>

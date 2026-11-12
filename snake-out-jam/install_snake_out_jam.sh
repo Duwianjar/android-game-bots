@@ -13,11 +13,13 @@ if [ ! -d "$APK_DIR" ]; then
 fi
 
 echo "[*] Mengecek perangkat ADB yang terhubung..."
-DEVICES=$(adb devices | grep -v "List of devices" | grep "device$" | awk '{print $1}')
+DEVICES=$(adb devices | grep -v "List of devices" | grep "device$" | awk '{print $1}' || true)
 
 if [ -z "$DEVICES" ]; then
-    echo "[-] Tidak ada perangkat Android yang terhubung via ADB."
-    exit 1
+    echo "[*] Perangkat belum terdeteksi. Silakan sambungkan kabel USB HP (dan pastikan USB debugging aktif)..."
+    adb wait-for-device
+    sleep 1
+    DEVICES=$(adb devices | grep -v "List of devices" | grep "device$" | awk '{print $1}' || true)
 fi
 
 DEVICE_ID=$(echo "$DEVICES" | head -n 1)
@@ -33,5 +35,9 @@ adb -s "$DEVICE_ID" install-multiple -r -d \
 echo "[+] Berhasil terpasang!"
 echo "[*] Membuka game di perangkat..."
 adb -s "$DEVICE_ID" shell monkey -p com.wiwvitsugeh.snack -c android.intent.category.LAUNCHER 1
+
+sleep 2
+echo "[*] Status window saat ini:"
+adb -s "$DEVICE_ID" shell dumpsys window | grep -E "mCurrentFocus|mFocusedApp" || true
 
 echo "[+] Game Snake Out Jam berhasil dibuka di perangkat."

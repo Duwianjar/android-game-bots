@@ -49,6 +49,7 @@ public final class ScreenAnalyzer {
         public boolean collectRewardVisible;
         public boolean playAgainVisible;
         public boolean adScreenLikely;
+        public boolean slotScreenLikely;
         public boolean adCloseButtonVisible;
         public float adCloseButtonX = -1;
         public int adCloseButtonY = -1;
@@ -88,7 +89,8 @@ public final class ScreenAnalyzer {
         result.adSeeNextY = seeNextY > 0 ? seeNextY : (int)(1105 * sy);
 
         result.playAgainVisible = hasPlayAgainButton(bitmap, sx, sy);
-        result.adScreenLikely = looksLikeAdScreen(bitmap);
+        result.slotScreenLikely = looksLikeSlotScreen(bitmap);
+        result.adScreenLikely = looksLikeAdScreen(bitmap) || result.slotScreenLikely;
 
         // PENTING: Jika tombol 'Main lagi' terdeteksi, layar ini PASTI dialog gagal game,
         // BUKAN IKLAN! Jangan biarkan adScreenLikely menimpa status ini.
@@ -148,6 +150,41 @@ public final class ScreenAnalyzer {
             }
         }
         return new int[]{-1, -1};
+    }
+
+    /**
+     * Halaman slot/redirect iklan biasanya memenuhi sebagian besar layar dengan warna
+     * promosi sangat jenuh (ungu/kuning/merah) dan tidak memiliki papan permainan
+     * abu-abu Bus Jam. Ini menjadi fallback bila SDK iklan memakai activity baru yang
+     * namanya tidak dikenali.
+     */
+    private static boolean looksLikeSlotScreen(Bitmap bitmap) {
+        int width = bitmap.getWidth();
+        int height = bitmap.getHeight();
+        int samples = 0;
+        int saturated = 0;
+        int gameBoardGray = 0;
+        float[] hsv = new float[3];
+
+        for (int y = height / 12; y < height * 11 / 12; y += 8) {
+            for (int x = width / 16; x < width * 15 / 16; x += 8) {
+                int pixel = bitmap.getPixel(x, y);
+                Color.colorToHSV(pixel, hsv);
+                samples++;
+                if (hsv[1] >= 0.60f && hsv[2] >= 0.35f) saturated++;
+
+                int red = Color.red(pixel);
+                int green = Color.green(pixel);
+                int blue = Color.blue(pixel);
+                if (Math.abs(red - green) <= 18 && Math.abs(green - blue) <= 18
+                        && red >= 125 && red <= 235) {
+                    gameBoardGray++;
+                }
+            }
+        }
+        if (samples == 0) return false;
+        // Papan Bus Jam punya area lantai abu-abu besar; halaman slot umumnya kaya warna.
+        return saturated * 100 >= samples * 48 && gameBoardGray * 100 < samples * 18;
     }
 
     private static boolean looksLikeAdScreen(Bitmap bitmap) {

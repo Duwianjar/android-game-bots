@@ -22,6 +22,9 @@ TAP_MARKER_PATH = "/Users/macbookair/scrcpy_tap_marker"
 CLICK_REWARD_DURING_AD_WAIT = False  # Nonaktif: jangan klik Koleksi/Klaim/Unduh saat menunggu iklan
 AD_WAIT_SECONDS = 6           # Menonton iklan selama 6 detik
 MIN_WITHDRAWAL_RP = int(os.environ.get('MIN_WITHDRAWAL_RP', '200'))      # Target saldo =Rp minimal 200 untuk penarikan
+TARGET_EWALLET = os.environ.get('TARGET_EWALLET', 'OVO')
+TARGET_EWALLET_NUMBER = os.environ.get('TARGET_EWALLET_NUMBER', '085157993801')
+TARGET_EWALLET_NAME = os.environ.get('TARGET_EWALLET_NAME', 'User')
 
 # Koordinat 8 Kolom Rak Kaleng & Baris Slot Botol (Terkalibrasi 720x1640)
 SHELF_COLUMNS_X = [55, 140, 225, 310, 400, 490, 580, 665]
@@ -289,6 +292,9 @@ class CanSortRunner:
             return res.stdout.strip()
         except Exception:
             return ""
+
+    def input_text(self, text):
+        self.run_adb(["shell", "input", "text", str(text)])
 
     def tap(self, x, y):
         self.show_tap_marker(x, y)
@@ -766,8 +772,10 @@ class CanSortRunner:
             cy, cx = it["cy"], it["cx"]
             if any(ig in t for ig in ["semakin", "aturan", "perkiraan", "diterima", "tingkat", "level"]):
                 continue
-            if int(950 * sy) <= cy <= int(1350 * sy):
-                if any(k in t for k in kw) or t in ["ok", "ya", "lanjut", "tarik"]:
+            if "menarik" in t:
+                continue
+            if int(780 * sy) <= cy <= int(1350 * sy):
+                if any(k in t for k in kw) or t in ["ok", "ya", "lanjut"]:
                     candidates.append((cx, cy, f"Tombol '{it['text']}'"))
 
         if candidates:
@@ -776,7 +784,7 @@ class CanSortRunner:
 
         # 2. Deteksi berbasis Computer Vision Kontur Tombol Hijau
         if img is not None:
-            y1, y2 = int(950 * sy), int(1350 * sy)
+            y1, y2 = int(750 * sy), int(1350 * sy)
             x1, x2 = int(80 * sx), int(640 * sx)
             crop = img[y1:y2, x1:x2]
             if crop.size > 0:
@@ -798,9 +806,11 @@ class CanSortRunner:
         return None
 
     def handle_withdrawal_modal_flow(self):
-        """Alur penarikan saldo ke DANA saat =Rp >= MIN_WITHDRAWAL_RP."""
+        """Alur penarikan saldo ke e-wallet (default: OVO di kanan, 085157993801) saat =Rp >= MIN_WITHDRAWAL_RP."""
+        target_wallet = TARGET_EWALLET.upper()
+        target_number = TARGET_EWALLET_NUMBER
         print(f"\n{self.tag} =======================================================", flush=True)
-        print(f"{self.tag}       [★] MEMULAI ALUR PENARIKAN DANA OTOMATIS        ", flush=True)
+        print(f"{self.tag}   [★] MEMULAI ALUR PENARIKAN {target_wallet} OTOMATIS ({target_number})", flush=True)
         print(f"{self.tag} =======================================================", flush=True)
         sx, sy = self.scale_x, self.scale_y
 
@@ -812,16 +822,26 @@ class CanSortRunner:
             ocr_items = self.run_full_ocr(img)
             all_text_lower = " ".join([it["text"].lower() for it in ocr_items])
 
-            # 0. Jika saldo sudah Rp0 / penarikan selesai, segera tutup halaman penarikan
-            is_saldo_zero = any(k in all_text_lower for k in ["diterima: rp0", "diterima: rp 0", "kurang rp", "~rp0", "~rp 0", "dana rpo", "dana rp0", "dana rp 0"]) or ("dana" in all_text_lower and any(r in all_text_lower for r in ["rpo", "rp0", "rp 0"]) and any(p in all_text_lower for p in ["pastikan", "informasi", "periksa"]))
-            if is_saldo_zero and any(k in all_text_lower for k in ["pilih metode", "saldo saya", "penukaran", "menarik", "pastikan"]):
+            # 0. Layar game utama kembali aktif (selesai)
+            if any(k in all_text_lower for k in ["tingkat:", "antri", "level"]):
+                self.withdrawn_pending_ad = True
+                print(f"{self.tag} [✔] Seluruh alur penarikan selesai! Layar game utama aktif.", flush=True)
+                return
+
+            # 1. Jika saldo sudah Rp0 / penarikan selesai, segera tutup halaman penarikan
+            is_saldo_zero = any(k in all_text_lower for k in [
+                "diterima: rp0", "diterima: rp 0", "kurang rp", "~rp0", "~rp 0",
+                "dana rp0", "dana rp 0", "dana rpo", "ovo rp0", "ovo rp 0", "ovo rpo",
+                "rp0", "rp 0", "rpo"
+            ]) and any(p in all_text_lower for p in ["pilih metode", "saldo saya", "penukaran", "menarik", "pastikan", "diterima", "peninjauan", "berhasil", "sukses"])
+            if is_saldo_zero:
                 print(f"{self.tag} [✔] Saldo penarikan sudah Rp0 (Penarikan Berhasil!). Menutup halaman penarikan kembali ke game...", flush=True)
                 self.press_back()
                 time.sleep(0.6)
                 self.withdrawn_pending_ad = True
                 return
 
-            # 1. Jika soft keyboard terbuka menutupi layar, tekan BACK untuk sembunyikan keyboard
+            # 2. Jika soft keyboard terbuka menutupi layar, tekan BACK untuk sembunyikan keyboard
             if any(k in all_text_lower for k in ["?123", "indonesia", "q w", "z x"]) or (any(it["text"] in ["1","2","3","4","5"] and it["cy"] > int(1000 * sy) for it in ocr_items)):
                 print(f"{self.tag} [+] Keyboard virtual terdeteksi terbuka. Menutup keyboard...", flush=True)
                 self.press_back()
@@ -830,70 +850,95 @@ class CanSortRunner:
                 ocr_items = self.run_full_ocr(img)
                 all_text_lower = " ".join([it["text"].lower() for it in ocr_items])
 
-            # 1b. Jika muncul form kosong (misal OVO belum diisi: 'masukkan hp', 'silakan masukkan nama'), tekan BACK untuk kembali ke DANA
-            if any(k in all_text_lower for k in ["masukkan hp", "silakan masukkan", "mulai 08"]):
-                print(f"{self.tag} [!] Terdeteksi form akun kosong (bukan DANA terisi). Menekan BACK untuk kembali...", flush=True)
-                self.press_back()
-                time.sleep(0.6)
+            # 3. Modal Form Akun ("Menarik Akun", "masukkan hp", "silakan masukkan", "mulai 08")
+            if any(k in all_text_lower for k in ["menarik akun", "masukkan hp", "silakan masukkan", "mulai 08", "nomor rekening", "nomor akun"]):
+                print(f"{self.tag} [+] Terdeteksi modal Form Akun Penarikan:", flush=True)
+                if target_wallet == "OVO":
+                    ovo_tab_x, ovo_tab_y = int(525 * sx), int(445 * sy)
+                    print(f"{self.tag}     -> Memilih tab OVO di kanan ({ovo_tab_x}, {ovo_tab_y})...", flush=True)
+                    self.tap(ovo_tab_x, ovo_tab_y)
+                else:
+                    dana_tab_x, dana_tab_y = int(194 * sx), int(445 * sy)
+                    print(f"{self.tag}     -> Memilih tab DANA di kiri ({dana_tab_x}, {dana_tab_y})...", flush=True)
+                    self.tap(dana_tab_x, dana_tab_y)
+                time.sleep(0.5)
+
+                clean_target_num = target_number.replace(" ", "")
+                all_digits = "".join([c for c in all_text_lower if c.isdigit()])
+                if clean_target_num not in all_digits:
+                    print(f"{self.tag}     -> Mengisi Nomor HP {target_number}...", flush=True)
+                    self.tap(int(360 * sx), int(601 * sy))
+                    time.sleep(0.3)
+                    self.input_text(TARGET_EWALLET_NAME)
+                    time.sleep(0.3)
+                    self.tap(int(360 * sx), int(750 * sy))
+                    time.sleep(0.4)
+                    self.input_text(clean_target_num)
+                    time.sleep(0.4)
+                    self.press_back()
+                    time.sleep(0.4)
+
+                conf_x, conf_y = int(360 * sx), int(879 * sy)
+                print(f"{self.tag}     -> Mengeklik tombol Konfirmasi form akun di ({conf_x}, {conf_y})...", flush=True)
+                self.tap(conf_x, conf_y)
+                time.sleep(1.2)
                 continue
 
-            # 2. PRIORITAS UTAMA: Cari dan klik tombol Konfirmasi (via OCR atau Green Button CV)
-            confirm_btn = self.find_modal_confirm_button(img, ocr_items)
-            if confirm_btn:
-                k_cx, k_cy, k_desc = confirm_btn
-                print(f"{self.tag} [+] [Konfirmasi Penarikan ({cycle+1})] Menemukan {k_desc} di ({k_cx}, {k_cy}). Mengeklik Konfirmasi...", flush=True)
-                self.tap(k_cx, k_cy)
-                time.sleep(1.0)
+            # 4. Dialog Modal Konfirmasi / Peninjauan / Berhasil ("Periksa Akun", "Pastikan Informasi", "Permintaan peninjauan")
+            modal_confirm_keywords = ["periksa akun", "memastikan", "pastikan informasi", "informasi sudah benar", "peninjauan", "telah berhasil", "berhasil", "sukses"]
+            if any(k in all_text_lower for k in modal_confirm_keywords) and not any(k in all_text_lower for k in ["tingkat:", "antri"]):
+                confirm_btn = self.find_modal_confirm_button(img, ocr_items)
+                if confirm_btn:
+                    k_cx, k_cy, k_desc = confirm_btn
+                    print(f"{self.tag} [+] [Konfirmasi Penarikan ({cycle+1})] Menemukan {k_desc} di ({k_cx}, {k_cy}). Mengeklik Konfirmasi...", flush=True)
+                    self.tap(k_cx, k_cy)
+                else:
+                    pts = [
+                        (int(360 * sx), int(879 * sy)),
+                        (int(360 * sx), int(900 * sy)),
+                        (int(362 * sx), int(1118 * sy)),
+                        (int(360 * sx), int(1200 * sy))
+                    ]
+                    print(f"{self.tag} [+] Terdeteksi dialog modal penarikan/peninjauan. Mengeklik burst Konfirmasi di ({pts[0][0]}, {pts[0][1]})...", flush=True)
+                    self.tap_burst(pts, delay=0.08)
+                time.sleep(1.2)
                 continue
 
-            # 3. Pilihan metode DANA
-            if "pilih metode" in all_text_lower or ("ovo" in all_text_lower and "dana" in all_text_lower):
+            # 5. Halaman Utama Penarikan: Pilih Metode (OVO di kanan / DANA di kiri) + Tombol Hijau Menarik
+            if "pilih metode" in all_text_lower or ("ovo" in all_text_lower and "dana" in all_text_lower) or ("saldo saya" in all_text_lower and "menarik" in all_text_lower):
                 print(f"\n{self.tag} [+] Terdeteksi halaman Pilih Metode Penarikan (Opsi OVO & DANA):", flush=True)
-                dana_btn = None
-                for it in ocr_items:
-                    if "dana" in it["text"].lower() and int(500 * sy) < it["cy"] < int(800 * sy):
-                        dana_btn = it
-                        break
-                d_x = dana_btn["cx"] if dana_btn else int(456 * sx)
-                d_y = dana_btn["cy"] if dana_btn else int(661 * sy)
-                print(f"{self.tag}     -> Memilih opsi DANA di ({d_x}, {d_y})...", flush=True)
-                self.tap(d_x, d_y)
+                if target_wallet == "OVO":
+                    ovo_btn = next((it for it in ocr_items if "ovo" in it["text"].lower() and int(480 * sy) < it["cy"] < int(750 * sy)), None)
+                    w_x = ovo_btn["cx"] if ovo_btn else int(520 * sx)
+                    w_y = ovo_btn["cy"] if ovo_btn else int(613 * sy)
+                    print(f"{self.tag}     -> Memilih opsi OVO (KANAN) di ({w_x}, {w_y})...", flush=True)
+                    self.tap(w_x, w_y)
+                else:
+                    dana_btn = next((it for it in ocr_items if "dana" in it["text"].lower() and int(480 * sy) < it["cy"] < int(750 * sy)), None)
+                    w_x = dana_btn["cx"] if dana_btn else int(200 * sx)
+                    w_y = dana_btn["cy"] if dana_btn else int(613 * sy)
+                    print(f"{self.tag}     -> Memilih opsi DANA (KIRI) di ({w_x}, {w_y})...", flush=True)
+                    self.tap(w_x, w_y)
                 time.sleep(0.6)
+
                 img = self.get_screenshot()
                 ocr_items = self.run_full_ocr(img)
-
-                menarik_btn = None
-                for it in ocr_items:
-                    if "menarik" in it["text"].lower() and int(750 * sy) < it["cy"] < int(1200 * sy):
-                        menarik_btn = it
-                        break
-                m_cx = menarik_btn["cx"] if menarik_btn else int(554 * sx)
-                m_cy = menarik_btn["cy"] if menarik_btn else int(852 * sy)
+                menarik_btn = next((it for it in ocr_items if "menarik" in it["text"].lower() and int(700 * sy) < it["cy"] < int(900 * sy)), None)
+                m_cx = menarik_btn["cx"] if menarik_btn else int(360 * sx)
+                m_cy = menarik_btn["cy"] if menarik_btn else int(778 * sy)
                 print(f"{self.tag}     -> Mengeklik tombol hijau Menarik di ({m_cx}, {m_cy})...", flush=True)
                 self.tap(m_cx, m_cy)
                 time.sleep(1.2)
                 continue
 
-            # 4. Dialog Modal Penarikan (Periksa Akun / Pastikan Informasi / Berhasil) jika tombol belum tertangkap di atas
-            modal_keywords = ["periksa akun", "memastikan", "pastikan informasi", "informasi sudah benar", "nama lengkap", "telah berhasil", "berhasil", "sukses"]
-            if any(k in all_text_lower for k in modal_keywords) and not any(k in all_text_lower for k in ["tingkat:", "antri"]):
-                pts = [
-                    (int(362 * sx), int(1118 * sy)),
-                    (int(361 * sx), int(1250 * sy)),
-                    (int(360 * sx), int(1200 * sy)),
-                    (int(360 * sx), int(1080 * sy)),
-                    (int(360 * sx), int(1150 * sy))
-                ]
-                print(f"{self.tag} [+] Terdeteksi dialog modal penarikan. Mengeklik burst tombol Konfirmasi di ({pts[0][0]}, {pts[0][1]})...", flush=True)
-                self.tap_burst(pts, delay=0.08)
-                time.sleep(1.2)
+            # 6. Fallback tombol konfirmasi umum jika ada dialog lain
+            confirm_btn = self.find_modal_confirm_button(img, ocr_items)
+            if confirm_btn:
+                k_cx, k_cy, k_desc = confirm_btn
+                print(f"{self.tag} [+] [Konfirmasi Fallback ({cycle+1})] Menemukan {k_desc} di ({k_cx}, {k_cy}). Mengeklik Konfirmasi...", flush=True)
+                self.tap(k_cx, k_cy)
+                time.sleep(1.0)
                 continue
-
-            # 5. Layar game utama kembali aktif
-            if any(k in all_text_lower for k in ["tingkat:", "antri", "level"]):
-                self.withdrawn_pending_ad = True
-                print(f"{self.tag} [✔] Seluruh alur penarikan selesai! Layar game utama aktif.", flush=True)
-                return
 
             self.press_back()
             time.sleep(0.8)
@@ -1284,7 +1329,7 @@ def main():
     main_pid = os.getpid()
     print("[+] Memindai semua perangkat Android yang terhubung via ADB...", flush=True)
     print(f"[+] Target Game: Soda Jam Puzzle (com.armg.sodajam)", flush=True)
-    print(f"[+] Aturan Aktif: Auto-Install, Main Ulang, Iklan {AD_WAIT_SECONDS}s, DANA (>= {MIN_WITHDRAWAL_RP}).\n", flush=True)
+    print(f"[+] Aturan Aktif: Auto-Install, Main Ulang, Iklan {AD_WAIT_SECONDS}s, Penarikan {TARGET_EWALLET} {TARGET_EWALLET_NUMBER} (>= {MIN_WITHDRAWAL_RP}).\n", flush=True)
     print("[+] Tekan Ctrl+C untuk berhenti kapan saja.\n", flush=True)
 
     try:

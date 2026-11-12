@@ -168,6 +168,17 @@ def detect_dialog_close_x_button(img, scale_x=1.0, scale_y=1.0):
         return best[0], best[1], "Tombol X Tutup Modal"
     return None
 
+def is_right_chevron(cnt, bw, bh):
+    pts = cnt[:, 0, :]
+    by = pts[:, 1].min()
+    mid_mask = (pts[:, 1] >= by + int(0.28 * bh)) & (pts[:, 1] <= by + int(0.72 * bh))
+    top_mask = pts[:, 1] <= by + int(0.25 * bh)
+    bot_mask = pts[:, 1] >= by + int(0.75 * bh)
+    if not np.any(mid_mask) or not np.any(top_mask) or not np.any(bot_mask):
+        return False
+    mid_max_x = pts[mid_mask, 0].max()
+    return (mid_max_x - pts[top_mask, 0].max() >= 2) and (mid_max_x - pts[bot_mask, 0].max() >= 2)
+
 class BusParkingDashRunner:
     def __init__(self, serial):
         self.serial = serial
@@ -579,10 +590,40 @@ class BusParkingDashRunner:
             cx, cy = it["cx"], it["cy"]
             if min_y <= cy <= max_y:
                 t = it["text"].strip().lower()
-                is_x_sym = t in ["x", "✕", "✖", "×", ">>", ">", "»", "+"] or (len(t) == 1 and t in "xX+")
+                compact = re.sub(r"\s+", "", t)
+                is_x_sym = compact in ["x", "✕", "✖", "×", ">>", ">", "»", "›", "››", ">|", ">l", ">i", "▶|", "⏭", "+"] or ">>" in compact or ">|" in compact or (len(compact) == 1 and compact in "xX+")
                 is_skip_word = any(k == t or t.startswith(k) for k in ["skip", "close", "tutup", "lewati", "reward"])
                 if (is_x_sym or is_skip_word) and (cx >= int(540 * sx) or cx <= int(180 * sx)):
                     return (cx, cy, f"OCR '{it['text']}'")
+
+        # 1b. Visual >> / >| di pojok atas. Ini sering tidak terbaca OCR.
+        cy1, cy2 = int(30 * sy), int(220 * sy)
+        for side, x1, x2 in [("kanan", int(520 * sx), int(710 * sx)), ("kiri", int(10 * sx), int(200 * sx))]:
+            crop = img[cy1:cy2, x1:x2]
+            if crop.size <= 0:
+                continue
+            gray = cv2.cvtColor(crop, cv2.COLOR_BGR2GRAY)
+            for thresh_val in [165, 200]:
+                _, bin_img = cv2.threshold(gray, thresh_val, 255, cv2.THRESH_BINARY)
+                cnts, _ = cv2.findContours(bin_img, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+                chevrons, bars = [], []
+                for cnt in cnts:
+                    bx, by, bw, bh = cv2.boundingRect(cnt)
+                    if int(6 * sx) <= bw <= int(40 * sx) and int(12 * sy) <= bh <= int(55 * sy):
+                        if 0.25 <= bw / float(bh) <= 0.95 and is_right_chevron(cnt, bw, bh):
+                            chevrons.append((bx, by, bw, bh))
+                    if int(2 * sx) <= bw <= int(9 * sx) and int(12 * sy) <= bh <= int(55 * sy):
+                        bars.append((bx, by, bw, bh))
+                for i, c1 in enumerate(chevrons):
+                    for c2 in chevrons[i + 1:] + bars:
+                        if abs((c1[1] + c1[3] / 2) - (c2[1] + c2[3] / 2)) > int(10 * sy):
+                            continue
+                        left_c, right_c = (c1, c2) if c1[0] < c2[0] else (c2, c1)
+                        gap = right_c[0] - (left_c[0] + left_c[2])
+                        if -int(3 * sx) <= gap <= int(30 * sx):
+                            cx = x1 + (left_c[0] + right_c[0] + right_c[2]) // 2
+                            cy = cy1 + (left_c[1] + left_c[3] // 2)
+                            return (cx, cy, f"Visual >>/>| {side} atas")
 
         # 2. Cek kontur presisi di Pojok Kanan Atas (x: 580..705, y: 45..140)
         rx1, rx2 = int(580 * sx), int(705 * sx)
@@ -745,7 +786,7 @@ class BusParkingDashRunner:
                 found_x = self.find_ad_x_button(img_wait)
                 if found_x:
                     fx, fy, desc = found_x
-                    print(f"{self.tag} [★] Saat tunggu iklan (sisa {remaining} detik), MENEMUKAN TOMBOL X ({desc}) di ({fx}, {fy})! Langsung mengeklik X...", flush=True)
+                    print(f"{self.tag} [★] Saat tunggu iklan (sisa {remaining} detik), MENEMUKAN TOMBOL X/>>/>| ({desc}) di ({fx}, {fy})! Langsung mengeklik X...", flush=True)
                     self.tap(fx, fy)
                     time.sleep(0.5)
 

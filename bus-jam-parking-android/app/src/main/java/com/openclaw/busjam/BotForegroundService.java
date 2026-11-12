@@ -48,6 +48,11 @@ public class BotForegroundService extends Service {
     private volatile Bitmap latestBitmap;
     private final Object bitmapLock = new Object();
     private volatile boolean running;
+    private static volatile boolean runningInstance = false;
+
+    public static boolean isBotRunning() {
+        return runningInstance;
+    }
     private PowerManager.WakeLock wakeLock;
     private long nextActionAt;
     private long closeAdAt;
@@ -64,6 +69,13 @@ public class BotForegroundService extends Service {
     private int lastTapY = -1;
     private long lastTapAt;
     private long lastParkingAdTapAt;
+    // Periksa singkat apakah klik slot biru benar-benar membuka halaman iklan.
+    private long parkingAdClickPendingUntil;
+    // Setelah halaman iklan terkonfirmasi, jangan kirim input apa pun selama 30 detik.
+    private long parkingAdGraceUntil;
+    // Jika slot biru tidak membuka iklan, jangan tekan slot yang sama berulang-ulang
+    // hingga bot gagal melanjutkan pemilihan bus.
+    private long parkingAdRetryAfter;
     private long lastProgressAt;
     private String lastProgressMessage = "";
     private final List<BlockedBus> blockedBuses = new ArrayList<>();
@@ -96,6 +108,7 @@ public class BotForegroundService extends Service {
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         if (intent != null && ACTION_STOP.equals(intent.getAction())) {
+            runningInstance = false;
             BotAccessibilityService.removeBotLog();
             stopSelf();
             return START_NOT_STICKY;
@@ -120,6 +133,7 @@ public class BotForegroundService extends Service {
         }
         setupCapture();
         running = true;
+        runningInstance = true;
         botThread = new Thread(this::botLoop, "bus-jam-bot-loop");
         botThread.start();
         return START_STICKY;
@@ -189,12 +203,11 @@ public class BotForegroundService extends Service {
             if (screenshot != null && !screenshot.isRecycled()) {
                 try {
                     ScreenAnalyzer.Result result = ScreenAnalyzer.analyze(screenshot);
-                    if (!isGameActivityActive()
-                            && (result.adScreenLikely || isFullscreenAd())) {
+                    if (result.adScreenLikely || result.slotScreenLikely || isFullscreenAd()) {
                         adTimerReader.readIfDue(screenshot);
                     }
                     runOneStep(result);
-                    checkStuckWatchdog();
+                    checkStuckWatchdog(result);
                 } catch (Throwable ignored) {
                 } finally {
                     screenshot.recycle();
@@ -235,7 +248,50 @@ public class BotForegroundService extends Service {
         // Activity utama game adalah pembeda utama antara popup game yang gelap dan
         // layar iklan. Jangan pernah menganggap popup Main lagi sebagai iklan.
         boolean gameActivity = isGameActivityActive();
-        boolean adDetected = !gameActivity && (result.adScreenLikely || isFullscreenAd());
+        // Sebagian slot/iklan dirender di activity HmeActivity game. Karena itu bukti
+        // visual slot/iklan harus menang atas nama activity; jangan masuk jalur bus.
+        boolean visualSlotOrAd = result.adScreenLikely || result.slotScreenLikely;
+        // Jika tidak ada bus terbaca dan activity bukan papan game, perlakukan juga
+        // sebagai halaman slot/redirect iklan agar tidak ada tap bus yang salah.
+        boolean emptyNonGameScreen = !gameActivity && result.buses.isEmpty() && !isBotActivityActive();
+        boolean adDetected = visualSlotOrAd || isFullscreenAd() || emptyNonGameScreen;
+
+        // Klik kotak biru tidak selalu membuka iklan. Tahan input hanya selama
+        // pemeriksaan transisi singkat; masa diam 30 detik baru dimulai setelah
+        // layar iklan benar-benar terkonfirmasi.
+        if (parkingAdClickPendingUntil > 0) {
+            if (adDetected) {
+                parkingAdClickPendingUntil = 0;
+                parkingAdGraceUntil = lastParkingAdTapAt + 30_000L;
+                fullscreenAdSeenAt = lastParkingAdTapAt;
+                adClosingStartedAt = 0;
+                lastAdBackAt = 0;
+                lastAdCloseButtonTapAt = 0;
+                lastAdNavigationTapAt = 0;
+                countdownWasSeen = false;
+                adTimerReader.reset();
+                log("Kotak biru membuka halaman iklan. Menunggu 30 detik tanpa klik.");
+            } else if (now < parkingAdClickPendingUntil) {
+                updateNotification("Kotak biru: memastikan apakah halaman iklan terbuka...");
+                return;
+            } else {
+                parkingAdClickPendingUntil = 0;
+                parkingAdRetryAfter = now + 15_000L;
+                nextActionAt = now;
+                log("Kotak biru tidak membuka halaman iklan. Melanjutkan bot tanpa tunggu 30 detik.");
+            }
+        }
+
+        if (now < parkingAdGraceUntil) {
+            long sisaDetik = (parkingAdGraceUntil - now + 999) / 1000;
+            updateNotification("Kotak biru: menunggu iklan " + sisaDetik + "s tanpa klik");
+            return;
+        }
+        if (parkingAdGraceUntil > 0) {
+            parkingAdGraceUntil = 0;
+            log("Waktu tunggu 30 detik setelah kotak biru selesai. Menjalankan penanganan iklan.");
+        }
+
         if (adDetected || adClosingStartedAt > 0) {
             // Sinkronkan deteksi tombol skip (>, >>, >|) dan close (X) dari OCR AdTimerReader dan visual ScreenAnalyzer
             boolean skipVisible = result.adSkipButtonVisible || adTimerReader.hasRecentSkipButton();
@@ -258,7 +314,9 @@ public class BotForegroundService extends Service {
                     countdownWasSeen = false;
                     lastLoggedAdSeconds = -1;
                     adTimerReader.reset();
-                    log("Halaman iklan terdeteksi. Menunggu wajib 30 detik tanpa klik...");
+                    log(result.slotScreenLikely
+                            ? "Halaman slot/iklan terdeteksi. Menunggu wajib 30 detik tanpa klik..."
+                            : "Halaman iklan terdeteksi. Menunggu wajib 30 detik tanpa klik...");
                 }
                 long elapsed = now - fullscreenAdSeenAt;
                 int remainingSeconds = adTimerReader.recentRemainingSeconds();
@@ -278,18 +336,13 @@ public class BotForegroundService extends Service {
                     return; // Diam mutlak, tidak klik apapun
                 }
 
-                // ATURAN 2 (INSTRUKSI USER): Wajib tunggu minimal 30 detik saat menemukan iklan
+                // ATURAN 2 (INSTRUKSI USER): Wajib tunggu 30 detik penuh.
+                // Tombol skip/X yang muncul lebih awal sengaja diabaikan.
                 long requiredWaitMs = 30_000L;
                 if (elapsed < requiredWaitMs) {
                     long sisaDetik = (requiredWaitMs - elapsed + 999) / 1000;
                     updateNotification("Iklan: wajib tunggu " + sisaDetik + "s lagi (total 30s)");
-                    // Hanya izinkan menutup jika ada tombol skip/close yang jelas dan countdown sudah habis
-                    if (hasActionBtn && (remainingSeconds == 0 || elapsed >= 15_000L)) {
-                        // Tombol skip / close di pojok atas siap diklik
-                    } else {
-                        // Belum 30 detik: DIAM TOTAL, tidak klik apapun di layar
-                        return;
-                    }
+                    return; // Diam total sampai genap 30 detik.
                 }
 
                 // ATURAN 3: Jika sudah 30s tetapi countdown masih ada (> 0) dan belum ada tombol skip/close:
@@ -440,14 +493,30 @@ public class BotForegroundService extends Service {
             return;
         }
 
-        // Slot AD biru di parkiran menghasilkan bus/slot tambahan. Sentuh hanya satu
-        // ikon, lalu tunggu layar iklan; jangan mengganggu klik bus yang sedang bergerak.
-        if (lastTapAt == 0 && result.parkingAdX > 0
+        // Slot AD biru di parkiran (seperti ikon biru yang ditandai pengguna)
+        // menghasilkan bus/slot tambahan. Slot ini harus diprioritaskan bahkan bila
+        // bot baru saja menyentuh bus lain: game tetap di halaman yang sama dan klik
+        // berikutnya akan langsung dialihkan ke iklan bila slot tersedia.
+        if (result.parkingAdX > 0
+                && now >= parkingAdRetryAfter
                 && now - lastParkingAdTapAt >= 4_000) {
             accessibility.tap(result.parkingAdX, result.parkingAdY);
             lastParkingAdTapAt = now;
-            nextActionAt = now + 2_500;
-            log("Kotak iklan biru di parkiran terdeteksi. Membuka iklan.");
+            lastTapAt = 0;
+            // Pastikan dulu apakah klik benar-benar mengubah layar ke iklan. Jika
+            // tidak berubah, bot tidak akan masuk mode tunggu iklan 30 detik.
+            parkingAdClickPendingUntil = now + 3_500L;
+            parkingAdGraceUntil = 0;
+            parkingAdRetryAfter = 0;
+            fullscreenAdSeenAt = 0;
+            adClosingStartedAt = 0;
+            lastAdBackAt = 0;
+            lastAdCloseButtonTapAt = 0;
+            lastAdNavigationTapAt = 0;
+            countdownWasSeen = false;
+            adTimerReader.reset();
+            nextActionAt = now + 800L;
+            log("Kotak biru/AD di parkiran ditekan. Memeriksa perpindahan ke halaman iklan.");
             return;
         }
 
@@ -623,6 +692,9 @@ public class BotForegroundService extends Service {
     }
 
     private void restartAdWait(long now) {
+        parkingAdClickPendingUntil = 0;
+        parkingAdGraceUntil = 0;
+        parkingAdRetryAfter = 0;
         fullscreenAdSeenAt = now;
         adClosingStartedAt = 0;
         lastAdBackAt = 0;
@@ -649,9 +721,12 @@ public class BotForegroundService extends Service {
      * dianggap macet (misalnya bonus/Koleksi menutup papan). Kembali ke Home lalu buka
      * task Bus Jam baru agar layar game dimuat ulang.
      */
-    private void checkStuckWatchdog() {
+    private void checkStuckWatchdog(ScreenAnalyzer.Result result) {
         long now = System.currentTimeMillis();
-        if (!isGameActivityActive() || lastProgressAt == 0
+        // Layar slot/iklan dapat tidak berubah lebih dari satu menit dan itu normal.
+        // Jangan sampai watchdog menutup game saat prosedur tunggu iklan berjalan.
+        if (result.adScreenLikely || result.slotScreenLikely || isFullscreenAd()
+                || !isGameActivityActive() || lastProgressAt == 0
                 || now - lastProgressAt < STUCK_TIMEOUT_MS) {
             return;
         }
@@ -742,6 +817,7 @@ public class BotForegroundService extends Service {
     @Override
     public void onDestroy() {
         running = false;
+        runningInstance = false;
         BotAccessibilityService.removeBotLog();
         if (botThread != null) botThread.interrupt();
         if (virtualDisplay != null) virtualDisplay.release();

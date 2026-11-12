@@ -26,6 +26,16 @@ public class MainActivity extends Activity {
         buildUi();
     }
 
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (BotForegroundService.isBotRunning()) {
+            setStatus("Bot sedang berjalan.");
+        } else {
+            setStatus("belum berjalan / dihentikan.");
+        }
+    }
+
     private void buildUi() {
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);

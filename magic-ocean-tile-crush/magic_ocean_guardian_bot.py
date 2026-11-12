@@ -4,7 +4,8 @@ Magic Ocean Tile Crush Guardian Bot
 
 Tugas utama:
 - Jika game Magic Ocean Tile Crush belum foreground, buka game.
-- Jika foreground masuk Chrome atau Play Store, tutup app tersebut lalu kembali ke game.
+- Jika foreground masuk Chrome atau Play Store, gunakan tombol Back Android untuk
+  kembali ke tab/halaman sebelumnya tanpa menutup aplikasi atau membuka ulang game.
 
 Target game:
   App     : Magic Ocean Tile Crush
@@ -38,6 +39,16 @@ BLOCKED_PACKAGES = {
     "com.android.vending": "Play Store",
     "com.bubble.crush.stick.magicgames": "Bubble Crush redirect",
     "com.starlightgame.woodlandtilematcher": "Woodland Tile Matcher redirect",
+}
+
+# Chrome dan Play Store dapat terbuka dari iklan. Keduanya harus dinavigasi
+# kembali dengan Back agar tab/riwayat aplikasi tetap terjaga.
+BACK_NAVIGATION_PACKAGES = {
+    "com.android.chrome",
+    "com.chrome.beta",
+    "com.chrome.dev",
+    "com.google.android.apps.chrome",
+    "com.android.vending",
 }
 
 LOG_FILE = os.path.expanduser("~/magic_ocean_guardian_bot.log")
@@ -107,6 +118,7 @@ class MagicOceanGuardian:
         self.last_action = ""
         self.last_launch_ts = 0.0
         self.last_block_close_ts = 0.0
+        self.last_browser_store_back_ts = 0.0
         self.ad_start_ts: Optional[float] = None
         self.ad_activity = ""
         self.last_ad_log_second = -1
@@ -420,6 +432,21 @@ class MagicOceanGuardian:
         self.force_stop(package)
         time.sleep(0.4)
         self.launch_game(reason=f"keluar dari {BLOCKED_PACKAGES.get(package, package)}")
+
+    def navigate_back_from_browser_or_store(self, package: str) -> None:
+        """Kembali dari Chrome/Play Store tanpa force-stop atau membuka ulang game."""
+        now = time.time()
+        if now - self.last_browser_store_back_ts < 1.0:
+            return
+        self.last_browser_store_back_ts = now
+        name = BLOCKED_PACKAGES.get(package, package)
+        self.log(
+            f"{name} terbuka -> kirim BACK untuk kembali ke halaman/tab sebelumnya "
+            "(tanpa menutup aplikasi atau membuka ulang game)"
+        )
+        if self.dry_run:
+            return
+        self.adb_out(["shell", "input", "keyevent", "BACK"], timeout=3)
 
     def restart_game_for_bubble_search(self, reason: str) -> None:
         now = time.time()
@@ -2788,15 +2815,9 @@ class MagicOceanGuardian:
             second_ts = now_ts
             second_png = first_png
         else:
-            # Cek cepat single-frame jika ada cash bubble langsung di layar
-            fast_icon = self.find_reward_bubble_icon(first_png, width, height)
-            if fast_icon:
-                ix, iy, iinfo = fast_icon
-                self._cached_bubble_frame = img_current
-                self._cached_bubble_ts = now_ts
-                return ix, iy, f"fast-detect {iinfo}"
-
-            # Frame kedua dengan delay super singkat (30ms)
+            # Jangan langsung tap kandidat dari satu frame: ornamen latar sering
+            # menyerupai cash bubble. Ambil frame kedua untuk memastikan target
+            # benar-benar bergerak.
             img1 = img_current
             first_ts = now_ts
             time.sleep(0.03)
@@ -2814,6 +2835,39 @@ class MagicOceanGuardian:
 
         diff = cv2.absdiff(img1, img2)
         gray = cv2.cvtColor(diff, cv2.COLOR_BGR2GRAY)
+
+        # Kandidat cash-bubble yang terdeteksi pada frame terbaru mendapat
+        # prioritas hanya bila area di sekelilingnya memang berubah antarframe.
+        # Ini menolak dekorasi statis yang sebelumnya berulang kali ditap.
+        reward_icon = self.find_reward_bubble_icon(second_png, width, height)
+        if reward_icon:
+            ix, iy, iinfo = reward_icon
+            roi = gray[
+                max(0, iy - 70):min(height, iy + 70),
+                max(0, ix - 70):min(width, ix + 70),
+            ]
+            if roi.size:
+                motion_mean = float(roi.mean())
+                motion_ratio = float((roi > 24).mean())
+                if motion_mean >= 5.0 and motion_ratio >= 0.07:
+                    previous_icon = self.find_reward_bubble_icon(first_png, width, height)
+                    vx, vy = 0.0, -180.0
+                    if previous_icon:
+                        old_x, old_y, _ = previous_icon
+                        dt = max(0.001, second_ts - first_ts)
+                        calc_vx = (ix - old_x) / dt
+                        calc_vy = (iy - old_y) / dt
+                        if abs(calc_vx) < 900 and abs(calc_vy) < 1200:
+                            vx, vy = calc_vx, calc_vy
+                    self.last_bubble_pair_velocity = (vx, vy)
+                    return (
+                        ix,
+                        iy,
+                        f"motion-confirmed {iinfo} "
+                        f"motion={motion_mean:.1f}/{motion_ratio:.2f} "
+                        f"v=({vx:.0f},{vy:.0f})",
+                    )
+
         _, mask = cv2.threshold(gray, 24, 255, cv2.THRESH_BINARY)
         kernel = np.ones((5, 5), np.uint8)
         mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
@@ -2904,14 +2958,6 @@ class MagicOceanGuardian:
 
             score = area + money_ratio * 4200 + white_ratio * 2800 + sat_mean * 10
             candidates.append((score, pred_x, pred_y, f"moving-bubble area={int(area)} bbox=({x},{y},{w},{h}) latest=({latest_x},{latest_y}) v=({vx:.0f},{vy:.0f}) money={money_ratio:.2f} white={white_ratio:.2f}"))
-
-        if not candidates:
-            reward_icon = self.find_reward_bubble_icon(second_png, width, height)
-            if reward_icon:
-                ix, iy, iinfo = reward_icon
-                diff_roi = diff[max(0, iy - 35):min(height, iy + 35), max(0, ix - 35):min(width, ix + 35)]
-                if diff_roi.size > 0 and float(diff_roi.mean()) > 3.5:
-                    return ix, iy, f"motion-confirmed {iinfo}"
 
         if not candidates:
             return None
@@ -3253,6 +3299,13 @@ class MagicOceanGuardian:
         if app.package != self.last_foreground:
             self.last_foreground = app.package
             self.log(f"Foreground: {app.package}/{app.activity}")
+
+        # Chrome/Play Store dari iklan harus selalu ditangani lebih dulu agar
+        # tidak masuk ke fallback yang force-stop aplikasi atau relaunch game.
+        if app.package in BACK_NAVIGATION_PACKAGES:
+            self.navigate_back_from_browser_or_store(app.package)
+            self.last_action = "back_from_browser_or_store"
+            return "back_from_browser_or_store", app
 
         if self.handle_confirm_close_popup(app):
             self.last_action = "clicked_confirm_close_continue"

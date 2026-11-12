@@ -2,232 +2,374 @@
 """
 Lucky Arrow Escaper Guardian Bot
 
-Fitur utama:
-- Deteksi foreground, buka game jika belum aktif
-- Tutup Chrome/Play Store/app lain yang terbuka karena iklan
-- Deteksi & klik tombol DOBEL/AMBIL reward / bubble iklan
-- Deteksi & tutup iklan (UI dump, OCR, Hough circle arrow kanan atas, contour)
-- Deteksi popup "Confirm to Close" -> klik Continue
-- Cek saldo OCR periodik + lapor Telegram
-- Fallback: BACK button & restart game
+Tugas utama:
+- Jika game Lucky Arrow Escaper belum foreground, buka game.
+- Jika foreground masuk Chrome atau Play Store, tutup app tersebut lalu kembali ke game.
 
 Target game:
-  App     : Lucky Arrow Escaper
-  Package : com.starlightgame.luckyarrowescaper
+  App     : Woodland Tile Matcher
+  Package : com.starlightgame.woodlandtilematcher
 """
 
 from __future__ import annotations
 
 import argparse
+import html
 import json
+import math
 import os
 import re
 import subprocess
+import sys
 import time
 import xml.etree.ElementTree as ET
-import random
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Optional, Tuple
 
 TARGET_PACKAGE = "com.starlightgame.luckyarrowescaper"
 TARGET_NAME = "Lucky Arrow Escaper"
-LOG_FILE = os.path.expanduser("~/lucky_arrow_escaper_guardian_bot.log")
-STATE_FILE = os.path.expanduser("~/lucky_arrow_escaper_saldo_state.json")
-OCR_HELPER = "/Users/macbookair/ocr_helper"
-TAP_MARKER = "/Users/macbookair/scrcpy_tap_marker"
-TELEGRAM_SENDER = "/Users/macbookair/telegram_sender.py"
-REWARD_HISTORY_FILE = os.path.expanduser("~/lucky_arrow_reward_history.json")
-MIN_REWARD_THRESHOLD = float(os.environ.get("LUCKY_ARROW_MIN_REWARD", "5.0"))
-MIN_AD_WATCH_SECONDS = float(os.environ.get("LUCKY_ARROW_MIN_AD_WATCH", "60.0"))
-MAX_BUKA_AD_ATTEMPTS = 3
-BUKA_AD_COOLDOWN_SECONDS = 15 * 60
 
-CHEAP_AD_KEYWORDS = (
-    "shopee", "tiktok", "lazada", "tokopedia", "install", "unduh", "pasang",
-    "google play", "play store", "buka toko", "open store",
-    "block", "blast", "puzzle", "match 3", "merge", "solitaire", "bubble shooter",
-    "candy", "fish", "farm", "woody", "woodland", "tile match",
-)
+ENABLE_SLOT_SEEDING_AFTER_AD = os.environ.get("ENABLE_SLOT_SEEDING_AFTER_AD", "0") == "1"  # Default nonaktif: injeksi web/app slot pasca-iklan
 
-HIGH_TIER_AD_KEYWORDS = (
-    "dewi", "pgtoto", "mposport", "slot", "taruhan", "deposit", "spin", "jackpot",
-    "gacor", "pragmatic", "pg soft", "pgsoft", "olympus", "mahjong", "maxwin", "zeus",
-    "casino", "poker", "roulette", "baccarat", "judi", "starlight princess",
-    "emas", "meta", "kwai", "alliance", "saldo gratis", "klaim bonus", "bonus saldo", "bonus deposit",
-    "dana", "gopay", "fintech", "pinjaman", "investasi", "trading", "crypto",
-)
-
-BLOCKED_PACKAGES = {
-    "com.android.vending": "Play Store",
-    "com.android.chrome": "Chrome",
-    "com.chrome.beta": "Chrome Beta",
-    "com.google.android.apps.chrome": "Chrome",
-    "com.shopee.id": "Shopee",
-    "com.shopee.app": "Shopee",
-    "com.transsnet.store": "Palm Store",
-    "com.transsion.XOSLauncher": "Launcher",
-    "com.android.settings": "Settings",
-    "com.google.android.youtube": "YouTube",
-    "com.facebook.katana": "Facebook",
-    "com.instagram.android": "Instagram",
+SYSTEM_PACKAGES = {
+    "com.android.quickstep",
+    "com.transsion.XOSLauncher",
+    "com.android.systemui",
+    "com.google.android.inputmethod.latin",
+    "com.android.settings",
 }
 
-AD_KEYWORDS = (
-    "ads", "adactivity", "adplayer", "advert", "reward", "rewardvideo", "rewarded",
-    "mbridge", "mintegral", "applovin", "vungle", "ironsource", "chartboost",
-    "gms.ads", "adcolony", "pangle", "bytedance", "kwai", "fullscreenwebview",
-    "webviewdisplay", "alliance", "adcommon", "emptyshell", "ksad",
+# App yang sering terbuka karena iklan / redirect.
+BLOCKED_PACKAGES = {
+    "com.android.chrome": "Chrome",
+    "com.chrome.beta": "Chrome Beta",
+    "com.chrome.dev": "Chrome Dev",
+    "com.google.android.apps.chrome": "Chrome",
+    "com.android.vending": "Play Store",
+    "com.transsnet.store": "Palm Store",
+    "com.afmobi.palmplay": "Palm Store",
+    "com.bubble.crush.stick.magicgames": "Bubble Crush redirect",
+    "com.starlightgame.magicoceantilecrush": "Magic Ocean redirect",
+    "com.starlightgame.woodlandtilematcher": "Woodland redirect",
+}
+
+LOG_FILE = os.path.expanduser("~/lucky_arrow_escaper_guardian_bot.log")
+SALDO_STATE_FILE = os.path.expanduser("~/lucky_arrow_saldo_state.json")
+TELEGRAM_SENDER = "/Users/macbookair/telegram_sender.py"
+DEFAULT_INTERVAL = 0.35
+OCR_HELPER = "/Users/macbookair/ocr_helper"
+TAP_MARKER = "/Users/macbookair/scrcpy_tap_marker"
+DOBEL_CHECK_INTERVAL = 0.8
+DOBEL_TAP_RETRY_SECONDS = 1.8
+AD_CLOSE_CHECK_INTERVAL = 0.8
+AD_CLOSE_MIN_SECONDS = 5.0
+AD_STUCK_RESTART_SECONDS = 120.0
+BUBBLE_CHECK_INTERVAL = 0.0
+BUBBLE_TIMEOUT_SECONDS = 300.0  # 5 menit (hanya restart jika 5 menit tidak menemukan gelembung)
+BUBBLE_TAP_COOLDOWN = 0.0
+# Area scan/tap gelembung Woodland:
+# mulai dari bawah tombol menu garis-3 kiri atas sampai hampir dasar layar.
+BUBBLE_SCAN_TOP_RATIO = 0.18
+BUBBLE_SCAN_BOTTOM_RATIO = 0.88
+AD_ACTIVITY_KEYWORDS = (
+    "ads",
+    "adplayer",
+    "advert",
+    "rewardvideo",
+    "rewarded",
+    "mbridge",
+    "mintegral",
+    "applovin",
+    "vungle",
+    "ironsource",
+    "chartboost",
+    "adcolony",
+    "gms.ads",
+    "fullscreenwebviewdisplay",
+    "webviewdisplay",
+    "kwai",
+    "alliance",
+    "adcommon",
+    "emptyshell",
+    "pangle",
+    "bytedance",
+    "ksad",
 )
 
-REWARD_WORDS = (
-    "claim", "get", "watch", "double", "dobel", "x2", "collect", "reward", "video",
-    "ambil", "buka", "klaim", "dapat", "tonton", "bonus", "gratis", "lanjut", "next", "continue",
-    "not now", "now not", "nanti", "tidak",
-)
-
-CLOSE_WORDS = (
-    "x", "\u00d7", "close", "tutup", "skip", "lewati", "next", "lanjut", ">", "\u203a", "\u00bb",
-)
-
-STORE_WORDS = ("install", "instal", "pasang", "google play", "play store", "shopee", "buka toko", "open store")
+# Iklan yang terbukti berulang/tidak menambah hadiah. Kalau activity ini muncul,
+# langsung bersihkan semua app dan buka ulang game.
+BAD_AD_ACTIVITIES = set()
 
 
 @dataclass
 class ForegroundApp:
     package: str
     activity: str = ""
-    raw: str = ""
+    source: str = ""
 
 
-class Bot:
-    def __init__(self, serial: str = "", interval: float = 0.08):
-        if not serial:
-            serial = "062322513B000705"
+class LuckyArrowEscaperGuardian:
+    def __init__(self, serial: str = "", interval: float = DEFAULT_INTERVAL, dry_run: bool = False):
         self.serial = serial.strip()
         self.interval = interval
-        self.last_fg = ""
+        self.dry_run = dry_run
+        self.last_foreground = ""
+        self.last_action = ""
         self.last_launch_ts = 0.0
+        self.last_block_close_ts = 0.0
         self.ad_start_ts: Optional[float] = None
         self.ad_activity = ""
+        self.last_ad_log_second = -1
+        self.dobel_visible = False
+        self.not_now_visible = False
+        self.last_dobel_check_ts = 0.0
+        self.last_dobel_tap_ts = 0.0
+        self.meta_ad_close_tap_count = 0
+        self.last_meta_close_tap_ts = 0.0
+        self._last_meta_wait_logged = -1
+        self.last_buka_tap_ts = 0.0
+        self.last_ad_close_check_ts = 0.0
         self.last_ad_close_tap_ts = 0.0
-        self.last_ad_check_ts = 0.0
-        self.ad_stuck_count = 0
-        self.ad_stuck_activity = ""
-        self.last_top_right_arrow_tap_ts = 0.0
-        self.last_reward_tap_ts = 0.0
-        self.last_saldo_check_ts = 0.0
-        self.last_external_ts = 0.0
-        self.last_gameplay_tap_ts = 0.0
+        self.ad_close_same_btn_count = 0
+        self.ad_close_last_btn_key = ""
+        self.bubble_watch_active = False
+        self.bubble_watch_start_ts = 0.0
+        self.bubble_search_notified = False
+        self.last_bubble_check_ts = 0.0
         self.last_bubble_tap_ts = 0.0
-        self.last_cache_clear_ts = 0.0
-        self.dobel_consecutive_clicks = 0
-        self.buka_consecutive_clicks = 0
-        self.buka_ad_cooldown_until = 0.0
-        self.pre_ad_saldo: Optional[float] = None
-        self.post_ad_saldo: Optional[float] = None
-        self.was_dobel_clicked: bool = False
-        self.pending_ad_verification: bool = False
-        self.current_ad_tier = "UNKNOWN"
-        self.current_ad_network = "Meta Audience Network"
-        self.current_ad_title = "Unknown"
-        self.current_ad_match = "-"
-        self.ad_title_confirmed = False
-        self.last_reported_saldo: Optional[float] = None
-        self.was_in_ad: bool = False
+        self.last_bubble_restart_ts = 0.0
+        self.last_ad_open_telegram_ts = 0.0
+        self.last_ad_stuck_restart_ts = 0.0
+        self.pending_dobel_reward_value: Optional[float] = None
+        self.pending_dobel_reward_raw = ""
+        self.pending_dobel_ts = 0.0
+        self.last_dobel_reward_value: Optional[float] = None
+        self.last_dobel_reward_raw = ""
+        self.last_dobel_ad_activity = ""
+        self.last_dobel_ad_ts = 0.0
+        self.last_duplicate_dobel_restart_ts = 0.0
+        self.last_bad_ad_restart_ts = 0.0
+        self.last_wallet_check_ts = 0.0
+        self.last_confirm_close_check_ts = 0.0
+        self.last_confirm_close_tap_ts = 0.0
+        self.prev_bubble_detection: Optional[Tuple[float, int, int]] = None
+        self.seeding_slot_routine = False
+        self.last_chrome_seed_ts = 0.0
+        self.last_arrow_tap_ts = 0.0
+        self.last_arrow_board_missing_log_ts = 0.0
+        self.last_gagal_check_ts = 0.0
+        self.last_gagal_tap_ts = 0.0
+        self._ocr_cache_ts = 0.0
+        self._ocr_cache_entries = None
+        self.arrow_tap_index = 0
+        self.completed_ads_count = 0
+        self.bad_bubble_coords: list[Tuple[float, int, int]] = []
+        self.buka_tap_count = 0
+        self.bubble_fail_count = 0
+        self.dobel_tap_count = 0
 
-    # ===================== LOGGING =====================
-
-    def log(self, msg: str) -> None:
-        line = f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] {msg}"
+    def log(self, message: str) -> None:
+        ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        line = f"[{ts}] {message}"
         print(line, flush=True)
-        if os.environ.get("LUCKY_ARROW_NO_FILE_LOG") == "1":
+        if os.environ.get("LUCKY_ARROW_NO_FILE_LOG") == "1" or os.environ.get("MAGIC_OCEAN_NO_FILE_LOG") == "1":
             return
         try:
             with open(LOG_FILE, "a", encoding="utf-8") as f:
                 f.write(line + "\n")
-        except Exception:
+        except OSError:
             pass
 
-    # ===================== ADB HELPERS =====================
-
-    def adb_cmd(self, args: list[str]) -> list[str]:
+    def adb(self, args: list[str], timeout: int = 12) -> subprocess.CompletedProcess[str]:
         cmd = ["adb"]
         if self.serial:
             cmd += ["-s", self.serial]
-        return cmd + args
+        cmd += args
+        return subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
 
-    def adb_out(self, args: list[str], timeout: int = 10) -> str:
+    def adb_out(self, args: list[str], timeout: int = 12) -> str:
         try:
-            r = subprocess.run(self.adb_cmd(args), capture_output=True, text=True, timeout=timeout)
-            return r.stdout or ""
-        except BaseException as exc:
-            self.log(f"ADB error: {' '.join(args)} | {type(exc).__name__}: {exc}")
+            result = self.adb(args, timeout=timeout)
+            return (result.stdout or "").strip()
+        except subprocess.TimeoutExpired:
+            self.log(f"ADB timeout: {' '.join(args)}")
+            return ""
+        except FileNotFoundError:
+            self.log("ADB tidak ditemukan. Install: brew install android-platform-tools")
+            sys.exit(1)
+        except Exception as exc:
+            self.log(f"ADB error: {exc}")
             return ""
 
-    def adb_bytes(self, args: list[str], timeout: int = 10) -> bytes:
+    def adb_bytes(self, args: list[str], timeout: int = 12) -> bytes:
+        cmd = ["adb"]
+        if self.serial:
+            cmd += ["-s", self.serial]
+        cmd += args
         try:
-            r = subprocess.run(self.adb_cmd(args), capture_output=True, timeout=timeout)
-            return r.stdout or b""
-        except BaseException as exc:
-            self.log(f"ADB bytes error: {' '.join(args)} | {type(exc).__name__}: {exc}")
+            result = subprocess.run(cmd, capture_output=True, timeout=timeout)
+            return result.stdout or b""
+        except Exception:
             return b""
 
-    def tap(self, x: int, y: int, natural: bool = True) -> None:
-        if natural:
-            jx = max(10, x + random.randint(-7, 7))
-            jy = max(10, y + random.randint(-7, 7))
-        else:
-            jx, jy = x, y
-        self.show_tap_marker([(int(jx), int(jy), "blue", 1.3, 58)])
-        self.log(f"TAP ({jx},{jy})")
-        self.adb_out(["shell", "input", "tap", str(int(jx)), str(int(jy))], timeout=4)
-        if natural:
-            time.sleep(random.uniform(0.08, 0.22))
+    def tap(self, x: int, y: int, color: str = "blue") -> None:
+        self.show_tap_marker([(int(x), int(y), color, 1.3, 58)])
+        self._ocr_cache_entries = None
+        self._ocr_cache_ts = 0.0
+        if self.dry_run:
+            self.log(f"DRY RUN: tap {x},{y}")
+            return
+        self.adb_out(["shell", "input", "tap", str(x), str(y)], timeout=5)
 
-    # ===================== TAP MARKER =====================
-
-    def show_tap_marker(self, specs: list) -> None:
-        if not os.path.exists(TAP_MARKER) or os.environ.get("LUCKY_ARROW_DISABLE_MARKER") == "1":
+    def show_tap_marker(self, specs: list[Tuple[int, int, str, float, int]]) -> None:
+        if not os.path.exists(TAP_MARKER) or os.environ.get("LUCKY_ARROW_DISABLE_MARKER") == "1" or os.environ.get("MAGIC_OCEAN_DISABLE_MARKER") == "1":
+            self.log(f"MARKER TIDAK AKTIF: file tidak ada atau disable | specs={len(specs)}")
             return
         args: list[str] = []
+        # Batasi supaya marker tetap ringan.
         for x, y, color, duration, diameter in specs[:220]:
             args += [str(int(x)), str(int(y)), color, str(float(duration)), str(int(diameter))]
         try:
             subprocess.Popen([TAP_MARKER, *args], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            preview = ", ".join(f"({x},{y},{color})" for x, y, color, _, _ in specs[:8])
+            self.log(f"MARKER DIBUAT: {len(specs)} titik | {preview}")
         except Exception:
-            pass
+            self.log("MARKER GAGAL DIBUAT")
 
-    # ===================== FOREGROUND DETECTION =====================
+    def monkey_burst(self, points: list[Tuple[int, int]], delay_ms: int = 3, timeout: int = 6) -> None:
+        """Kirim banyak tap berkecepatan tinggi menggunakan monkey script (satu proses JVM, tanpa ANR/lag)."""
+        if not points or self.dry_run:
+            return
+        script_lines = [
+            "type= raw events",
+            "count= 1",
+            "speed= 1.0",
+            "start data >>",
+        ]
+        for x, y in points:
+            script_lines.append(f"DispatchPointer(0, 0, 0, {int(x)}, {int(y)}, 0, 0, 0, 0, 0, 0, 0)")
+            script_lines.append(f"DispatchPointer(0, 0, 1, {int(x)}, {int(y)}, 0, 0, 0, 0, 0, 0, 0)")
+            if delay_ms > 0:
+                script_lines.append(f"UserWait({delay_ms})")
+        script_content = chr(10).join(script_lines) + chr(10)
+
+        cmd = ["adb"]
+        if self.serial:
+            cmd += ["-s", self.serial]
+        cmd += ["shell", "cat > /data/local/tmp/burst_tap.txt && monkey -f /data/local/tmp/burst_tap.txt 1"]
+        try:
+            subprocess.run(cmd, input=script_content, text=True, capture_output=True, timeout=timeout)
+        except subprocess.TimeoutExpired:
+            self.log("ADB timeout saat monkey burst tap")
+        except Exception as exc:
+            self.log(f"Monkey burst error: {exc}")
+
+    def tap_many(self, points: list[Tuple[int, int]], timeout: int = 10, color: str = "orange", wait: bool = True) -> None:
+        """Kirim banyak tap berkecepatan tinggi via monkey script agar tidak membebani sistem."""
+        if not points:
+            return
+        unique_points: list[Tuple[int, int]] = []
+        self._ocr_cache_entries = None
+        self._ocr_cache_ts = 0.0
+        for x, y in points:
+            point = (int(x), int(y))
+            if point not in unique_points:
+                unique_points.append(point)
+
+        pts = unique_points[:9] if color == "red" else unique_points[:220]
+        marker_diam = 22 if color == "red" else 34
+        marker_dur = 1.2 if color == "red" else 1.8
+        self.show_tap_marker([(x, y, color, marker_dur, marker_diam) for x, y in pts])
+
+        if self.dry_run:
+            self.log(f"DRY RUN: burst tap {pts}")
+            return
+
+        # Untuk tap gelembung (marker merah) beri jeda 15ms agar tidak spam input berlebih.
+        delay_ms = 15 if color == "red" else 3
+        self.monkey_burst(pts, delay_ms=delay_ms, timeout=timeout)
+
+    def tap_bubble_until_ad(self, points: list[Tuple[int, int]]) -> bool:
+        """Tap terfokus di sekitar gelembung dan berhenti bila layar berubah."""
+        if not points:
+            return False
+        batch = points[:7]
+        self.log(f"TAP GELEMBUNG TERFOKUS: {len(batch)} titik di sekitar target")
+        self.tap_many(batch, timeout=5, color="red")
+        self.last_dobel_check_ts = 0.0
+
+        time.sleep(0.30)
+        app = self.get_foreground_app()
+        if app and self.is_game_ad(app):
+            self.log(f"STOP TAP GELEMBUNG: iklan terbuka ({app.package}/{app.activity})")
+            return True
+        if app and app.package != TARGET_PACKAGE:
+            bx, by = points[0]
+            self.bad_bubble_coords.append((time.time() + 50.0, bx, by))
+            self.log(
+                f"BLACKLIST KOORDINAT BUBBLE ({bx},{by}) selama 50s karena redirect ke {app.package} | "
+                "TAP GELEMBUNG DIBATALKAN: layar berpindah ke aktivitas non-iklan "
+                f"({app.package}/{app.activity}); tidak meneruskan tap."
+            )
+            return False
+
+        second_wave = list(reversed(batch))
+        if second_wave:
+            self.log(f"TAP GELEMBUNG RETRY TERFOKUS: {len(second_wave)} titik")
+            self.tap_many(second_wave, timeout=4, color="red")
+
+        time.sleep(0.30)
+        app = self.get_foreground_app()
+        if app and self.is_game_ad(app):
+            self.log(f"STOP TAP GELEMBUNG: iklan terbuka setelah retry ({app.package}/{app.activity})")
+            return True
+        if app and app.package != TARGET_PACKAGE:
+            bx, by = points[0]
+            self.bad_bubble_coords.append((time.time() + 50.0, bx, by))
+            self.log(
+                f"BLACKLIST KOORDINAT BUBBLE ({bx},{by}) selama 50s karena redirect ke {app.package} | "
+                "TAP GELEMBUNG DIBATALKAN SETELAH RETRY: layar non-iklan "
+                f"({app.package}/{app.activity})."
+            )
+        return False
 
     @staticmethod
     def parse_package_activity(text: str) -> Optional[ForegroundApp]:
+        # Contoh:
+        # mCurrentFocus=Window{a5c81e3 u0 com.pkg/.MainActivity}
+        # ActivityRecord{... u0 com.pkg/com.Activity t123}
+        anr_match = re.search(r"Application Not Responding:\s*([a-zA-Z0-9_]+(?:\.[a-zA-Z0-9_]+)+)", text)
+        if anr_match:
+            return ForegroundApp(package=anr_match.group(1), activity="Application Not Responding", source=text.strip())
+
         patterns = [
             r"u\d+\s+([a-zA-Z0-9_]+(?:\.[a-zA-Z0-9_]+)+)/([^\s}\]]+)",
-            r"([a-zA-Z0-9_]+(?:\.[a-zA-Z0-9_]+)+)/([a-zA-Z0-9_.$]+)",
+            r"\s([a-zA-Z0-9_]+(?:\.[a-zA-Z0-9_]+)+)/([a-zA-Z0-9_.$]+)",
         ]
-        for pat in patterns:
-            m = re.search(pat, text)
-            if m:
-                return ForegroundApp(m.group(1), m.group(2), text.strip())
+        for pattern in patterns:
+            match = re.search(pattern, text)
+            if match:
+                return ForegroundApp(package=match.group(1), activity=match.group(2), source=text.strip())
         return None
 
-    def foreground(self) -> Optional[ForegroundApp]:
+    def get_foreground_app(self) -> Optional[ForegroundApp]:
+        # Prioritaskan mCurrentFocus/topResumedActivity. Gunakan 'dumpsys window displays'
+        # agar tidak membaca dump riwayat 'Last ANR' stale dari dumpsys window.
         checks = [
             (["shell", "dumpsys", "window", "displays"], ("mCurrentFocus",)),
-            (["shell", "dumpsys", "activity", "activities"], ("topResumedActivity", "mResumedActivity")),
+            (["shell", "dumpsys", "activity", "activities"], ("topResumedActivity", "mResumedActivity", "ResumedActivity")),
             (["shell", "dumpsys", "window", "displays"], ("mFocusedApp",)),
-            (["shell", "dumpsys", "activity", "top"], ("ACTIVITY",)),
         ]
         for args, keywords in checks:
-            out = self.adb_out(args, timeout=6)
+            output = self.adb_out(args, timeout=10)
             in_last_anr = False
-            for line in out.splitlines():
+            for line in output.splitlines():
                 if "Last ANR" in line:
                     in_last_anr = True
                     continue
                 if in_last_anr:
-                    if not line.startswith(" ") and not line.startswith("\t"):
+                    if not line.startswith(" ") and not line.startswith("	"):
                         in_last_anr = False
                     else:
                         continue
@@ -237,84 +379,591 @@ class Bot:
                         return app
         return None
 
-    def verify_still_in_game(self) -> bool:
-        app = self.foreground()
-        if not app:
-            self.launch_game("verifikasi: foreground hilang")
+    def has_device(self) -> bool:
+        output = self.adb_out(["devices"], timeout=8)
+        devices = []
+        for line in output.splitlines()[1:]:
+            parts = line.split()
+            if len(parts) >= 2 and parts[1] == "device":
+                devices.append(parts[0])
+        if self.serial:
+            ok = self.serial in devices
+            if not ok:
+                self.log(f"Device serial {self.serial} tidak terhubung. Devices aktif: {devices or '-'}")
+            return ok
+        if not devices:
+            self.log("Tidak ada device ADB aktif. Cek USB debugging dan jalankan: adb devices")
             return False
-        if app.package != TARGET_PACKAGE:
-            self.launch_game(f"verifikasi: foreground={app.package}")
+        if len(devices) > 1:
+            self.log(f"Ada lebih dari 1 device: {devices}. Jalankan dengan --serial SERIAL agar jelas.")
             return False
-        if self.is_ad(app):
-            return False
+        self.serial = devices[0]
+        self.log(f"Device dipakai: {self.serial}")
         return True
 
-    # ===================== SCREEN / CAPTURE / UI DUMP =====================
+    def is_target_installed(self) -> bool:
+        output = self.adb_out(["shell", "pm", "path", TARGET_PACKAGE], timeout=8)
+        return "package:" in output
 
-    def screen_size(self) -> Tuple[int, int]:
-        out = self.adb_out(["shell", "wm", "size"], timeout=4)
-        m = re.search(r"(\d+)x(\d+)", out)
-        return (int(m.group(1)), int(m.group(2))) if m else (720, 1600)
+    def force_stop(self, package: str) -> None:
+        name = BLOCKED_PACKAGES.get(package, package)
+        if self.dry_run:
+            self.log(f"DRY RUN: force-stop {name} ({package})")
+            return
+        self.log(f"Menutup {name} ({package})")
+        self.adb_out(["shell", "am", "force-stop", package], timeout=8)
 
-    def capture_png(self):
-        png = self.adb_bytes(["exec-out", "screencap", "-p"], timeout=8)
-        if not png or len(png) < 1000:
-            return None
-        try:
-            from PIL import Image
-            from io import BytesIO
-            image = Image.open(BytesIO(png))
-            w, h = image.size
-            return png, w, h
-        except Exception:
-            w, h = self.screen_size()
-            return png, w, h
+    def launch_game(self, reason: str = "") -> None:
+        now = time.time()
+        # Hindari spam launch terlalu cepat.
+        if now - self.last_launch_ts < 3:
+            return
+        self.last_launch_ts = now
+        reason_msg = f" karena {reason}" if reason else ""
+        if self.dry_run:
+            self.log(f"DRY RUN: buka {TARGET_NAME}{reason_msg}")
+            return
+        self.log(f"Membuka {TARGET_NAME}{reason_msg}")
+        self.adb_out([
+            "shell", "monkey", "-p", TARGET_PACKAGE,
+            "-c", "android.intent.category.LAUNCHER", "1",
+        ], timeout=8)
 
-    def dump_ui(self):
-        self.adb_out(["shell", "uiautomator", "dump", "/sdcard/luckyarrow_ui.xml"], timeout=5)
-        xml = self.adb_out(["shell", "cat", "/sdcard/luckyarrow_ui.xml"], timeout=5)
-        if "<hierarchy" not in xml:
-            return None
-        try:
-            return ET.fromstring(xml)
-        except Exception:
-            return None
+    def is_game_running(self) -> bool:
+        out = self.adb_out(["shell", "pidof", TARGET_PACKAGE], timeout=3)
+        return bool(out.strip())
+
+    def open_game_from_recents(self, reason: str = "") -> None:
+        now = time.time()
+        if now - self.last_launch_ts < 2:
+            return
+        self.last_launch_ts = now
+        reason_msg = f" karena {reason}" if reason else ""
+        self.log(f"Kembali ke game melalui Riwayat Aplikasi (Recents){reason_msg}")
+        if self.dry_run:
+            return
+        if not self.is_game_running():
+            self.log(f"Proses game {TARGET_NAME} tidak aktif di background, membuka via launcher{reason_msg}")
+            self.launch_game(reason=reason)
+            return
+
+        # Tekan tombol riwayat aplikasi (Recents / Overview)
+        self.adb_out(["shell", "input", "keyevent", "187"], timeout=5)
+        time.sleep(0.6)
+
+        # Cari khusus kartu game Lucky Arrow Escaper di riwayat, jangan buka aplikasi lain
+        game_card_pos = None
+        for attempt in range(3):
+            entries = self.ocr_current_screen(f"recents_find_game_{attempt}")
+            for text, bbox, x, y in entries:
+                norm = self.normalize_text(text)
+                if (
+                    "luckyarrow" in norm
+                    or ("lucky" in norm and "arrow" in norm)
+                    or "arrowescape" in norm
+                    or norm in {"lucky", "arrow", "la"}
+                ):
+                    tap_target_y = min(1000, y + 300) if y < 500 else y
+                    game_card_pos = (x, tap_target_y)
+                    self.log(f"Menemukan kartu riwayat game '{text}' di ({x},{y}), tap kartu game di ({x},{tap_target_y})")
+                    break
+
+            if game_card_pos:
+                self.tap(game_card_pos[0], game_card_pos[1])
+                time.sleep(0.6)
+                break
+
+            # Jika belum terlihat pada pandangan pertama, geser riwayat ke kanan untuk melihat game
+            if attempt < 2:
+                self.log(f"Kartu Lucky Arrow Escaper belum tampak di riwayat (coba #{attempt+1}), geser riwayat ke kanan...")
+                self.adb_out(["shell", "input", "swipe", "200", "750", "600", "750", "250"], timeout=4)
+                time.sleep(0.5)
+
+        # Verifikasi apakah sudah kembali ke game; jika belum, bawa task game ke depan
+        app = self.get_foreground_app()
+        if not app or app.package != TARGET_PACKAGE:
+            self.log("Mengaktifkan kembali task game Lucky Arrow Escaper yang sedang berjalan di background...")
+            self.adb_out([
+                "shell", "am", "start",
+                "-a", "android.intent.action.MAIN",
+                "-c", "android.intent.category.LAUNCHER",
+                "-f", "0x10200000",
+                "-n", f"{TARGET_PACKAGE}/com.google.firebase.MessagingUnityPlayerActivity"
+            ], timeout=6)
+            time.sleep(0.6)
+
+    def close_game_from_recents_and_restart(self, reason: str = "") -> None:
+        self.log(f"Tutup riwayat game dan buka ulang karena: {reason}")
+        if self.dry_run:
+            return
+        self.adb_out(["shell", "input", "keyevent", "187"], timeout=5)
+        time.sleep(0.6)
+        self.adb_out(["shell", "input", "swipe", "360", "800", "360", "150", "250"], timeout=4)
+        time.sleep(0.5)
+        self.adb_out(["shell", "am", "force-stop", TARGET_PACKAGE], timeout=5)
+        time.sleep(0.8)
+        self.launch_game(reason=reason)
+        self.dobel_visible = False
+        self.not_now_visible = False
+        self.bubble_watch_active = True
+        self.bubble_watch_start_ts = time.time()
+
+    def close_blocked_app_and_return(self, package: str) -> None:
+        if getattr(self, "seeding_slot_routine", False):
+            return
+        now = time.time()
+        if now - self.last_block_close_ts < 2:
+            return
+        self.last_block_close_ts = now
+        self.force_stop(package)
+        time.sleep(0.4)
+        self.open_game_from_recents(reason=f"keluar dari {BLOCKED_PACKAGES.get(package, package)}")
+
+    def restart_game_for_bubble_search(self, reason: str) -> None:
+        now = time.time()
+        if now - self.last_bubble_restart_ts < 5:
+            return
+        self.last_bubble_restart_ts = now
+        self.log(f"RESTART GAME UNTUK CARI GELEMBUNG: {reason}")
+        for package in [TARGET_PACKAGE, *BLOCKED_PACKAGES.keys()]:
+            if self.dry_run:
+                self.log(f"DRY RUN: force-stop {package}")
+            else:
+                self.adb_out(["shell", "am", "force-stop", package], timeout=5)
+        time.sleep(0.8)
+        self.launch_game(reason="cari gelembung setelah timeout")
+        self.bubble_watch_active = True
+        self.bubble_watch_start_ts = time.time()
+        self.bubble_search_notified = False
+        self.last_bubble_check_ts = 0.0
+
+    def restart_game_for_stuck_ad(self, reason: str) -> None:
+        now = time.time()
+        if now - self.last_ad_stuck_restart_ts < 30:
+            return
+        self.last_ad_stuck_restart_ts = now
+        self.log(f"IKLAN STUCK: {reason} -> tutup semua app terkait dan buka ulang game")
+        for package in [TARGET_PACKAGE, *BLOCKED_PACKAGES.keys()]:
+            if self.dry_run:
+                self.log(f"DRY RUN: force-stop {package}")
+            else:
+                self.adb_out(["shell", "am", "force-stop", package], timeout=8)
+        self.ad_start_ts = None
+        self.ad_activity = ""
+        self.last_ad_log_second = -1
+        self.last_ad_close_check_ts = 0.0
+        self.last_ad_close_tap_ts = 0.0
+        self.dobel_visible = False
+        self.not_now_visible = False
+        self.bubble_watch_active = False
+        self.prev_bubble_detection = None
+        time.sleep(0.8)
+        self.launch_game(reason="iklan stuck lebih dari 2 menit")
+
+    def clear_apps_and_reopen_game(self, reason: str) -> None:
+        self.log(f"BERSIHKAN APP DAN BUKA ULANG GAME: {reason}")
+        self.adb_out(["shell", "input", "keyevent", "4"], timeout=3)
+        packages = [TARGET_PACKAGE, *BLOCKED_PACKAGES.keys()]
+        seen = set()
+        for package in packages:
+            if package in seen:
+                continue
+            seen.add(package)
+            if self.dry_run:
+                self.log(f"DRY RUN: force-stop {package}")
+            else:
+                self.adb_out(["shell", "am", "force-stop", package], timeout=8)
+        self.ad_start_ts = None
+        self.ad_activity = ""
+        self.last_ad_log_second = -1
+        self.last_ad_close_check_ts = 0.0
+        self.last_ad_close_tap_ts = 0.0
+        self.dobel_visible = False
+        self.not_now_visible = False
+        self.bubble_watch_active = False
+        self.prev_bubble_detection = None
+        time.sleep(0.8)
+        self.launch_game(reason=reason)
+
+    def remember_pending_dobel_reward(self, reward_rp: Optional[Tuple[float, str, int, int]]) -> None:
+        self.pending_dobel_ts = time.time()
+        if reward_rp:
+            value, raw_text, _x, _y = reward_rp
+            self.pending_dobel_reward_value = float(value)
+            self.pending_dobel_reward_raw = raw_text
+        else:
+            self.pending_dobel_reward_value = None
+            self.pending_dobel_reward_raw = ""
+
+    def handle_dobel_ad_opened(self, activity: str) -> bool:
+        """Return True hanya kalau DOBEL benar-benar duplikat: iklan sama DAN reward tidak berubah."""
+        now = time.time()
+        current_reward = self.pending_dobel_reward_value
+        current_reward_raw = self.pending_dobel_reward_raw or "-"
+        previous_reward = self.last_dobel_reward_value
+        previous_reward_raw = self.last_dobel_reward_raw or "-"
+        previous_ad = self.last_dobel_ad_activity or "-"
+        same_ad = bool(self.last_dobel_ad_activity and self.last_dobel_ad_activity == activity)
+        can_compare_reward = current_reward is not None and previous_reward is not None
+        same_reward = can_compare_reward and abs(current_reward - previous_reward) < 0.01
+        reward_changed = can_compare_reward and not same_reward
+        reward_increased = can_compare_reward and current_reward > previous_reward + 0.01
+
+        self.log(
+            "CEK DOBEL VS SEBELUMNYA: "
+            f"reward_sekarang={current_reward_raw}, reward_sebelumnya={previous_reward_raw}, "
+            f"iklan_sekarang={activity}, iklan_sebelumnya={previous_ad}, "
+            f"same_reward={same_reward}, reward_changed={reward_changed}, "
+            f"reward_increased={reward_increased}, same_ad={same_ad}"
+        )
+
+        # Penting: jangan tutup app hanya karena activity iklan sama. Kalau nominal DOBEL berubah/naik,
+        # itu reward baru dan iklannya harus tetap dijalankan. Tutup hanya jika iklan sama DAN reward sama.
+        if same_ad and same_reward:
+            self.log(
+                "IKLAN DOBEL SAMA DAN REWARD SAMA: tetap jalankan tonton iklan tanpa restart"
+            )
+
+        if same_ad and reward_changed:
+            self.log(
+                "IKLAN DOBEL SAMA TAPI REWARD BERUBAH/NAIK: "
+                f"tetap jalankan iklan | reward sekarang={current_reward_raw}, sebelumnya={previous_reward_raw}"
+            )
+        elif same_ad and not can_compare_reward:
+            self.log(
+                "IKLAN DOBEL SAMA TAPI DATA REWARD BELUM LENGKAP: tetap jalankan iklan, jangan tutup app"
+            )
+
+        self.last_dobel_reward_value = current_reward
+        self.last_dobel_reward_raw = current_reward_raw
+        self.last_dobel_ad_activity = activity
+        self.last_dobel_ad_ts = now
+        self.pending_dobel_reward_value = None
+        self.pending_dobel_reward_raw = ""
+        return False
 
     @staticmethod
-    def norm(text: str) -> str:
-        return re.sub(r"\s+", " ", (text or "").lower().strip())
+    def format_duration(seconds: float) -> str:
+        total = max(0, int(seconds))
+        minutes, sec = divmod(total, 60)
+        hours, minutes = divmod(minutes, 60)
+        if hours:
+            return f"{hours} jam {minutes} menit {sec} detik"
+        if minutes:
+            return f"{minutes} menit {sec} detik"
+        return f"{sec} detik"
+
+    def is_game_ad(self, app: ForegroundApp) -> bool:
+        if app.package != TARGET_PACKAGE:
+            return False
+        activity = app.activity.lower()
+        if any(keyword in activity for keyword in AD_ACTIVITY_KEYWORDS):
+            return True
+        # Fail-safe: game utama hanya UnityPlayerActivity. Kalau package game membuka
+        # activity lain, biasanya itu fullscreen/interstitial ad. Jangan diam scan bubble.
+        if activity and activity not in {"application not responding"} and "unityplayeractivity" not in activity:
+            return True
+        return False
 
     @staticmethod
-    def bounds_center(bounds: str):
-        m = re.match(r"\[(\d+),(\d+)\]\[(\d+),(\d+)\]", bounds or "")
-        if not m:
+    def get_ad_info(activity: str) -> Tuple[str, str, str]:
+        act_lower = (activity or "").lower()
+        if "applovin" in act_lower:
+            network = "AppLovin"
+            ad_type = "Fullscreen / Rewarded"
+        elif "mbridge" in act_lower or "mintegral" in act_lower:
+            network = "Mintegral (MBridge)"
+            ad_type = "Rewarded Video" if "reward" in act_lower else "Interstitial"
+        elif "unity3d" in act_lower or "unity" in act_lower:
+            network = "Unity Ads"
+            ad_type = "FullScreen WebView Display" if "fullscreenwebview" in act_lower else "AdUnit"
+        elif "bytedance" in act_lower or "openadsdk" in act_lower or "pangle" in act_lower:
+            network = "Pangle (ByteDance)"
+            ad_type = "Rewarded / Interstitial"
+        elif "kwad" in act_lower or "kwai" in act_lower or "ksad" in act_lower:
+            network = "Kwai Ads"
+            ad_type = "Rewarded Video"
+        elif "gms.ads" in act_lower or "admob" in act_lower or "google" in act_lower:
+            network = "Google AdMob"
+            ad_type = "AdActivity"
+        elif "ironsource" in act_lower:
+            network = "ironSource"
+            ad_type = "Rewarded / Interstitial"
+        elif "vungle" in act_lower:
+            network = "Vungle (Liftoff)"
+            ad_type = "Fullscreen Ad"
+        elif "facebook" in act_lower or "audiencenetwork" in act_lower:
+            network = "Meta (Facebook Audience Network)"
+            ad_type = "Audience Network Fullscreen"
+        else:
+            network = "Game Ad Network"
+            ad_type = "Fullscreen Activity"
+
+        short_id = activity.split(".")[-1] if "." in activity else activity
+        return network, ad_type, short_id
+
+    def is_meta_ad(self, app: Optional[ForegroundApp]) -> bool:
+        if not app:
+            return False
+        act_lower = (app.activity or "").lower()
+        if any(token in act_lower for token in ("facebook", "audiencenetwork", "meta")):
+            return True
+        if getattr(self, "_is_current_ad_meta", False):
+            return True
+        return False
+
+    def on_ad_finished(self, activity: str, duration: float) -> None:
+        self.completed_ads_count += 1
+        now = time.time()
+        # Setelah iklan selesai: buka 2 web slot di Chrome lalu buka 1 aplikasi slot acak (rr33, k68, fj99)
+        if ENABLE_SLOT_SEEDING_AFTER_AD and now - self.last_chrome_seed_ts >= 25.0:
+            self.last_chrome_seed_ts = now
+            self.run_slot_seeding_and_app_routine()
+
+    def adb_type_text(self, text: str) -> None:
+        """Ketik teks via ADB input text dengan penanganan karakter khusus seperti * dan @."""
+        if not text:
+            return
+        special = " *?&$()[]{}|;<>`\"'\\"
+        if "*" in text:
+            parts = text.split("*")
+            for i, part in enumerate(parts):
+                if part:
+                    safe = "".join(("\\" + ch) if ch in special else ch for ch in part)
+                    self.adb_out(["shell", "input", "text", safe], timeout=4)
+                if i < len(parts) - 1:
+                    # KEYCODE_STAR = 17
+                    self.adb_out(["shell", "input", "keyevent", "17"], timeout=3)
+        else:
+            safe = "".join(("\\" + ch) if ch in special else ch for ch in text)
+            self.adb_out(["shell", "input", "text", safe], timeout=4)
+
+    def match_registration_field(self, text: str) -> Optional[str]:
+        """Cocokkan label teks OCR dengan jenis field formulir pendaftaran."""
+        norm = self.normalize_text(text)
+        if not norm or len(norm) < 3:
             return None
-        x1, y1, x2, y2 = map(int, m.groups())
-        return (x1 + x2) // 2, (y1 + y2) // 2, x1, y1, x2, y2
 
-    # ===================== OCR =====================
+        # 1. Konfirmasi Kata Sandi / Password (harus diperiksa SEBELUM password)
+        if (
+            any(k in norm for k in [
+                "konfirmasikatasandi", "konfirmasisandi", "konfirmasipassword",
+                "ulangikatasandi", "ulangisandi", "ulangipassword",
+                "confirmpassword", "repeatpassword"
+            ])
+            or ("konfirmasi" in norm and ("sandi" in norm or "password" in norm))
+            or ("ulangi" in norm and ("sandi" in norm or "password" in norm))
+        ):
+            return "confirm_password"
 
-    def ocr_screen(self, prefix: str) -> list:
-        if not os.path.exists(OCR_HELPER):
-            return []
-        cap = self.capture_png()
-        if not cap:
-            return []
-        png, w, h = cap
+        # 2. Kata Sandi / Password
+        if any(k in norm for k in ["katasandi", "password", "sandi", "katakunci"]):
+            if not any(neg in norm for neg in ["konfirmasi", "ulangi", "confirm", "repeat"]):
+                return "password"
+
+        # 3. Nomor Rekening (harus diperiksa SEBELUM nomor telepon)
+        if (
+            any(k in norm for k in ["nomorrekening", "norekening", "norek", "nomorakun", "nomorewallet", "noewallet"])
+            or ("rekening" in norm and "nomor" in norm)
+        ):
+            return "rek"
+
+        # 4. Nama Pemilik Rekening
+        if (
+            any(k in norm for k in ["namarekening", "namapemilik", "namasesuairekening"])
+            or ("rekening" in norm and "nama" in norm)
+        ):
+            return "nama_rek"
+
+        # 5. Bank / Metode Pembayaran / E-Wallet
+        if (
+            any(k in norm for k in ["pilihbank", "namabank", "jenisbank", "metodepembayaran", "jenisrekening", "akunbank", "ewallet"])
+            or norm == "bank"
+            or ("pilih" in norm and "pembayaran" in norm)
+        ):
+            return "bank"
+
+        # 6. Nomor Telepon / HP / WhatsApp
+        if any(k in norm for k in ["nomortelepon", "notelepon", "nomorhp", "nohp", "telepon", "whatsapp", "nowa", "nomorkontak", "kontak", "nohandphone"]):
+            return "phone"
+
+        # 7. Email / Alamat Email
+        if any(k in norm for k in ["email", "alamatemail", "surel"]) or "@" in norm:
+            return "email"
+
+        # 8. Nama Pengguna / Username
+        if (
+            any(k in norm for k in ["namapengguna", "username", "userid", "namaakun", "idpengguna", "namalengkap", "loginid"])
+            or norm == "nama"
+        ):
+            return "username"
+
+        return None
+
+    def select_ovo_option_if_present(self) -> bool:
+        """Cari teks 'OVO' di layar (setelah klik dropdown bank/metode pembayaran), lalu klik."""
+        screenshot = self.capture_screenshot()
+        if not screenshot:
+            return False
+        png_data, width, height = screenshot
         safe_serial = re.sub(r"[^a-zA-Z0-9_.-]+", "_", self.serial or "default")
-        path = f"/tmp/luckyarrow_{prefix}_{safe_serial}.png"
+        screenshot_path = f"/tmp/lucky_arrow_bank_drop_{safe_serial}.png"
         try:
-            with open(path, "wb") as f:
-                f.write(png)
+            with open(screenshot_path, "wb") as f:
+                f.write(png_data)
+            result = subprocess.run(
+                [OCR_HELPER, screenshot_path],
+                capture_output=True,
+                text=True,
+                timeout=8,
+            )
         except Exception:
-            return []
+            return False
+
+        for line in (result.stdout or "").splitlines():
+            text, _, bbox = line.partition("|")
+            text = text.strip()
+            norm = self.normalize_text(text)
+            if "ovo" in norm:
+                try:
+                    bx, by, bw, bh = [float(p) for p in bbox.split(",")]
+                    cx = int((bx + bw / 2) * width)
+                    cy = int((1 - by - bh / 2) * height)
+                    if 180 <= cy <= 1580:
+                        self.log(f"Opsi OVO terdeteksi di ({cx},{cy}), memilih OVO!")
+                        self.tap(cx, cy, color="green")
+                        time.sleep(0.8)
+                        return True
+                except Exception:
+                    pass
+        return False
+
+    def fill_registration_form(self, search_label: str = "WEB SLOT") -> None:
+        """Isi formulir pendaftaran akun dengan data Wahyu91123, 085157993801, OVO, wahyu91123@gmail.com, Wahyu123*."""
+        self.log(f"[{search_label}]: Memulai pengisian formulir pendaftaran akun...")
+
+        field_values = {
+            "username": "Wahyu91123",
+            "password": "Wahyu123*",
+            "confirm_password": "Wahyu123*",
+            "email": "wahyu91123@gmail.com",
+            "phone": "085157993801",
+            "bank": "OVO",
+            "rek": "085157993801",
+            "nama_rek": "Wahyu",
+        }
+
+        filled_fields = set()
+
+        # Lakukan 2 pass:
+        # Pass 1: isi inputan yang tampak di layar atas
+        # Scroll sedikit ke bawah untuk memunculkan sisa inputan
+        # Pass 2: isi inputan yang baru terlihat di bagian bawah
+        for pass_num in (1, 2):
+            screenshot = self.capture_screenshot()
+            if not screenshot:
+                break
+            png_data, width, height = screenshot
+            safe_serial = re.sub(r"[^a-zA-Z0-9_.-]+", "_", self.serial or "default")
+            screenshot_path = f"/tmp/lucky_arrow_reg_form_{safe_serial}.png"
+            try:
+                with open(screenshot_path, "wb") as f:
+                    f.write(png_data)
+                result = subprocess.run(
+                    [OCR_HELPER, screenshot_path],
+                    capture_output=True,
+                    text=True,
+                    timeout=10,
+                )
+            except Exception:
+                break
+
+            entries = []
+            for line in (result.stdout or "").splitlines():
+                text, _, bbox = line.partition("|")
+                text = text.strip()
+                bbox = bbox.strip()
+                if not text or not bbox:
+                    continue
+                try:
+                    bx, by, bw, bh = [float(p) for p in bbox.split(",")]
+                    cx = int((bx + bw / 2) * width)
+                    cy = int((1 - by - bh / 2) * height)
+                except Exception:
+                    continue
+                if cy < 160 or cy > 1580:
+                    continue
+                entries.append((text, bbox, cx, cy))
+
+            # Urutkan dari atas ke bawah
+            entries.sort(key=lambda item: item[3])
+
+            for text, _bbox, cx, cy in entries:
+                field_type = self.match_registration_field(text)
+                if not field_type or field_type in filled_fields:
+                    continue
+
+                val = field_values.get(field_type)
+                if not val:
+                    continue
+
+                # Titik tap input box: di kanan atau sedikit di bawah label
+                tap_x = 360 if cx < 250 else cx
+                tap_y = (cy + 42) if (cy + 42) < 1550 else cy
+
+                if field_type == "bank":
+                    self.log(f"[{search_label}]: Memilih Bank/Metode Pembayaran '{text}' di ({tap_x},{tap_y}) -> OVO")
+                    self.tap(tap_x, tap_y, color="yellow")
+                    time.sleep(0.4)
+                    ovo_selected = self.select_ovo_option_if_present()
+                    if not ovo_selected:
+                        self.adb_type_text("OVO")
+                    filled_fields.add("bank")
+                    time.sleep(0.25)
+                else:
+                    self.log(f"[{search_label}]: Mengisi input '{text}' [{field_type}] di ({tap_x},{tap_y}) dengan '{val}'")
+                    self.tap(tap_x, tap_y, color="yellow")
+                    time.sleep(0.25)
+                    self.adb_type_text(val)
+                    filled_fields.add(field_type)
+                    time.sleep(0.25)
+
+            if pass_num == 1:
+                # Scroll ke bawah untuk menampilkan sisa field (metode pembayaran, rekening, dsb.)
+                self.adb_out(["shell", "input", "swipe", "360", "1100", "360", "600", "300"], timeout=4)
+                time.sleep(0.5)
+
+        self.log(f"[{search_label}]: Formulir pendaftaran selesai diisi. Field terisi: {list(filled_fields)}")
+
+    def find_web_daftar_button(self) -> Optional[Tuple[str, str, int, int]]:
+        """Mendeteksi tombol/link DAFTAR, REGISTER, SIGN UP, REGISTRASI pada halaman web yang dibuka."""
+        screenshot = self.capture_screenshot()
+        if not screenshot:
+            return None
+        png_data, width, height = screenshot
+
+        safe_serial = re.sub(r"[^a-zA-Z0-9_.-]+", "_", self.serial or "default")
+        screenshot_path = f"/tmp/lucky_arrow_web_daftar_{safe_serial}.png"
         try:
-            r = subprocess.run([OCR_HELPER, path], capture_output=True, text=True, timeout=10)
-            raw = r.stdout or ""
+            with open(screenshot_path, "wb") as f:
+                f.write(png_data)
+            result = subprocess.run(
+                [OCR_HELPER, screenshot_path],
+                capture_output=True,
+                text=True,
+                timeout=10,
+            )
         except Exception:
-            return []
-        entries = []
-        for line in raw.strip().splitlines():
+            return None
+
+        register_keywords = [
+            "daftar", "register", "registrasi", "signup", "sign up",
+            "gabung", "buka akun", "buat akun", "klaim bonus", "claim bonus", "join now"
+        ]
+        exclude_words = ["cara", "mengklik", "syarat", "ketentuan", "panduan", "adalah", "tentang", "about", "hasil"]
+
+        candidates: list[Tuple[int, str, str, int, int]] = []
+        for line in (result.stdout or "").splitlines():
             text, _, bbox = line.partition("|")
             text = text.strip()
             bbox = bbox.strip()
@@ -322,91 +971,713 @@ class Bot:
                 continue
             try:
                 bx, by, bw, bh = [float(p) for p in bbox.split(",")]
-                x = int((bx + bw / 2) * w)
-                y = int((1.0 - by - bh / 2) * h)
+                cx = int((bx + bw / 2) * width)
+                cy = int((1 - by - bh / 2) * height)
             except Exception:
-                x, y = w // 2, h // 2
-            entries.append((text, x, y, bbox))
-        return entries
+                continue
 
-    # ===================== GAME LAUNCH =====================
+            # Abaikan status bar / URL bar atas (cy < 180) dan navbar Android bawah (cy > 1580)
+            if cy < 180 or cy > 1580:
+                continue
 
-    def clear_ad_cache(self) -> None:
-        """Bersihkan cache iklan usang (termasuk 114MB video MBridge & Unity) agar SDK mediasi melelang iklan video baru bernilai tinggi (Meta & Kwai)."""
+            words = text.split()
+            # Tombol biasanya singkat (1 - 4 kata, <= 25 karakter)
+            if len(words) > 4 or len(text) > 25:
+                continue
+
+            lower_text = text.lower()
+            if any(ex in lower_text for ex in exclude_words):
+                continue
+
+            norm = self.normalize_text(text)
+            for kw in register_keywords:
+                kw_norm = self.normalize_text(kw)
+                if kw_norm in norm:
+                    # Prioritaskan kata 'daftar' dan 'register' di atas yang lain
+                    priority = 0 if ("daftar" in norm or "register" in norm) else 1
+                    candidates.append((priority, text, bbox, cx, cy))
+                    break
+
+        if not candidates:
+            return None
+
+        candidates.sort(key=lambda c: (c[0], c[4]))  # prioritas, lalu y
+        _, best_text, best_bbox, best_x, best_y = candidates[0]
+        return best_text, best_bbox, best_x, best_y
+
+    def browse_google_and_click_sites(self, query: str, search_label: str = "WEB SLOT 1/2") -> None:
+        """Buka Google Search di Chrome, scroll hasil pencarian, klik beberapa situs, dan klik tombol daftar jika ada."""
+        import urllib.parse
+
+        url = f"https://www.google.com/search?q={urllib.parse.quote_plus(query)}"
+        self.log(f"[{search_label}]: Google Search '{query}'")
+        self.adb_out([
+            "shell", "am", "start",
+            "-a", "android.intent.action.VIEW",
+            "-d", url,
+            "com.android.chrome"
+        ], timeout=6)
+        time.sleep(1.8)
+
+        for site_idx in (1, 2):
+            if site_idx == 1:
+                # Scroll Google hasil pencarian awal
+                self.adb_out(["shell", "input", "swipe", "360", "950", "360", "550", "250"], timeout=4)
+                time.sleep(0.4)
+                tap_x, tap_y = 360, 680
+            else:
+                # Scroll Google lebih ke bawah untuk mendapatkan situs berbeda
+                self.adb_out(["shell", "input", "swipe", "360", "1100", "360", "450", "300"], timeout=4)
+                time.sleep(0.4)
+                tap_x, tap_y = 360, 780
+
+            self.log(f"[{search_label} - SITUS {site_idx}]: Klik link situs hasil pencarian Google di ({tap_x},{tap_y})")
+            self.tap(tap_x, tap_y, color="green")
+            time.sleep(2.2)
+
+            # Scroll ke bawah di dalam situs untuk memicu pemuatan aset & tracking
+            self.adb_out(["shell", "input", "swipe", "360", "1000", "360", "550", "300"], timeout=4)
+            time.sleep(0.6)
+
+            # Cari tombol DAFTAR / REGISTER
+            daftar_btn = self.find_web_daftar_button()
+            if not daftar_btn:
+                # Coba scroll sekali lagi jika tombol ada di posisi lebih bawah
+                self.adb_out(["shell", "input", "swipe", "360", "900", "360", "450", "300"], timeout=4)
+                time.sleep(0.6)
+                daftar_btn = self.find_web_daftar_button()
+
+            if daftar_btn:
+                dtext, _dbbox, dx, dy = daftar_btn
+                self.log(f"[{search_label} - SITUS {site_idx}]: Menemukan tombol DAFTAR '{dtext}' di ({dx},{dy}) -> KLIK TOMBOL DAFTAR!")
+                self.tap(dx, dy, color="green")
+                # Waktu muat modal formulir pendaftaran
+                time.sleep(1.8)
+                # Isi formulir pendaftaran dengan data akun (Wahyu91123, 085157993801, OVO, wahyu91123@gmail.com, Wahyu123*)
+                self.fill_registration_form(search_label=f"{search_label} - SITUS {site_idx}")
+                time.sleep(0.5)
+            else:
+                self.log(f"[{search_label} - SITUS {site_idx}]: Tombol DAFTAR tidak terdeteksi di situs ini, selesai jelajah situs.")
+
+            # Jika masih ada situs berikutnya di pencarian ini, kembali ke Google Search
+            if site_idx < 2:
+                self.log(f"[{search_label}]: Kembali ke halaman pencarian Google...")
+                self.adb_out(["shell", "input", "keyevent", "BACK"], timeout=3)
+                time.sleep(0.6)
+                app = self.get_foreground_app()
+                if not app or "chrome" not in app.package:
+                    self.adb_out([
+                        "shell", "am", "start",
+                        "-a", "android.intent.action.VIEW",
+                        "-d", url,
+                        "com.android.chrome"
+                    ], timeout=6)
+                    time.sleep(1.2)
+
+    def run_slot_seeding_and_app_routine(self) -> None:
+        """Setelah iklan: buka web slot di Chrome, scroll & klik beberapa situs, klik tombol daftar jika ada, buka 1 aplikasi slot acak (rr33, k68, fj99), lalu kembali ke game."""
+        if not ENABLE_SLOT_SEEDING_AFTER_AD:
+            return
+        self.seeding_slot_routine = True
+        self.log("=== MEMULAI SIKLUS INJEKSI SLOT: GOOGLE SEARCH + SCROLL BEBERAPA SITUS + KLIK DAFTAR + 1 APLIKASI SLOT ACAK ===")
         try:
-            self.adb_out(["shell", "rm -rf /sdcard/Android/data/com.starlightgame.luckyarrowescaper/files/mb/res/Movies/mb/res/.MBridge_VC/* /sdcard/Android/data/com.starlightgame.luckyarrowescaper/files/mb/res/.mbridge700/* /sdcard/Android/data/com.starlightgame.luckyarrowescaper/cache/kwaiadsdk/* /sdcard/Android/data/com.starlightgame.luckyarrowescaper/cache/UnityAdsCache/* 2>/dev/null"], timeout=3)
-            self.adb_out(["shell", "settings put system pointer_location 0"], timeout=3)
+            import random
+
+            slot_keywords = [
+                "slot gacor hari ini pragmatic play",
+                "daftar situs judi slot online terpercaya",
+                "demo slot pg soft gacor rupiah",
+                "slot online maxwin deposit dana",
+                "link slot gacor resmi indonesia",
+                "pragmatic play gates of olympus slot gacor",
+                "situs slot resmi terpercaya bonus new member",
+                "bocoran rtp live slot tertinggi",
+                "daftar akun slot gacor gampang menang",
+            ]
+
+            # 1. Buka Google Search Pertama & jelajahi beberapa situs + tombol daftar
+            kw1 = random.choice(slot_keywords)
+            self.browse_google_and_click_sites(kw1, search_label="WEB SLOT 1/2")
+
+            # 2. Buka Google Search Kedua & jelajahi beberapa situs + tombol daftar
+            remaining_kws = [k for k in slot_keywords if k != kw1]
+            kw2 = random.choice(remaining_kws) if remaining_kws else "slot online terpercaya"
+            self.browse_google_and_click_sites(kw2, search_label="WEB SLOT 2/2")
+
+            # Tutup Chrome setelah kedua web slot dibuka
+            self.adb_out(["shell", "am", "force-stop", "com.android.chrome"], timeout=4)
+            time.sleep(0.4)
+
+            # 3. Buka salah satu aplikasi slot acak yang terinstall
+            slot_apps = [
+                {"name": "RR33", "pkg": "RR33.COM"},
+                {"name": "K68", "pkg": "com.k68.id.xulsfy"},
+                {"name": "FJ99", "pkg": "org.chromium.webapk.a1ffa4016fb2cda0c_v2"},
+            ]
+            installed_list = self.adb_out(["shell", "pm", "list", "packages"]).splitlines()
+            installed_set = {p.replace("package:", "").strip() for p in installed_list}
+            eligible = [a for a in slot_apps if a["pkg"] in installed_set]
+            chosen_app = random.choice(eligible) if eligible else slot_apps[0]
+
+            # Jika layanan Inject Iklan terpasang, picu siklus latar belakangnya
+            if "com.openclaw.injectiklan" in installed_set:
+                self.log("[INJECT IKLAN SERVICE]: Memicu InjectForegroundService untuk penguatan persona...")
+                self.adb_out(["shell", "am", "start-foreground-service", "-a", "com.openclaw.injectiklan.RUN_ONCE", "com.openclaw.injectiklan/.InjectForegroundService"], timeout=5)
+            app_name = chosen_app["name"]
+            app_pkg = chosen_app["pkg"]
+            self.log(f"[APLIKASI SLOT ACAK]: Membuka aplikasi {app_name} ({app_pkg})...")
+            self.adb_out([
+                "shell", "monkey", "-p", app_pkg,
+                "-c", "android.intent.category.LAUNCHER", "1"
+            ], timeout=6)
+            # Sesi aktif di OS & SDK iklan
+            time.sleep(2.2)
+            self.adb_out(["shell", "input", "swipe", "360", "900", "360", "650", "250"], timeout=4)
+            time.sleep(0.4)
+            self.log(f"[APLIKASI SLOT ACAK]: {app_name} selesai dibuka, menutup aplikasi")
+            self.adb_out(["shell", "am", "force-stop", app_pkg], timeout=4)
+
+        except Exception as e:
+            self.log(f"ERROR SIKLUS SLOT: {e}")
+        finally:
+            self.seeding_slot_routine = False
+            self.log("=== SIKLUS SLOT SELESAI: Kembali ke game Lucky Arrow Escaper via Riwayat ===")
+            self.open_game_from_recents(reason="selesai siklus slot acak")
+            time.sleep(0.8)
+
+    def is_bad_ad_activity(self, activity: str) -> bool:
+        return activity.lower() in BAD_AD_ACTIVITIES
+
+    def handle_bad_ad_if_needed(self, activity: str) -> bool:
+        if not self.is_bad_ad_activity(activity):
+            return False
+        now = time.time()
+        if now - self.last_bad_ad_restart_ts < 20:
+            return True
+        self.last_bad_ad_restart_ts = now
+        self.clear_apps_and_reopen_game(
+            f"menemukan iklan blacklist/tidak menambah hadiah: {activity}"
+        )
+        return True
+
+    def update_ad_log(self, app: Optional[ForegroundApp]) -> None:
+        if app and self.is_game_ad(app):
+            now = time.time()
+            elapsed = now - self.ad_start_ts if self.ad_start_ts else 0
+
+            if self.handle_bad_ad_if_needed(app.activity):
+                return
+
+            if self.ad_start_ts is None or self.ad_activity != app.activity:
+                self.ad_start_ts = now
+                self.ad_close_same_btn_count = 0
+                self.ad_close_last_btn_key = ""
+                self.ad_activity = app.activity
+                self.last_ad_log_second = 0
+                self.meta_ad_close_tap_count = 0
+                self.last_meta_close_tap_ts = 0.0
+                self._last_meta_wait_logged = -1
+                self._is_current_ad_meta = any(token in app.activity.lower() for token in ("facebook", "audiencenetwork", "meta"))
+                net, ad_type, short_id = self.get_ad_info(app.activity)
+                is_meta = self.is_meta_ad(app)
+                target_str = " | target 60s (Meta)" if is_meta else " | target 30s"
+                self.log(f"IKLAN TERBUKA [NETWORK: {net} | TIPE: {ad_type} | ID: {short_id}]: {app.activity} | durasi {self.format_duration(0)}{target_str}")
+                source = "DOBEL" if self.dobel_visible else ("GELEMBUNG" if self.bubble_watch_active else "DETEKSI GAME")
+                if source == "DOBEL" and self.handle_dobel_ad_opened(app.activity):
+                    return
+                self.notify_ad_opened(app.activity, source=source, info="activity iklan baru terdeteksi")
+                return
+
+            if elapsed >= AD_STUCK_RESTART_SECONDS:
+                self.restart_game_for_stuck_ad(
+                    f"{app.activity} terbuka {self.format_duration(elapsed)} tanpa selesai"
+                )
+                return
+
+            elapsed_second = int(elapsed)
+            # Log durasi setiap interval cek, tapi tidak dobel dalam detik yang sama.
+            if elapsed_second != self.last_ad_log_second:
+                self.last_ad_log_second = elapsed_second
+                net, ad_type, short_id = self.get_ad_info(app.activity)
+                is_meta = self.is_meta_ad(app)
+                target_str = " / target 60s (Meta)" if is_meta else " / target 30s"
+                self.log(f"IKLAN DITONTON [NETWORK: {net} | ID: {short_id}]: durasi {self.format_duration(elapsed)}{target_str}")
+            return
+
+        if self.ad_start_ts is not None:
+            elapsed = time.time() - self.ad_start_ts
+            finished_ad = self.ad_activity
+            net, ad_type, short_id = self.get_ad_info(finished_ad)
+            self.log(f"IKLAN SELESAI [NETWORK: {net} | ID: {short_id}]: {finished_ad} | total durasi {self.format_duration(elapsed)}")
+            self.ad_start_ts = None
+            self.ad_activity = ""
+            self._is_current_ad_meta = False
+            self.meta_ad_close_tap_count = 0
+            self.last_meta_close_tap_ts = 0.0
+            self._last_meta_wait_logged = -1
+            self.last_ad_log_second = -1
+            self.last_ad_close_check_ts = 0.0
+            self.on_ad_finished(finished_ad, elapsed)
+
+    @staticmethod
+    def normalize_text(text: str) -> str:
+        return re.sub(r"[^a-z0-9]+", "", text.lower())
+
+    @staticmethod
+    def parse_rupiah_value(text: str) -> Optional[float]:
+        cleaned = (
+            text.replace("R p", "Rp")
+            .replace("RP", "Rp")
+            .replace("Rp.", "Rp")
+            .replace("Rpl", "Rp1")
+            .replace("RpI", "Rp1")
+        )
+        match = re.search(r"Rp\s*([0-9][0-9.,]*)", cleaned, re.I)
+        if not match:
+            return None
+        raw = re.sub(r"[^0-9,.]", "", match.group(1))
+        if not raw:
+            return None
+        # Format Indonesia: 577,11 atau 1.234,56
+        if "," in raw and "." in raw:
+            raw = raw.replace(".", "").replace(",", ".")
+        elif "," in raw:
+            raw = raw.replace(",", ".")
+        try:
+            return float(raw)
+        except ValueError:
+            return None
+
+    @staticmethod
+    def format_rupiah(value: Optional[float]) -> str:
+        if value is None:
+            return "-"
+        return f"Rp {value:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+
+    @staticmethod
+    def load_saldo_state() -> dict:
+        try:
+            if os.path.exists(SALDO_STATE_FILE):
+                with open(SALDO_STATE_FILE, "r", encoding="utf-8") as f:
+                    return json.load(f)
+        except Exception:
+            pass
+        return {}
+
+    @staticmethod
+    def save_saldo_state(state: dict) -> None:
+        try:
+            with open(SALDO_STATE_FILE, "w", encoding="utf-8") as f:
+                json.dump(state, f, ensure_ascii=False, indent=2)
         except Exception:
             pass
 
-    def launch_game(self, reason: str = "", hard_restart: bool = False) -> None:
-        if hard_restart:
-            self.clear_ad_cache()
-        now = time.time()
-        if now - self.last_launch_ts < 3:
-            return
-        self.last_launch_ts = now
-        self.log(f"BUKA GAME: {reason or 'ensure foreground'}{' [HARD]' if hard_restart else ''}")
-        for pkg in BLOCKED_PACKAGES:
-            self.adb_out(["shell", "am", "force-stop", pkg], timeout=3)
-        if hard_restart:
-            self.log("HARD RESTART: force-stop game dan tunggu 3 detik")
-            self.adb_out(["shell", "am", "force-stop", TARGET_PACKAGE], timeout=5)
-            time.sleep(3)
-        self.adb_out(["shell", "monkey", "-p", TARGET_PACKAGE, "-c", "android.intent.category.LAUNCHER", "1"], timeout=6)
-        time.sleep(0.4 if not hard_restart else 2)
-        app = self.foreground()
-        if not app or app.package != TARGET_PACKAGE:
-            self.adb_out(["shell", "am", "start", "-n", f"{TARGET_PACKAGE}/.AppActivity"], timeout=6)
-        self.ad_start_ts = None
-        self.ad_title_confirmed = False
-
-    def is_ad(self, app: ForegroundApp) -> bool:
-        if app.package != TARGET_PACKAGE:
-            return False
-        low = f"{app.package}/{app.activity}".lower()
-        return any(k in low for k in AD_KEYWORDS)
-
-    # ===================== CONFIRM TO CLOSE POPUP =====================
-
-    def find_continue_on_close_confirm(self):
-        confirm_words = (
-            "confirm to close", "not be rewarded", "will not be rewarded",
-            "after closing", "closing the window",
-        )
-        continue_words = ("continue", "lanjut", "lanjutkan")
-
-        entries = self.ocr_screen("confirm_continue")
-        labels = [self.norm(text) for text, *_ in entries]
-        if not any(any(word in label for word in confirm_words) for label in labels):
-            return None
-        candidates = []
-        for text, x, y, _bbox in entries:
-            n = self.norm(text)
-            if any(word == n or word in n for word in continue_words):
-                candidates.append((text, x, y, "ocr"))
+    def detect_top_rupiah_balance(self) -> Optional[Tuple[float, str]]:
+        """OCR saldo Rp di header atas game."""
+        entries = self.ocr_current_screen("saldo")
+        candidates: list[Tuple[int, float, str]] = []
+        for text, _bbox, _x, y in entries:
+            # Header saldo ada di bagian atas layar.
+            if y > 260:
+                continue
+            value = self.parse_rupiah_value(text)
+            if value is not None:
+                candidates.append((y, value, text))
         if not candidates:
+            # Fallback: OCR kadang memecah kata; gabungkan semua text bagian atas.
+            top_text = " ".join(text for text, _bbox, _x, y in entries if y <= 260)
+            value = self.parse_rupiah_value(top_text)
+            if value is not None:
+                return value, top_text
             return None
-        return sorted(candidates, key=lambda c: (-c[1], c[2]))[0]
+        candidates.sort(key=lambda item: item[0])
+        _y, value, raw_text = candidates[0]
+        return value, raw_text
 
-    # ===================== HOUGH CIRCLE TOP-RIGHT (X / ARROW) =====================
+    def send_telegram_message(self, message: str) -> None:
+        if not os.path.exists(TELEGRAM_SENDER):
+            self.log(f"TELEGRAM GAGAL: sender tidak ada {TELEGRAM_SENDER}")
+            return
+        try:
+            result = subprocess.run(
+                ["python3", TELEGRAM_SENDER, message],
+                capture_output=True,
+                text=True,
+                timeout=15,
+            )
+            ok = result.returncode == 0
+            self.log(f"TELEGRAM {'TERKIRIM' if ok else 'GAGAL'}: saldo report | rc={result.returncode}")
+            if result.stdout.strip():
+                self.log(f"TELEGRAM STDOUT: {result.stdout.strip()[:180]}")
+            if result.stderr.strip():
+                self.log(f"TELEGRAM STDERR: {result.stderr.strip()[:180]}")
+        except Exception as exc:
+            self.log(f"TELEGRAM ERROR: {exc}")
 
-    def find_ad_top_corner_button(self):
-        """Deteksi tombol close/next iklan di pojok kanan atas via Hough circle & contour."""
-        cap = self.capture_png()
-        if not cap:
+    def capture_and_report_balance(self, reason: str) -> None:
+        detected = self.detect_top_rupiah_balance()
+        if not detected:
+            self.log("SALDO RP TIDAK TERDETEKSI DI HEADER ATAS")
+            return
+
+        now_ts = time.time()
+        now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S WIB")
+        current_value, raw_text = detected
+        state = self.load_saldo_state()
+        prev_value = state.get("saldo_value")
+        prev_ts = state.get("timestamp")
+
+        diff_value = None
+        elapsed_text = "-"
+        if isinstance(prev_value, (int, float)):
+            diff_value = current_value - float(prev_value)
+        if isinstance(prev_ts, (int, float)):
+            elapsed_text = self.format_duration(now_ts - float(prev_ts))
+
+        state = {
+            "saldo_value": current_value,
+            "saldo_display": self.format_rupiah(current_value),
+            "raw_text": raw_text,
+            "timestamp": now_ts,
+            "time": now_str,
+            "reason": reason,
+        }
+        self.save_saldo_state(state)
+
+        diff_display = "-" if diff_value is None else self.format_rupiah(diff_value)
+        prev_display = "-" if prev_value is None else self.format_rupiah(float(prev_value))
+
+        message = (
+            "💰 <b>UPDATE SALDO LUCKY ARROW</b>\n"
+            f"🕐 <b>Waktu:</b> {html.escape(now_str)}\n"
+            f"📌 <b>Pemicu:</b> {html.escape(reason)}\n"
+            f"📊 <b>Saldo sebelumnya:</b> {html.escape(prev_display)}\n"
+            f"✅ <b>Saldo sekarang:</b> {html.escape(self.format_rupiah(current_value))}\n"
+            f"↕️ <b>Selisih saldo:</b> {html.escape(diff_display)}\n"
+            f"⏱️ <b>Jarak dari data sebelumnya:</b> {html.escape(elapsed_text)}\n"
+            f"🔎 <b>OCR:</b> <code>{html.escape(raw_text[:80])}</code>"
+        )
+        self.log(
+            f"SALDO TERDETEKSI: sekarang={self.format_rupiah(current_value)} "
+            f"sebelumnya={prev_display} selisih={diff_display} elapsed={elapsed_text}"
+        )
+        self.send_telegram_message(message)
+
+    def notify_dobel_found(
+        self,
+        text: str,
+        bbox: str,
+        ocr_x: int,
+        ocr_y: int,
+        tap_x: int,
+        tap_y: int,
+        reward_rp: Optional[Tuple[float, str, int, int]] = None,
+    ) -> None:
+        """Notif lengkap saat DOBEL terlihat: saldo header + Rp reward di atas tombol DOBEL."""
+        now_ts = time.time()
+        now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S WIB")
+
+        detected = self.detect_top_rupiah_balance()
+        current_display = "-"
+        prev_display = "-"
+        diff_display = "-"
+        elapsed_text = "-"
+        raw_balance = "-"
+
+        state = self.load_saldo_state()
+        prev_value = state.get("saldo_value")
+        prev_ts = state.get("timestamp")
+        if isinstance(prev_value, (int, float)):
+            prev_display = self.format_rupiah(float(prev_value))
+        if isinstance(prev_ts, (int, float)):
+            elapsed_text = self.format_duration(now_ts - float(prev_ts))
+
+        if detected:
+            current_value, raw_balance = detected
+            current_display = self.format_rupiah(current_value)
+            if isinstance(prev_value, (int, float)):
+                diff_display = self.format_rupiah(current_value - float(prev_value))
+            self.save_saldo_state({
+                "saldo_value": current_value,
+                "saldo_display": current_display,
+                "raw_text": raw_balance,
+                "timestamp": now_ts,
+                "time": now_str,
+                "reason": "saat menemukan tombol DOBEL sebelum klik",
+            })
+        else:
+            self.log("SALDO RP TIDAK TERDETEKSI DI HEADER ATAS SAAT DOBEL")
+
+        if reward_rp:
+            reward_value, reward_raw, reward_x, reward_y = reward_rp
+            reward_display = f"{self.format_rupiah(reward_value)} | OCR: {reward_raw} | pos=({reward_x},{reward_y})"
+        else:
+            reward_display = "-"
+
+        message = (
+            "<b>LUCKY ARROW: TOMBOL DOBEL TERDETEKSI</b>\n"
+            f"<b>Waktu:</b> {html.escape(now_str)}\n"
+            f"<b>Reward Rp di atas DOBEL:</b> {html.escape(reward_display)}\n"
+            f"<b>Saldo sebelumnya:</b> {html.escape(prev_display)}\n"
+            f"<b>Saldo sekarang:</b> {html.escape(current_display)}\n"
+            f"<b>Selisih saldo:</b> {html.escape(diff_display)}\n"
+            f"<b>Jarak dari data sebelumnya:</b> {html.escape(elapsed_text)}\n"
+            f"<b>Tombol:</b> <code>{html.escape(text)}</code> bbox=<code>{html.escape(bbox)}</code>\n"
+            f"<b>OCR/Tap:</b> ({ocr_x},{ocr_y}) -> ({tap_x},{tap_y})\n"
+            f"<b>OCR saldo:</b> <code>{html.escape(str(raw_balance)[:80])}</code>"
+        )
+        self.log(
+            f"TELEGRAM NOTIF: DOBEL | reward={reward_display} | "
+            f"saldo={current_display} prev={prev_display} diff={diff_display}"
+        )
+        self.send_telegram_message(message)
+
+    def notify_ad_opened(self, activity: str, source: str = "IKLAN", info: str = "") -> None:
+        now = time.time()
+        # Anti spam jika activity berulang.
+        if now - self.last_ad_open_telegram_ts < 8:
+            return
+        self.last_ad_open_telegram_ts = now
+        now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S WIB")
+        search_elapsed = "-"
+        if self.bubble_watch_start_ts and self.bubble_watch_active:
+            search_elapsed = self.format_duration(now - self.bubble_watch_start_ts)
+        message = (
+            "<b>LUCKY ARROW: IKLAN TERBUKA</b>\n"
+            f"<b>Waktu:</b> {html.escape(now_str)}\n"
+            f"<b>Sumber:</b> {html.escape(source)}\n"
+            f"<b>Activity iklan:</b> <code>{html.escape(activity)}</code>\n"
+            f"<b>Lama cari gelembung:</b> {html.escape(search_elapsed)}\n"
+            f"<b>Info:</b> {html.escape(info[:160])}"
+        )
+        self.log(f"TELEGRAM NOTIF: iklan terbuka | source={source} | {activity}")
+        self.send_telegram_message(message)
+
+    def notify_bubble_search_once(self, reason: str) -> None:
+        if self.bubble_search_notified:
+            return
+        self.bubble_search_notified = True
+        now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S WIB")
+        message = (
+            "🔎 <b>LUCKY ARROW: MULAI CARI GELEMBUNG</b>\n"
+            f"🕐 <b>Waktu:</b> {html.escape(now_str)}\n"
+            f"📌 <b>Pemicu:</b> {html.escape(reason)}\n"
+            f"⏳ <b>Timeout:</b> {html.escape(self.format_duration(BUBBLE_TIMEOUT_SECONDS))}\n"
+            "🎯 <i>Bot mulai scan cash-bubble dan akan brutal tap jika ketemu.</i>"
+        )
+        self.log(f"TELEGRAM NOTIF: mulai cari gelembung | {reason}")
+        self.send_telegram_message(message)
+
+    @staticmethod
+    def parse_bounds(bounds: str) -> Optional[Tuple[int, int]]:
+        match = re.match(r"\[(\d+),(\d+)\]\[(\d+),(\d+)\]", bounds or "")
+        if not match:
             return None
-        png, width, height = cap
+        x1, y1, x2, y2 = map(int, match.groups())
+        if x2 <= x1 or y2 <= y1 or (x2 - x1 < 12) or (y2 - y1 < 12):
+            return None
+        if x1 < 15 and y1 < 15 and x2 < 30 and y2 < 30:
+            return None
+        return (x1 + x2) // 2, (y1 + y2) // 2
+
+    def get_screen_size(self) -> Tuple[int, int]:
+        output = self.adb_out(["shell", "wm", "size"], timeout=5)
+        match = re.search(r"(\d+)x(\d+)", output)
+        if match:
+            return int(match.group(1)), int(match.group(2))
+        return 720, 1640
+
+    def capture_screenshot(self) -> Optional[Tuple[bytes, int, int]]:
+        png_data = self.adb_bytes(["exec-out", "screencap", "-p"], timeout=8)
+        if len(png_data) < 1000:
+            return None
+        try:
+            from PIL import Image
+            from io import BytesIO
+
+            image = Image.open(BytesIO(png_data))
+            width, height = image.size
+            return png_data, width, height
+        except Exception:
+            width, height = self.get_screen_size()
+            return png_data, width, height
+
+    def dump_ui_tree(self) -> Optional[ET.Element]:
+        # Hapus file lama terlebih dahulu agar tidak membaca XML basi (seperti 'Tutup sheet' Play Store)
+        self.adb_out(["shell", "rm", "-f", "/sdcard/lucky_arrow_ui.xml"], timeout=3)
+        dump_res = self.adb_out(["shell", "uiautomator", "dump", "/sdcard/lucky_arrow_ui.xml"], timeout=4)
+        if "dumped to" not in dump_res:
+            return None
+        xml_text = self.adb_out(["shell", "cat", "/sdcard/lucky_arrow_ui.xml"], timeout=4)
+        if "<hierarchy" not in xml_text:
+            return None
+        try:
+            return ET.fromstring(xml_text)
+        except ET.ParseError:
+            return None
+
+    def find_ad_finish_button_by_ui(self) -> Optional[Tuple[str, str, int, int]]:
+        root = self.dump_ui_tree()
+        if root is None:
+            return None
+
+        finish_words = {
+            "x",
+            "×",
+            "close",
+            "tutup",
+            "skip",
+            "lewati",
+            "next",
+            "lanjut",
+            ">",
+            "›",
+            "»",
+            ">|",
+            ">>",
+            "close ad",
+            "tutup iklan",
+        }
+        screen_w, screen_h = self.get_screen_size()
+        for node in root.iter("node"):
+            text = (node.get("text") or "").strip()
+            desc = (node.get("content-desc") or "").strip()
+            label = text or desc
+            if not label:
+                continue
+            norm = self.normalize_text(label)
+            raw = label.strip().lower()
+            if raw not in finish_words and norm not in finish_words and not any(token in norm for token in ("close", "tutup", "skip", "lewati")):
+                continue
+            center = self.parse_bounds(node.get("bounds", ""))
+            if not center:
+                continue
+            x, y = center
+            # Hindari tombol navigasi Android bawah; tombol close/next iklan biasanya tepi atas/kanan.
+            if y > screen_h * 0.88:
+                continue
+            is_corner = y < screen_h * 0.30 and (x < screen_w * 0.35 or x > screen_w * 0.65)
+            is_store = raw in {"play", "google play", "buka toko", "open store", "store", "install", "instal"}
+            if x > screen_w * 0.65 or y < screen_h * 0.30 or raw in {"close", "tutup", "skip", "lewati", "next", "lanjut"}:
+                if is_store and not is_corner:
+                    continue
+                kind = "X" if raw in {"x", "×", "close", "tutup"} else ("PLAY/STORE" if is_store else "PANAH_KANAN/NEXT")
+                return kind, label, x, y
+
+        # Kwai/Alliance sering menaruh tombol X sebagai ImageView tanpa text/content-desc.
+        image_candidates = []
+        for node in root.iter("node"):
+            klass = (node.get("class") or "").lower()
+            if "imageview" not in klass and "button" not in klass:
+                continue
+            bounds = node.get("bounds", "")
+            match = re.match(r"\[(\d+),(\d+)\]\[(\d+),(\d+)\]", bounds or "")
+            if not match:
+                continue
+            x1, y1, x2, y2 = map(int, match.groups())
+            w = x2 - x1
+            h = y2 - y1
+            if w < 18 or h < 18 or w > 70 or h > 70:
+                continue
+            x = (x1 + x2) // 2
+            y = (y1 + y2) // 2
+            if x < screen_w * 0.72 or y < screen_h * 0.18 or y > screen_h * 0.70:
+                continue
+            score = x + (screen_h * 0.70 - y) * 0.2
+            image_candidates.append((score, x, y, bounds))
+        if image_candidates:
+            image_candidates.sort(reverse=True)
+            _score, x, y, bounds = image_candidates[0]
+            return "X", f"kwai image close {bounds}", x, y
+        return None
+
+    def find_ad_finish_button_by_ocr(self, png_data: bytes, width: int, height: int) -> Optional[Tuple[str, str, int, int]]:
+        if not os.path.exists(OCR_HELPER):
+            return None
+
+        safe_serial = re.sub(r"[^a-zA-Z0-9_.-]+", "_", self.serial or "default")
+        screenshot_path = f"/tmp/lucky_arrow_ad_close_{safe_serial}.png"
+        try:
+            with open(screenshot_path, "wb") as f:
+                f.write(png_data)
+            result = subprocess.run(
+                [OCR_HELPER, screenshot_path],
+                capture_output=True,
+                text=True,
+                timeout=10,
+            )
+        except Exception:
+            return None
+
+        finish_labels = {
+            "x": "X",
+            "close": "X",
+            "tutup": "X",
+            "skip": "PANAH_KANAN/NEXT",
+            "lewati": "PANAH_KANAN/NEXT",
+            "next": "PANAH_KANAN/NEXT",
+            "lanjut": "PANAH_KANAN/NEXT",
+        }
+        arrow_chars = {">", "›", "»", "→", ">|", ">>", "> >", "|<", ">>|"}
+        for line in (result.stdout or "").splitlines():
+            text, _, bbox = line.partition("|")
+            label = text.strip()
+            if not label or not bbox:
+                continue
+            norm = self.normalize_text(label)
+            raw = label.strip().lower()
+            kind = None
+            if raw in arrow_chars:
+                kind = "PANAH_KANAN/NEXT"
+            elif norm in finish_labels:
+                kind = finish_labels[norm]
+            elif any(token in norm for token in ("close", "tutup")):
+                kind = "X"
+            elif any(token in norm for token in ("skip", "lewati", "next", "lanjut")):
+                kind = "PANAH_KANAN/NEXT"
+            elif any(token in norm for token in ("googleplay", "bukatoko", "bukotoko", "openstore")):
+                kind = "PLAY/STORE"
+            if not kind:
+                continue
+
+            try:
+                bx, by, bw, bh = [float(part) for part in bbox.split(",")]
+            except ValueError:
+                continue
+            x = int((bx + bw / 2) * width)
+            y = int((1 - by - bh / 2) * height)
+            # Conservative: icon/text harus di tepi atas atau sisi kanan, bukan area tombol install.
+            if y > height * 0.88:
+                continue
+            is_corner = y < height * 0.32 and (x < width * 0.38 or x > width * 0.62)
+            if kind == "PLAY/STORE" and not is_corner:
+                continue
+            # Tulisan Close/Tutup kadang berupa tombol teks di tengah/bawah iklan.
+            # Klik selama masih bukan area navigation bar bawah.
+            if kind == "X" and any(token in norm for token in ("close", "tutup")) and y < height * 0.86:
+                return kind, label, x, y
+            if x > width * 0.60 or y < height * 0.30:
+                return kind, label, x, y
+        return None
+
+    def find_ad_top_corner_button_by_image(self, png_data: bytes, width: int, height: int) -> Optional[Tuple[str, str, int, int]]:
+        """Prioritas tombol iklan di pojok atas (MBridge sering pakai lingkaran gelap dengan panah >).
+
+        Ini memperbaiki kasus bot salah klik ikon panah/gesture di tengah iklan.
+        """
         try:
             import cv2
             import numpy as np
         except Exception:
             return None
-        img = cv2.imdecode(np.frombuffer(png, dtype=np.uint8), cv2.IMREAD_COLOR)
+
+        img = cv2.imdecode(np.frombuffer(png_data, dtype=np.uint8), cv2.IMREAD_COLOR)
         if img is None:
             return None
 
-        # --- Hough circle di kanan atas ---
+        # Jalur khusus MBridge: tombol asli adalah lingkaran gelap di kanan atas
+        # dengan panah putih. Kontur biasa sering menyatu dengan header iklan,
+        # jadi pakai Hough circle dan tap sedikit di bawah center.
         try:
             rx1 = int(width * 0.72)
             ry1 = max(45, int(height * 0.030))
@@ -431,10 +1702,9 @@ class Bot:
                         abs_x = rx1 + int(cx)
                         abs_y = ry1 + int(cy)
                         r = int(radius)
-                        # Tombol X kanan atas tidak boleh menempel tepi border layar (lebar 720)
-                        if abs_x < width * 0.78 or abs_x > width - 25:
+                        if abs_x < width * 0.88:
                             continue
-                        if abs_y < max(60, int(height * 0.035)) or abs_y > height * 0.16:
+                        if abs_y < max(78, int(height * 0.045)) or abs_y > height * 0.14:
                             continue
                         patch = gray[
                             max(0, cy - r): min(gray.shape[0], cy + r),
@@ -442,15 +1712,34 @@ class Bot:
                         ]
                         if patch.size == 0:
                             continue
-                        mean_gray = float(patch.mean())
-                        if not (35 <= mean_gray <= 145):
+                        patch_y, patch_x = np.ogrid[:patch.shape[0], :patch.shape[1]]
+                        patch_mask = (
+                            (patch_x - (patch.shape[1] - 1) / 2) ** 2
+                            + (patch_y - (patch.shape[0] - 1) / 2) ** 2
+                            <= r * r
+                        )
+                        white_ratio = float(((patch > 180) & patch_mask).sum()) / max(1, int(patch_mask.sum()))
+                        # Lingkaran dekorasi bisa terlihat seperti tombol, tetapi
+                        # tombol X/panah memiliki tanda putih yang jelas di dalamnya.
+                        if white_ratio < 0.03:
                             continue
-                        # Tap tepat di pusat lingkaran tombol tanpa digeser ke bawah
+                        mean_gray = float(patch[patch_mask].mean())
+                        # Lingkaran close/next gelap; hindari lingkaran terang UI/game.
+                        if not (45 <= mean_gray <= 135):
+                            continue
+                        # Klik tepat di pusat lingkaran yang terdeteksi; jangan
+                        # menggeser ke bawah karena hitbox X tiap iklan berbeda.
                         tap_x = abs_x
                         tap_y = abs_y
-                        score = (abs_x / width) * 3000 + r * 40 - abs(abs_y - 115) * 8 - mean_gray
+                        score = (
+                            (abs_x / width) * 3000
+                            + white_ratio * 1500
+                            + r * 40
+                            - abs(abs_y - 115) * 8
+                            - mean_gray
+                        )
                         circle_candidates.append(
-                            (score, tap_x, tap_y, f"hough circle r={r} mean={mean_gray:.1f} center=({abs_x},{abs_y})")
+                            (score, tap_x, tap_y, f"hough top-right circle r={r} mean={mean_gray:.1f} center=({abs_x},{abs_y})")
                         )
                 if circle_candidates:
                     circle_candidates.sort(reverse=True)
@@ -459,11 +1748,11 @@ class Bot:
         except Exception:
             pass
 
-        # --- Contour fallback di kanan atas & kiri atas (hanya area status/header bar) ---
-        search_h = int(height * 0.12)
+        search_h = int(height * 0.20)
+        # Prioritaskan kanan atas, lalu kiri atas.
         areas = [
-            (int(width * 0.70), int(height * 0.025), width, search_h, "kanan-atas"),
-            (0, int(height * 0.025), int(width * 0.25), search_h, "kiri-atas"),
+            (int(width * 0.58), 0, width, search_h, "kanan-atas"),
+            (0, 0, int(width * 0.42), search_h, "kiri-atas"),
         ]
         candidates = []
         for ax1, ay1, ax2, ay2, area_name in areas:
@@ -471,932 +1760,1368 @@ class Bot:
             if roi.size == 0:
                 continue
             gray = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
+            # Tombol next/close MBridge biasanya lingkaran abu gelap.
             dark = cv2.inRange(gray, 35, 135)
             kernel = np.ones((3, 3), np.uint8)
             dark = cv2.morphologyEx(dark, cv2.MORPH_OPEN, kernel)
             dark = cv2.morphologyEx(dark, cv2.MORPH_CLOSE, kernel, iterations=2)
             contours, _ = cv2.findContours(dark, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
             for contour in contours:
-                x, y, w, h_c = cv2.boundingRect(contour)
+                x, y, w, h = cv2.boundingRect(contour)
                 area = cv2.contourArea(contour)
                 if area < 450 or area > 6500:
                     continue
-                if w < 25 or h_c < 25 or w > 95 or h_c > 95:
+                if w < 25 or h < 25 or w > 95 or h > 95:
                     continue
-                aspect = w / float(h_c)
-                if aspect < 0.5 or aspect > 2.0:
+                aspect = w / float(h)
+                if aspect < 0.65 or aspect > 1.55:
                     continue
                 abs_x = ax1 + x + w // 2
-                abs_y = ay1 + y + h_c // 2
-                priority = 2 if area_name == "kanan-atas" else 1
-                score = priority * 1000 + area
-                candidates.append((score, abs_x, abs_y, f"contour-{area_name} area={int(area)} size={w}x{h_c}"))
-        if candidates:
-            candidates.sort(reverse=True)
-            _score, x, y, label = candidates[0]
-            return "X_BUTTON", label, int(x), int(y)
-
-        return None
-
-    # ===================== ARROW ICON TOP RIGHT (HSV) =====================
-
-    def find_top_right_arrow_button(self):
-        cap = self.capture_png()
-        if not cap:
-            return None
-        png, w, h = cap
-        try:
-            import cv2
-            import numpy as np
-        except Exception:
-            return None
-        img = cv2.imdecode(np.frombuffer(png, dtype=np.uint8), cv2.IMREAD_COLOR)
-        if img is None:
-            return None
-
-        x_min = int(w * 0.80)
-        y_min = 0
-        y_max = int(h * 0.18)
-        roi = img[y_min:y_max, x_min:w]
-        if roi.size == 0:
-            return None
-
-        hsv = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
-        dark = cv2.inRange(hsv, (80, 35, 15), (145, 255, 155))
-        white = cv2.inRange(hsv, (0, 0, 175), (179, 90, 255))
-        if cv2.countNonZero(dark) < 350:
-            return None
-
-        contours, _ = cv2.findContours(white, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        for c in contours:
-            area = cv2.contourArea(c)
-            if area < 40 or area > 3000:
-                continue
-            bx, by, bw, bh = cv2.boundingRect(c)
-            cx = x_min + bx + bw // 2
-            cy = y_min + by + bh // 2
-            return "arrow_icon", cx, cy, "cv2"
-        return None
-
-    # ===================== CLOSE BUTTON (UI + OCR) =====================
-
-    def find_close_button(self):
-        w, h = self.screen_size()
-        entries = self.ocr_screen("close")
-        for text, x, y, bbox in entries:
-            n = self.norm(text)
-            if any(sw in n for sw in STORE_WORDS):
-                continue
-            if n in ("x", "\u00d7") or any(t in n for t in ("close", "tutup", "skip", "lewati")):
-                return text, x, y, "ocr"
-        return None
-
-    # ===================== AD HANDLING =====================
-
-    def detect_ad_network(self, activity: str) -> str:
-        act = (activity or "").lower()
-        if "audiencenetwork" in act or "facebook" in act:
-            return "Meta Audience Network"
-        if "alliance" in act or "kwai" in act or "ksad" in act:
-            return "Kwai Ads (Alliance)"
-        if "applovin" in act:
-            return "AppLovin MAX"
-        if "gms.ads" in act or "google" in act:
-            return "Google AdMob"
-        if "unity3d" in act or "unityads" in act:
-            return "Unity Ads"
-        if "mbridge" in act or "mintegral" in act:
-            return "Mintegral (MBridge)"
-        if "pangle" in act or "bytedance" in act:
-            return "Pangle (ByteDance)"
-        if "ironsource" in act:
-            return "ironSource"
-        if "vungle" in act:
-            return "Vungle"
-        return activity.split(".")[-1] if activity else "Unknown Network"
-
-    def analyze_ad_screen(self, app: ForegroundApp) -> tuple:
-        """Menganalisis layar iklan untuk mengekstrak Asal Network, Judul/App, Matched Keywords, dan Kategori Tier."""
-        network = self.detect_ad_network(app.activity)
-
-        entries = self.ocr_screen("ad_classify")
-        all_text = " ".join(t[0].lower() for t in entries)
-
-        # Deteksi sub-network jika ada label Mintegral atau Unity di layar
-        if "mintegral" in all_text and "mintegral" not in network.lower():
-            network = f"{network} (Mintegral)"
-        elif "unity" in all_text and "unity" not in network.lower():
-            network = f"{network} (Unity)"
-
-        matched_high = [w for w in HIGH_TIER_AD_KEYWORDS if w in all_text]
-        matched_cheap = [w for w in CHEAP_AD_KEYWORDS if w in all_text]
-
-        ignore_words = {
-            "ad", "ads", "iklan", "buka", "open", "install", "instal", "pasang", "download",
-            "unduh", "google play", "play store", "free", "gratis", "skip", "lewati", "close",
-            "tutup", "lanjut", "continue", "privacy", "kebijakan", "terms", "aturan", "detik",
-            "seconds", "level", "moves", "hint", "sound", "restart", "reward", "hadiah", "x", "x2",
-            "penarikan", "saldo", "dana", "gopay", "dobel", "ambil", "claim", "confirm", "ok", "oke",
-            "result", "guaranteed", "amount", "app", "just", "for", "you", "memasang", "cash out",
-            "tarik tunai", "progres", "klaim hadiah",
-        }
-
-        candidates = []
-        for text, x, y, _bbox in entries:
-            clean = text.strip()
-            clean_lower = clean.lower()
-            if len(clean) < 3 or len(clean) > 40:
-                continue
-            if re.match(r"^[\d\s.,:;/\-—$€Rp%!()+]+$", clean):
-                continue
-            if re.search(r"\b\d+\s*s\b|left to be|reward in|rewarded|tersisa|to be rewarded", clean_lower):
-                continue
-            if any(iw == clean_lower or clean_lower.startswith(iw + " ") for iw in ignore_words):
-                continue
-            if any(p in clean_lower for p in ("google play", "play store", "ad 1 of", "ad 2 of", "ad 3 of", "iklan 1 dari")):
-                continue
-            candidates.append(clean)
-
-        title = candidates[0] if candidates else ""
-        if not title:
-            for text, *_ in entries:
-                t_clean = text.strip()
-                if len(t_clean) >= 3 and not re.match(r"^[\d\s.,:;/\-—$€Rp%!()+]+$", t_clean):
-                    if not any(t_clean.lower().startswith(iw) for iw in ("ad 1", "ad 2", "iklan 1")):
-                        title = t_clean
-                        break
-
-        if not title:
-            title = network
-
-        act_lower = app.activity.lower()
-        if matched_high:
-            tier = "HIGH_TIER"
-            matched_str = f"HIGH:[{','.join(matched_high[:3])}]"
-        elif matched_cheap:
-            tier = "CHEAP"
-            matched_str = f"CHEAP:[{','.join(matched_cheap[:3])}]"
-        elif "unity3d" in act_lower or "mbridge" in act_lower:
-            tier = "CHEAP"
-            matched_str = f"DEFAULT_CHEAP:({network})"
-        else:
-            tier = "HIGH_TIER"
-            matched_str = f"DEFAULT_HIGH:({network})"
-
-        return network, title, matched_str, tier
-
-    def classify_ad_quality(self, app: ForegroundApp) -> str:
-        network, title, matched_str, tier = self.analyze_ad_screen(app)
-        self.current_ad_network = network
-        self.current_ad_title = title
-        self.current_ad_match = matched_str
-        self.current_ad_tier = tier
-        return tier
-
-    def try_close_ad(self, app: ForegroundApp) -> None:
-        now = time.time()
-        if self.ad_start_ts is None or self.ad_activity != app.activity:
-            self.ad_start_ts = now
-            self.ad_activity = app.activity
-            self.ad_title_confirmed = False
-            network, title, matched_str, tier = self.analyze_ad_screen(app)
-            self.current_ad_network = network
-            self.current_ad_title = title
-            self.current_ad_match = matched_str
-            self.current_ad_tier = tier
-            short_act = app.activity.split(".")[-1]
-            self.log(f"IKLAN TERBUKA: Asal: {network} | Iklan/App: \"{title}\" | Match: {matched_str} | Kategori: {tier} | Act: {short_act}")
-            return
-        elapsed = now - self.ad_start_ts
-        if now - self.last_ad_check_ts < 2:
-            return
-        self.last_ad_check_ts = now
-
-        # Perbarui judul & klasifikasi iklan setelah video merender (detik ke-3)
-        if elapsed >= 3.0 and not self.ad_title_confirmed:
-            self.ad_title_confirmed = True
-            network, title, matched_str, tier = self.analyze_ad_screen(app)
-            if title and title != network:
-                self.current_ad_title = title
-            self.current_ad_network = network
-            self.current_ad_match = matched_str
-            self.current_ad_tier = tier
-
-        target_watch = 5.0 if self.current_ad_tier == "CHEAP" else MIN_AD_WATCH_SECONDS
-        mode_label = "IKLAN MURAH (Fast Skip 5s)" if self.current_ad_tier == "CHEAP" else f"IKLAN MAHAL (Retensi {MIN_AD_WATCH_SECONDS:.0f}s)"
-        short_act = app.activity.split(".")[-1]
-        self.log(f"IKLAN DITONTON [{mode_label}]: Asal: {self.current_ad_network} | Iklan: \"{self.current_ad_title}\" | Match: {self.current_ad_match} | Act: {short_act} | durasi {elapsed:.0f}s / target {target_watch:.0f}s")
-
-        # 0) OVERTIME WATCHDOG: jika iklan melebihi target + 20s (misal > 80s), paksa restart game!
-        if elapsed > (target_watch + 20):
-            self.log(f"IKLAN STUCK OVERTIME ({elapsed:.0f}s > {target_watch:.0f}s+20) -> RESTART GAME")
-            self.launch_game(f"iklan overtime {elapsed:.0f}s", hard_restart=True)
-            return
-
-        # Jika iklan mahal/slot: tonton utuh. Jika iklan murah (shopee/game): lewati cepat di detik ke-5!
-        if elapsed < target_watch:
-            return
-
-        # 1) Popup "Confirm to Close" -> klik Continue
-        keep_watching = self.find_continue_on_close_confirm()
-        if keep_watching and now - self.last_ad_close_tap_ts >= 2.5:
-            label, x, y, src = keep_watching
-            self.last_ad_close_tap_ts = now
-            self.log(f"POPUP CONFIRM TO CLOSE: klik '{label}' di ({x},{y}) via {src} | durasi {elapsed:.0f}s")
-            self.tap(x, y)
-            return
-
-        # 2) UI Automator Close view (Meta / Kwai / Unity native X / close view di top 18%)
-        root = self.dump_ui()
-        if root is not None and now - self.last_ad_close_tap_ts >= 2.0:
-            w, h = self.screen_size()
-            for node in root.iter("node"):
-                b = self.bounds_center(node.get("bounds", ""))
-                if not b:
+                abs_y = ay1 + y + h // 2
+                if abs_y > height * 0.18:
                     continue
-                cx, cy, x1, y1, x2, y2 = b
-                if cy > int(h * 0.18):
+                # Jangan klik icon/header palsu playable-ad. Tombol close/next MBridge asli
+                # biasanya muncul agak turun dari status/pointer overlay, bukan menempel di y=0.
+                if abs_y < max(78, int(height * 0.045)):
                     continue
-                desc = (node.get("content-desc") or node.get("resource-id") or node.get("text") or "").lower()
-                if any(k in desc for k in ("close", "tutup", "skip", "dismiss", "x")) or (node.get("clickable") == "true" and cy < int(h * 0.12)):
-                    self.last_ad_close_tap_ts = now
-                    self.log(f"UI AUTOMATOR CLOSE: klik '{desc}' di ({cx},{cy}) | durasi {elapsed:.0f}s")
-                    self.tap(cx, cy)
-                    return
-
-        # 3) Close button via OCR (X, close, skip, lewati)
-        found = self.find_close_button()
-        if found and now - self.last_ad_close_tap_ts >= 2.0:
-            label, x, y, src = found
-            self.last_ad_close_tap_ts = now
-            self.log(f"TUTUP IKLAN: '{label}' di ({x},{y}) via {src} | durasi {elapsed:.0f}s")
-            self.tap(x, y)
-            return
-
-        # 4) Hough circle + contour di pojok kanan atas
-        top_corner = self.find_ad_top_corner_button()
-        if top_corner and now - self.last_top_right_arrow_tap_ts >= 2.5:
-            kind, label, x, y = top_corner
-            self.last_top_right_arrow_tap_ts = now
-            self.last_ad_close_tap_ts = now
-            self.log(f"MENEMUKAN TOMBOL SELESAI IKLAN: {kind} '{label}' di ({x},{y}) | durasi {elapsed:.0f}s")
-            self.tap(x, y)
-            return
-
-        # 5) Arrow icon HSV di kanan atas
-        arrow = self.find_top_right_arrow_button()
-        if arrow and now - self.last_top_right_arrow_tap_ts >= 2.5:
-            label, x, y, src = arrow
-            self.last_top_right_arrow_tap_ts = now
-            self.last_ad_close_tap_ts = now
-            self.log(f"IKON ARAH KANAN ATAS: klik '{label}' di ({x},{y}) via {src} | durasi {elapsed:.0f}s")
-            self.tap(x, y)
-            return
-
-        # 6) DIRECT CORNER TAP + BACK FALLBACK (Khusus Meta Audience Network & rewarded video):
-        # Jika durasi iklan sudah terpenuhi (target_watch + 3s), tap koordinat paten X pojok atas & tekan BACK
-        if elapsed >= (target_watch + 3) and now - self.last_ad_close_tap_ts >= 2.0:
-            self.last_ad_close_tap_ts = now
-            w, h = self.screen_size()
-            meta_top_right_x = int(w * 0.92)  # ≈ 662 pada 720
-            meta_top_right_y = int(h * 0.055) # ≈ 90 pada 1640
-            self.log(f"FALLBACK CLOSE ({elapsed:.0f}s >= {target_watch:.0f}s+3): tap pojok kanan atas ({meta_top_right_x},{meta_top_right_y}) & BACK")
-            self.tap(meta_top_right_x, meta_top_right_y)
-            time.sleep(0.3)
-            self.adb_out(["shell", "input", "keyevent", "BACK"], timeout=3)
-            return
-
-        # 7) Iklan stuck overtime (> target_watch + 18s) -> restart game
-        if elapsed > (target_watch + 18):
-            self.log(f"IKLAN STUCK OVERTIME ({elapsed:.0f}s > {target_watch:.0f}s+18) -> restart game")
-            self.launch_game(f"iklan stuck {elapsed:.0f}s", hard_restart=True)
-            return
-
-    # ===================== SALDO =====================
-
-    def parse_rupiah(self, text: str):
-        low = text.lower()
-        # Abaikan debug overlay pointer location
-        if any(ign in low for ign in ("size:", "dx:", "dy:", "prs:", "xv:", "yv:", "p:")):
-            return None
-        if "rp" not in low:
-            return None
-        m = re.search(r"rp\s*([0-9][0-9.,]*)", text, re.I)
-        if not m:
-            return None
-        raw = m.group(1)
-        try:
-            if "," in raw and "." in raw:
-                return float(raw.replace(".", "").replace(",", "."))
-            elif "," in raw:
-                return float(raw.replace(",", "."))
-            return float(raw)
-        except Exception:
-            return None
-
-    @staticmethod
-    def rupiah(v: float) -> str:
-        s = f"{v:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
-        return f"Rp {s}"
-
-    def get_current_saldo(self) -> Optional[float]:
-        w, h = self.screen_size()
-        entries = self.ocr_screen("get_saldo")
-        candidates = []
-        for text, x, y, bbox in entries:
-            if y > int(h * 0.28):
-                continue
-            val = self.parse_rupiah(text)
-            if val is not None and val > 10.0:
-                candidates.append((y, val, text.strip()))
-        if not candidates:
-            return None
-        candidates.sort(key=lambda c: c[0])
-        return candidates[0][1]
-
-    def record_verified_reward(self, delta: float, pre: float, post: float, action: str, mode: str, network: str, ad_title: str = "") -> None:
-        try:
-            history = []
-            if os.path.exists(REWARD_HISTORY_FILE):
-                try:
-                    with open(REWARD_HISTORY_FILE, "r") as f:
-                        history = json.load(f)
-                except Exception:
-                    history = []
-
-            now_ts = time.time()
-            ad_note = f"Hadiah riil selisih saldo (+Rp {delta:,.2f}) mode {mode} jaringan {network}"
-            if ad_title and ad_title != "-":
-                ad_note += f" [Iklan: {ad_title}]"
-            new_entry = {
-                "timestamp": now_ts,
-                "time": datetime.now().strftime("%Y-%m-%d %H:%M:%S WIB"),
-                "amount": delta,
-                "amount_display": f"Rp {delta:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."),
-                "pre_saldo": pre,
-                "post_saldo": post,
-                "is_dobel": "dobel" in mode.lower(),
-                "action": action,
-                "network": network,
-                "ad_title": ad_title,
-                "note": ad_note,
-            }
-            history.append(new_entry)
-            with open(REWARD_HISTORY_FILE, "w") as f:
-                json.dump(history, f, indent=2)
-        except Exception as exc:
-            self.log(f"Gagal simpan verified reward: {exc}")
-
-    def verify_reward_payout(self) -> None:
-        current_saldo = self.get_current_saldo()
-        if current_saldo is None:
-            time.sleep(1.0)
-            current_saldo = self.get_current_saldo()
-        if current_saldo is None:
-            return
-
-        if self.pre_ad_saldo is not None:
-            delta = round(current_saldo - self.pre_ad_saldo, 2)
-            mode_str = "DOBEL (2x)" if self.was_dobel_clicked else "SINGLE (1x)"
-            action_str = "CLAIMED_DOBEL" if self.was_dobel_clicked else "CLAIMED_SINGLE"
-            ad_net = getattr(self, "current_ad_network", "Unknown Network") or "Unknown Network"
-            ad_title = getattr(self, "current_ad_title", "-") or "-"
-
-            if delta > 0.0:
-                self.log(f"[HADIAH IKLAN TERVERIFIKASI] +Rp {delta:,.2f} | Saldo: Rp {self.pre_ad_saldo:,.2f} -> Rp {current_saldo:,.2f} | Mode: {mode_str} | Asal: {ad_net} | Iklan: \"{ad_title}\"")
-                self.record_verified_reward(delta, self.pre_ad_saldo, current_saldo, action_str, mode_str, ad_net, ad_title)
-                self.send_telegram(f"[{TARGET_NAME}] Hadiah Terverifikasi: +Rp {delta:,.2f} ({mode_str})\nSaldo: Rp {self.pre_ad_saldo:,.2f} -> Rp {current_saldo:,.2f}\nAsal: {ad_net}\nIklan: {ad_title}")
-            else:
-                self.log(f"[INFO SALDO] Saldo: Rp {current_saldo:,.2f} (delta=0) setelah nonton iklan {ad_net} ({ad_title})")
-
-        self.pre_ad_saldo = current_saldo
-        self.pending_ad_verification = False
-        self.was_dobel_clicked = False
-
-    def check_saldo(self, reason: str) -> None:
-        w, h = self.screen_size()
-        entries = self.ocr_screen("saldo")
-        candidates = []
-        for text, x, y, bbox in entries:
-            if y > int(h * 0.28):
-                continue
-            val = self.parse_rupiah(text)
-            if val is not None and val > 10.0:
-                candidates.append((y, val, text.strip()))
-        if not candidates:
-            return
-        candidates.sort(key=lambda c: c[0])
-        _y, val, raw = candidates[0]
-        display = self.rupiah(val)
-        self.log(f"SALDO: {display} (raw='{raw}') | reason={reason}")
-
-        state = {
-            "saldo_value": val,
-            "saldo_display": display,
-            "raw_text": raw,
-            "timestamp": time.time(),
-            "time": datetime.now().strftime("%Y-%m-%d %H:%M:%S WIB"),
-            "reason": reason,
-        }
-        try:
-            with open(STATE_FILE, "w") as f:
-                json.dump(state, f, indent=2)
-        except Exception:
-            pass
-
-        # Lapor ke Telegram hanya jika nominal berubah atau pertama kali
-        if self.last_reported_saldo is None or abs(val - self.last_reported_saldo) >= 0.01:
-            old_disp = f" (sebelumnya {self.rupiah(self.last_reported_saldo)})" if self.last_reported_saldo is not None else ""
-            self.last_reported_saldo = val
-            self.send_telegram(f"[{TARGET_NAME}] Saldo Terkini: {display}{old_disp} | {reason}")
-
-    def send_telegram(self, msg: str) -> None:
-        if not os.path.exists(TELEGRAM_SENDER):
-            return
-        try:
-            r = subprocess.run(
-                ["/opt/homebrew/bin/python3", TELEGRAM_SENDER, msg],
-                capture_output=True, text=True, timeout=15,
-            )
-            stdout = (r.stdout or "").strip()
-            if stdout:
-                self.log(f"TELEGRAM STDOUT: {stdout}")
-        except Exception as exc:
-            self.log(f"TELEGRAM ERROR: {exc}")
-
-    # ===================== REWARD / DOBEL / FILTER HADIAH =====================
-
-    def record_reward_history(self, amount: float, action: str, note: str = "") -> None:
-        """Kelola riwayat reward: simpan hanya reward Kwai & Meta, bersihkan riwayat kecil."""
-        try:
-            history = []
-            if os.path.exists(REWARD_HISTORY_FILE):
-                try:
-                    with open(REWARD_HISTORY_FILE, "r") as f:
-                        history = json.load(f)
-                except Exception:
-                    history = []
-
-            # Hapus riwayat selain Kwai Ads dan Meta Audience Network (atau nominal besar >= 50)
-            allowed_nets = ("kwai", "meta", "alliance")
-            history = [
-                entry for entry in history
-                if (any(k in (entry.get("network") or "").lower() or k in (entry.get("note") or "").lower() for k in allowed_nets)
-                    or entry.get("amount", 0) >= 50.0)
-            ]
-
-            now_ts = time.time()
-            ad_net = getattr(self, "current_ad_network", "Meta Audience Network")
-
-            # Deduplikasi dalam 15 detik terakhir untuk nominal yang sama
-            is_dup = any(abs(now_ts - e.get("timestamp", 0)) < 15 and abs(amount - e.get("amount", 0)) < 0.1 for e in history[-5:])
-
-            if not is_dup and (amount >= MIN_REWARD_THRESHOLD or action == "CLAIMED_DOBEL"):
-                new_entry = {
-                    "timestamp": now_ts,
-                    "time": datetime.now().strftime("%Y-%m-%d %H:%M:%S WIB"),
-                    "amount": round(amount, 2),
-                    "amount_display": f"Rp {amount:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."),
-                    "action": action,
-                    "note": note or f"Reward iklan {ad_net} ditonton & digandakan",
-                    "network": ad_net,
-                }
-                history.append(new_entry)
-
-            with open(REWARD_HISTORY_FILE, "w") as f:
-                json.dump(history, f, indent=2)
-        except Exception as exc:
-            self.log(f"Gagal simpan reward history: {exc}")
-
-    def find_reward_offer(self):
-        """Deteksi tombol DOBEL, tombol NOW NOT/NANTI, serta nominal Rp reward di popup."""
-        w, h = self.screen_size()
-        entries = self.ocr_screen("reward_offer")
-        
-        dobel = None
-        not_now = None
-        reward_candidates = []
-        for text, x, y, _bbox in entries:
-            n = self.norm(text)
-            n_clean = n.replace(" ", "")
-            if any(sw in n for sw in STORE_WORDS):
-                continue
-            
-            val = self.parse_rupiah(text)
-            if val is not None and val > 0 and y > 300:
-                reward_candidates.append((y, val, text, x, y))
-                
-            if "dobel" in n_clean or "double" in n_clean or "2x" in n_clean or "x2" in n_clean:
-                dobel = (text, x, y)
-                continue
-                
-            if not_now is None and any(k in n_clean for k in ("notnow", "nownot", "nanti", "tidak", "lewati", "skip", "ambil", "dapat", "terima")):
-                not_now = (text, x, y)
-
-        reward_rp = None
-        if reward_candidates and dobel:
-            target_y = dobel[2]
-            above = [r for r in reward_candidates if r[0] < target_y and (target_y - r[0]) < 500]
-            if above:
-                above.sort(key=lambda item: abs(target_y - item[0]))
-                reward_rp = above[0][1]
-            else:
-                reward_candidates.sort(key=lambda item: abs(target_y - item[0]))
-                reward_rp = reward_candidates[0][1]
-
-        return dobel, not_now, reward_rp
-
-    # ===================== REWARD / DOBEL BUTTON =====================
-
-    def reward_score(self, label: str) -> int:
-        n = self.norm(label).replace(" ", "")
-        if "dobel" in n or "double" in n or "2x" in n or "x2" in n:
-            return 0
-        if any(k in n for k in ("claim", "klaim", "watch", "tonton", "reward", "bonus", "gratis", "buka")):
-            return 1
-        if any(k in n for k in ("ambil", "get", "collect", "dapat")):
-            return 2
-        if any(k in n for k in ("notnow", "nownot", "nanti", "tidak", "lanjut", "next", "continue")):
-            return 3
-        return 9
-
-    def find_not_now_button(self):
-        entries = self.ocr_screen("not_now")
-        for text, x, y, _bbox in entries:
-            n = self.norm(text).replace(" ", "")
-            if any(k in n for k in ("notnow", "nownot", "nanti", "tidak", "lewati", "skip")):
-                return text, x, y
-        return None
-
-    def find_reward_button(self):
-        w, h = self.screen_size()
-        candidates = []
-
-        # 1. OCR (game Unity render kanvas grafik tombol DOBEL)
-        entries = self.ocr_screen("reward")
-        for text, x, y, _bbox in entries:
-            n = self.norm(text)
-            n_clean = n.replace(" ", "")
-            if any(sw in n for sw in STORE_WORDS):
-                continue
-            # Jika ada DOBEL langsung pilih tanpa ragu
-            if "dobel" in n_clean or "double" in n_clean or "2x" in n_clean or "x2" in n_clean:
-                return text, x, y, "ocr"
-            if any(word in n for word in REWARD_WORDS) and h * 0.18 < y < h * 0.92:
-                candidates.append((self.reward_score(text), text, x, y, "ocr"))
-
-        # 2. UI Automator dump
-        root = self.dump_ui()
-        if root is not None:
-            for node in root.iter("node"):
-                label = (node.get("text") or node.get("content-desc") or "").strip()
-                b = self.bounds_center(node.get("bounds", ""))
-                if not label or not b:
+                # Area aktif close/next biasanya dekat tepi. Hindari logo DANA/header iklan.
+                if area_name == "kanan-atas" and abs_x < width * 0.76:
                     continue
-                n = self.norm(label)
-                n_clean = n.replace(" ", "")
-                if any(sw in n for sw in STORE_WORDS):
+                if area_name == "kiri-atas" and abs_x > width * 0.16:
                     continue
-                if "dobel" in n_clean or "double" in n_clean:
-                    x, y, *_ = b
-                    return label, x, y, "ui"
-                if any(word in n for word in REWARD_WORDS):
-                    x, y, *_ = b
-                    if h * 0.18 < y < h * 0.92:
-                        candidates.append((self.reward_score(label), label, x, y, "ui"))
 
-        if not candidates:
-            return None
-        candidates.sort(key=lambda t: (t[0], -t[3]))
-        _score, label, x, y, src = candidates[0]
-        return label, x, y, src
+                perimeter = cv2.arcLength(contour, True)
+                circularity = (4 * np.pi * area / (perimeter * perimeter)) if perimeter else 0
+                if circularity < 0.45:
+                    continue
 
-    def burst_tap_bubble_and_arrows(self, bx: int, by: int) -> None:
-        """Spam multi-tap serentak: pecahkan bubble iklan dan sekaligus klik panah puzzle (cepat < 0.3s tanpa timeout)."""
-        w, h = self.screen_size()
-        b_x = max(10, min(w - 10, bx + random.randint(-6, 6)))
-        b_y = max(10, min(h - 10, by + random.randint(-6, 6)))
-
-        arrow1_x = w // 2 + random.randint(-120, 120)
-        arrow1_y = int(h * 0.55) + random.randint(-100, 100)
-        arrow2_x = w // 2 + random.randint(-120, 120)
-        arrow2_y = int(h * 0.55) + random.randint(-100, 100)
-
-        cmd = f"input tap {b_x} {b_y} & input tap {arrow1_x} {arrow1_y} & input tap {arrow2_x} {arrow2_y}"
-        markers = [
-            (b_x, b_y, "red", 0.6, 75),
-            (arrow1_x, arrow1_y, "green", 0.5, 55),
-            (arrow2_x, arrow2_y, "green", 0.5, 55),
-        ]
-        self.show_tap_marker(markers)
-        self.adb_out(["shell", f"sh -c '{cmd}'"], timeout=2)
-
-    # ===================== BUBBLE IKLAN (HIJAU/KUNING) =====================
-
-    def find_ad_bubble(self):
-        """Deteksi bubble iklan hijau/kuning di layar game."""
-        cap = self.capture_png()
-        if not cap:
-            return None
-        png, w, h = cap
-        try:
-            import cv2
-            import numpy as np
-        except Exception:
-            return None
-        img = cv2.imdecode(np.frombuffer(png, dtype=np.uint8), cv2.IMREAD_COLOR)
-        if img is None:
-            return None
-
-        x_min = int(w * 0.05)
-        y_min = int(h * 0.15)
-        x_max = w - 8
-        y_max = int(h * 0.88)
-        roi = img[y_min:y_max, x_min:x_max]
-        if roi.size == 0:
-            return None
-
-        hsv = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
-        green = cv2.inRange(hsv, (35, 55, 70), (95, 255, 255))
-        yellow = cv2.inRange(hsv, (15, 70, 100), (38, 255, 255))
-        mask = cv2.bitwise_or(green, yellow)
-        kernel = np.ones((5, 5), np.uint8)
-        mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
-        mask = cv2.dilate(mask, kernel, iterations=2)
-        contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-
-        candidates = []
-        for c in contours:
-            area = cv2.contourArea(c)
-            if area < 600 or area > 30000:
-                continue
-            x, y, bw, bh = cv2.boundingRect(c)
-            if bw < 30 or bh < 30 or bw > 220 or bh > 220:
-                continue
-            aspect = bw / float(bh)
-            if aspect < 0.4 or aspect > 2.2:
-                continue
-            cx = x_min + x + bw // 2
-            cy = y_min + y + bh // 2
-
-            pad = 70
-            cr_x1 = max(0, cx - pad)
-            cr_y1 = max(0, cy - pad)
-            cr_x2 = min(w, cx + pad)
-            cr_y2 = min(h, cy + pad)
-            crop_hsv = cv2.cvtColor(img[cr_y1:cr_y2, cr_x1:cr_x2], cv2.COLOR_BGR2HSV)
-            if crop_hsv.size == 0:
-                continue
-            white_mask = cv2.inRange(crop_hsv, np.array([0, 0, 165]), np.array([179, 85, 255]))
-            white_ratio = float(white_mask.mean() / 255.0)
-            if white_ratio < 0.06:
-                continue
-
-            score = area + white_ratio * 5000
-            candidates.append((score, cx, cy, area, bw, bh))
+                # Klik tepat di pusat kontur tombol hasil deteksi.
+                tap_x = abs_x
+                tap_y = abs_y
+                right_bonus = 4000 if area_name == "kanan-atas" else 0
+                edge_bonus = (abs_x / width) * 900 if area_name == "kanan-atas" else ((width - abs_x) / width) * 250
+                score = area + right_bonus + edge_bonus - abs_y * 2
+                candidates.append((score, tap_x, tap_y, f"top-corner {area_name} area={int(area)} circ={circularity:.2f} bbox=({ax1+x},{ay1+y},{w},{h})"))
 
         if not candidates:
             return None
         candidates.sort(reverse=True)
-        _score, cx, cy, area, bw, bh = candidates[0]
-        return int(cx), int(cy), f"ad-bubble area={int(area)} size={bw}x{bh}"
+        _score, x, y, label = candidates[0]
+        return "PANAH_KANAN/TOP", label, int(x), int(y)
 
-    # ===================== LICENSE ERROR =====================
+    def find_ad_finish_button_by_image(self, png_data: bytes, width: int, height: int) -> Optional[Tuple[str, str, int, int]]:
+        """Deteksi konservatif ikon X / panah kanan di area tepi iklan."""
+        try:
+            import cv2
+            import numpy as np
+        except Exception:
+            return None
 
-    def handle_license_error(self) -> bool:
-        root = self.dump_ui()
-        if root is not None:
-            for node in root.iter("node"):
-                label = (node.get("text") or node.get("content-desc") or "").strip()
-                b = self.bounds_center(node.get("bounds", ""))
-                if label.lower() in ("close", "tutup") and b:
-                    x, y, *_ = b
-                    self.log(f"LICENSE ERROR: klik '{label}' di ({x},{y})")
-                    self.tap(x, y)
-                    time.sleep(0.7)
-                    self.launch_game("license error close")
-                    return True
-        self.log("LICENSE ERROR: tutup dengan BACK lalu launch ulang")
-        self.adb_out(["shell", "input", "keyevent", "BACK"], timeout=3)
-        time.sleep(0.7)
-        self.launch_game("license error")
+        arr = np.frombuffer(png_data, dtype=np.uint8)
+        img = cv2.imdecode(arr, cv2.IMREAD_COLOR)
+        if img is None:
+            return None
+
+        # Area yang biasanya berisi tombol close/next iklan.
+        search_areas = [
+            (int(width * 0.70), 0, width, int(height * 0.28)),          # kanan atas
+            (0, 0, int(width * 0.30), int(height * 0.28)),              # kiri atas
+            (int(width * 0.78), int(height * 0.18), width, int(height * 0.62)),  # sisi kanan
+        ]
+
+        for ax1, ay1, ax2, ay2 in search_areas:
+            roi = img[ay1:ay2, ax1:ax2]
+            if roi.size == 0:
+                continue
+            gray = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
+            edges = cv2.Canny(gray, 80, 180)
+            contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+            for contour in contours:
+                x, y, w, h = cv2.boundingRect(contour)
+                if w < 14 or h < 14 or w > 95 or h > 95:
+                    continue
+                aspect = w / float(h)
+                if aspect < 0.45 or aspect > 2.2:
+                    continue
+
+                patch = edges[max(0, y - 4): min(edges.shape[0], y + h + 4), max(0, x - 4): min(edges.shape[1], x + w + 4)]
+                lines = cv2.HoughLinesP(patch, 1, np.pi / 180, threshold=10, minLineLength=10, maxLineGap=4)
+                if lines is None:
+                    continue
+
+                pos_diag = 0
+                neg_diag = 0
+                horizontal = 0
+                for line in lines.reshape(-1, 4):
+                    x1, y1, x2, y2 = [int(v) for v in line]
+                    dx = x2 - x1
+                    dy = y2 - y1
+                    if dx == 0 and dy == 0:
+                        continue
+                    angle = np.degrees(np.arctan2(dy, dx))
+                    if 25 <= angle <= 70:
+                        pos_diag += 1
+                    elif -70 <= angle <= -25:
+                        neg_diag += 1
+                    elif abs(angle) <= 15:
+                        horizontal += 1
+
+                abs_x = ax1 + x + w // 2
+                abs_y = ay1 + y + h // 2
+                # Abaikan pointer-location overlay/status bar dan ikon palsu yang terlalu atas.
+                if abs_y < max(85, int(height * 0.052)):
+                    continue
+                # Untuk deteksi generik, jangan ambil panah tengah playable-ad.
+                # Tombol selesai iklan harus sangat atas atau sangat kanan.
+                # Tombol X/Next yang valid harus berada di area atas; ikon di tengah
+                # iklan sering terlihat seperti X tetapi sebenarnya tombol konten.
+                is_upper_corner = abs_y < height * 0.20 and (abs_x < width * 0.20 or abs_x > width * 0.70)
+                is_right_edge = abs_x > width * 0.88
+                if is_right_edge and abs_y >= height * 0.20:
+                    is_right_edge = False
+                if not (is_upper_corner or is_right_edge):
+                    continue
+                vertical = 0
+                for line in lines.reshape(-1, 4):
+                    x1, y1, x2, y2 = [int(v) for v in line]
+                    dx, dy = x2 - x1, y2 - y1
+                    if dx == 0 and dy == 0:
+                        continue
+                    ang = np.degrees(np.arctan2(dy, dx))
+                    if 75 <= abs(ang) <= 105:
+                        vertical += 1
+
+                if pos_diag >= 1 and neg_diag >= 1:
+                    kind = "X" if aspect < 1.35 else "PANAH_KANAN/NEXT"
+                    return kind, "ikon X terdeteksi", abs_x, abs_y
+                if (pos_diag >= 1 or neg_diag >= 1) and vertical >= 1 and abs_x > width * 0.65:
+                    return "PANAH_KANAN/SKIP", "ikon panah (>|) terdeteksi", abs_x, abs_y
+                if neg_diag >= 1 and horizontal >= 1 and abs_x > width * 0.70:
+                    return "PANAH_KANAN/NEXT", "ikon panah (>>/>) terdeteksi", abs_x, abs_y
+        return None
+
+    def find_ad_finish_button(self) -> Optional[Tuple[str, str, int, int, str]]:
+        screenshot = self.capture_screenshot()
+        if screenshot:
+            png_data, width, height = screenshot
+
+            # 1. Cek tombol lingkaran pojok atas dulu (Hough circle / contour X, >|, >>, >).
+            top_corner_found = self.find_ad_top_corner_button_by_image(png_data, width, height)
+            if top_corner_found:
+                kind, label, x, y = top_corner_found
+                return kind, label, x, y, "top-corner"
+
+            # 2. Cek ikon X atau panah kanan (>| / >>) via edge line detection
+            image_found = self.find_ad_finish_button_by_image(png_data, width, height)
+            if image_found:
+                kind, label, x, y = image_found
+                return kind, label, x, y, "image"
+
+            # 3. Cek teks X / Skip / Tutup via OCR cepat
+            ocr_found = self.find_ad_finish_button_by_ocr(png_data, width, height)
+            if ocr_found:
+                kind, label, x, y = ocr_found
+                return kind, label, x, y, "ocr"
+
+        # 4. Fallback ke UI XML dump jika metode gambar belum menemukan
+        ui_found = self.find_ad_finish_button_by_ui()
+        if ui_found:
+            kind, label, x, y = ui_found
+            return kind, label, x, y, "ui"
+
+        return None
+
+    def try_finish_ad(self, app: Optional[ForegroundApp]) -> None:
+        if not app or not self.is_game_ad(app) or self.ad_start_ts is None:
+            return
+
+        now = time.time()
+        elapsed = now - self.ad_start_ts
+        act_lower = (app.activity or "").lower()
+        is_applovin = "applovin" in act_lower
+        is_meta = self.is_meta_ad(app)
+
+        # Aturan durasi tonton:
+        # 1. Meta (Facebook Audience Network): tunggu minimal 60 detik sebelum klik X pertama.
+        # 2. Setelah klik X pertama pada Meta, jika masih di halaman iklan Meta (endcard), tunggu 15 detik sebelum klik X kedua.
+        # 3. Iklan selain Meta (Mintegral, Kwai, AppLovin, Pangle, Unity, dll.): wajib tunggu 30 detik dulu baru mencari tombol penutup.
+        if is_meta:
+            meta_clicks = getattr(self, "meta_ad_close_tap_count", 0)
+            if meta_clicks == 0:
+                if elapsed < 60.0:
+                    return
+            else:
+                since_last_meta_tap = now - getattr(self, "last_meta_close_tap_ts", 0.0)
+                if since_last_meta_tap < 15.0:
+                    wait_left = int(15.0 - since_last_meta_tap)
+                    sec_key = int(since_last_meta_tap)
+                    if sec_key != getattr(self, "_last_meta_wait_logged", -1):
+                        self._last_meta_wait_logged = sec_key
+                        self.log(f"IKLAN META ENDCARD: tunggu 15 detik sebelum klik X berikutnya (sisa {wait_left}s)")
+                    return
+        elif elapsed < 30.0:
+            return
+
+        if now - self.last_ad_close_check_ts < AD_CLOSE_CHECK_INTERVAL:
+            return
+        self.last_ad_close_check_ts = now
+
+        found = self.find_ad_finish_button()
+        if not found:
+            fallback_limit = 75.0 if is_meta else 45.0
+            if elapsed > fallback_limit and (now - self.last_ad_close_tap_ts >= 4):
+                self.last_ad_close_tap_ts = now
+                self.log(f"FALLBACK CLOSE: iklan terbuka {self.format_duration(elapsed)} belum ada tombol tutup, kirim BACK")
+                self.adb_out(["shell", "input", "keyevent", "BACK"], timeout=3)
+            return
+
+        kind, label, x, y, source = found
+        if x < 20 and y < 20:
+            self.log(f"ABORT KLIK IKLAN: koordinat tidak valid ({x},{y})")
+            return
+
+        # Track klik berulang pada tombol yang sama tanpa efek
+        btn_key = f"{x}_{y}_{kind}"
+        if self.ad_close_last_btn_key == btn_key:
+            self.ad_close_same_btn_count += 1
+        else:
+            self.ad_close_same_btn_count = 1
+            self.ad_close_last_btn_key = btn_key
+
+        # Jika tombol yang sama sudah diklik >= 5x tanpa efek, skip dan fallback BACK
+        if self.ad_close_same_btn_count >= 5:
+            self.log(
+                f"SKIP TOMBOL TIDAK BEREAKSI: {kind} di ({x},{y}) sudah diklik {self.ad_close_same_btn_count}x | "
+                f"durasi {self.format_duration(elapsed)}, fallback BACK"
+            )
+            self.adb_out(["shell", "input", "keyevent", "BACK"], timeout=3)
+            if self.ad_close_same_btn_count >= 8:
+                self.log(f"TOMBOL STUCK {self.ad_close_same_btn_count}x: restart game")
+                self.ad_close_same_btn_count = 0
+                self.ad_close_last_btn_key = ""
+                self.restart_game_for_stuck_ad(f"tombol {kind} di ({x},{y}) tidak bereaksi {self.ad_close_same_btn_count}x")
+            return
+
+        self.log(
+            f"MENEMUKAN TOMBOL SELESAI IKLAN: {kind} '{label}' "
+            f"di ({x},{y}) via {source} | durasi {self.format_duration(elapsed)}"
+        )
+
+        if now - self.last_ad_close_tap_ts < 1.0:
+            return
+        self.last_ad_close_tap_ts = now
+        if is_meta:
+            self.meta_ad_close_tap_count = getattr(self, "meta_ad_close_tap_count", 0) + 1
+            self.last_meta_close_tap_ts = now
+            self.log(f"KLIK TOMBOL SELESAI IKLAN META #{self.meta_ad_close_tap_count}: {kind} di ({x},{y})")
+        else:
+            self.log(f"KLIK TOMBOL SELESAI IKLAN: {kind} di ({x},{y})")
+        # Selalu klik tepat pada koordinat hasil deteksi terbaru.
+        self.tap(x, y)
+
+    def ocr_current_screen(self, prefix: str) -> list[Tuple[str, str, int, int]]:
+        """OCR layar sekarang. Return: [(text, bbox, x, y), ...]."""
+        if not os.path.exists(OCR_HELPER):
+            return []
+
+        now = time.time()
+        if hasattr(self, "_ocr_cache_ts") and (now - self._ocr_cache_ts < 0.6):
+            if hasattr(self, "_ocr_cache_entries") and self._ocr_cache_entries is not None:
+                return self._ocr_cache_entries
+
+        safe_serial = re.sub(r"[^a-zA-Z0-9_.-]+", "_", self.serial or "default")
+        screenshot_path = f"/tmp/lucky_arrow_{prefix}_{safe_serial}.png"
+        screenshot = self.capture_screenshot()
+        if not screenshot:
+            return []
+        png_data, width, height = screenshot
+
+        try:
+            with open(screenshot_path, "wb") as f:
+                f.write(png_data)
+            result = subprocess.run(
+                [OCR_HELPER, screenshot_path],
+                capture_output=True,
+                text=True,
+                timeout=10,
+            )
+        except Exception:
+            return []
+
+        entries = []
+        for line in (result.stdout or "").splitlines():
+            text, _, bbox = line.partition("|")
+            text = text.strip()
+            bbox = bbox.strip()
+            if not text or not bbox:
+                continue
+            try:
+                bx, by, bw, bh = [float(part) for part in bbox.split(",")]
+                x = int((bx + bw / 2) * width)
+                y = int((1 - by - bh / 2) * height)
+            except ValueError:
+                x, y = width // 2, height // 2
+            entries.append((text, bbox, x, y))
+        self._ocr_cache_entries = entries
+        self._ocr_cache_ts = now
+        return entries
+
+    def find_reward_offer_buttons(self) -> Tuple[
+        Optional[Tuple[str, str, int, int]],
+        Optional[Tuple[str, str, int, int]],
+        Optional[Tuple[str, str, int, int]],
+        Optional[Tuple[float, str, int, int]],
+        Optional[Tuple[str, str, int, int]],
+        bool,
+    ]:
+        """Cari tombol DOBEL, tombol BUKA, tombol NOT NOW/NOW NOT, nominal Rp reward, tombol X pop-up Pengaturan, dan status Hadiah sedang diproses."""
+        dobel = None
+        buka_btn = None
+        not_now = None
+        settings_btn = None
+        hadiah_sedang_diproses = False
+        reward_candidates: list[Tuple[int, float, str, int, int]] = []
+        entries = self.ocr_current_screen("reward_offer")
+        screen_w, _screen_h = self.get_screen_size()
+        for text, bbox, x, y in entries:
+            norm = self.normalize_text(text)
+
+            # Cek teks 'Hadiah sedang diproses, mohon tunggu.'
+            if (
+                "hadiahsedang" in norm
+                or "sedangdiproses" in norm
+                or "sedangproses" in norm
+                or "diprosesmohon" in norm
+                or "mohontunggu" in norm
+                or "mohongtunggu" in norm
+            ):
+                hadiah_sedang_diproses = True
+
+            value = self.parse_rupiah_value(text)
+            # Abaikan saldo header atas; yang dicari adalah nominal reward di popup DOBEL.
+            if value is not None and y > 300:
+                reward_candidates.append((y, value, text, x, y))
+
+            if dobel is None and "dobel" in norm:
+                dobel = (text, bbox, x, y)
+                continue
+
+            # Tombol BUKA (peti hadiah/bonus yang sering muncul)
+            is_store = any(w in norm for w in ("toko", "store", "play", "google", "web", "browser", "situs", "link"))
+            is_title = "hartakarun" in norm or "menghasilkan" in norm or len(norm) > 14
+            is_buka = (
+                not is_store
+                and not is_title
+                and (
+                    norm in {"buka", "open", "klaim", "claim", "bukasekarang"}
+                    or norm.startswith("buka ")
+                )
+                and (350 <= y <= 1350)
+            )
+            if buka_btn is None and is_buka:
+                buka_btn = (text, bbox, x, y)
+                continue
+
+            # Pop-up Pengaturan: tombol X berada di sebelah kanan teks Pengaturan (ujung kanan banner header pop-up).
+            if settings_btn is None and ("pengaturan" in norm or "setting" in norm or "pengatur" in norm):
+                x_close = int(screen_w * 0.88) if screen_w else (x + 270)
+                y_close = y + 21 if y else 545
+                settings_btn = (text, bbox, x_close, y_close)
+                continue
+
+            # OCR kadang membaca 'NOT NOW' sebagai 'NOW NOT'; tangani dua-duanya.
+            is_not_now = (
+                "notnow" in norm
+                or "nownot" in norm
+                or "nothanks" in norm
+                or "tidaksekarang" in norm
+                or "nantidulu" in norm
+                or norm in {"nanti", "skip", "lewati"}
+                or (dobel is not None and norm in {"ambil", "klaim"})
+            )
+            if not_now is None and is_not_now:
+                not_now = (text, bbox, x, y)
+
+        reward_rp = None
+        if reward_candidates:
+            target_y = dobel[3] if dobel else (buka_btn[3] if buka_btn else 1120)
+            # Pilih nominal Rp yang paling dekat di atas tombol DOBEL/BUKA, misalnya "Rp 41,9".
+            above = [item for item in reward_candidates if item[0] < target_y and (target_y - item[0]) <= 430]
+            pool = above or reward_candidates
+            pool.sort(key=lambda item: abs(target_y - item[0]))
+            _sort_y, value, raw_text, x, y = pool[0]
+            reward_rp = (value, raw_text, x, y)
+        return dobel, buka_btn, not_now, reward_rp, settings_btn, hadiah_sedang_diproses
+
+    def check_and_handle_hadiah_sedang_diproses(self, app: Optional[ForegroundApp] = None) -> bool:
+        """Cek apakah muncul popup dengan teks 'Hadiah sedang diproses' / 'Mohon tunggu'.
+        Jika ya, klik tombol NOW NOT, tutup riwayat game, dan buka ulang game."""
+        if not app or app.package != TARGET_PACKAGE or self.is_game_ad(app):
+            return False
+
+        entries = self.ocr_current_screen("cek_hadiah_proses")
+        if not entries:
+            return False
+
+        has_proses = False
+        not_now_btn = None
+        for text, bbox, x, y in entries:
+            norm = self.normalize_text(text)
+            if (
+                "hadiahsedang" in norm
+                or "sedangdiproses" in norm
+                or "sedangproses" in norm
+                or "diprosesmohon" in norm
+                or "mohontunggu" in norm
+                or "mohongtunggu" in norm
+            ):
+                has_proses = True
+            is_not_now = (
+                "notnow" in norm
+                or "nownot" in norm
+                or "nothanks" in norm
+                or "tidaksekarang" in norm
+                or "nantidulu" in norm
+                or norm in {"nanti", "skip", "lewati"}
+            )
+            if not_now_btn is None and is_not_now:
+                not_now_btn = (text, bbox, x, y)
+
+        if not has_proses:
+            return False
+
+        self.log("TERDETEKSI POPUP: 'Hadiah sedang diproses, mohon tunggu.'")
+        if not_now_btn:
+            nx_text, _nbbox, nx, ny = not_now_btn
+            self.log(f"Klik tombol NOW NOT '{nx_text}' di ({nx},{ny})")
+            self.tap(nx, ny)
+        else:
+            self.log("Tombol NOW NOT tidak terdeteksi via OCR, fallback klik di (360, 1215)")
+            self.tap(360, 1215)
+
+        time.sleep(0.8)
+        self.close_game_from_recents_and_restart(reason="hadiah sedang diproses")
         return True
 
-    # ===================== GAMEPLAY =====================
-
-    def handle_game_screen(self) -> None:
+    def handle_confirm_close_popup(self, app: Optional[ForegroundApp]) -> bool:
+        """Jika muncul popup 'Confirm to close app' atau 'Keluar dari tantangan saat ini?' (Tinggalkan/Lanjut), klik Lanjut/Continue."""
+        if not app or app.package != TARGET_PACKAGE or self.is_game_ad(app):
+            return False
         now = time.time()
-        self.ad_start_ts = None
-        self.ad_title_confirmed = False
+        if now - self.last_confirm_close_check_ts < 2.0:
+            return False
+        self.last_confirm_close_check_ts = now
 
-        # Cek saldo periodik setiap 45 detik
-        if now - self.last_saldo_check_ts > 45:
-            self.last_saldo_check_ts = now
-            self.check_saldo("pengecekan periodik")
+        entries = self.ocr_current_screen("confirm_close")
+        if not entries:
+            return False
+        has_context = False
+        continue_btn = None
+        for text, bbox, x, y in entries:
+            norm = self.normalize_text(text)
+            if (
+                "confirmtoclose" in norm
+                or "confirmclose" in norm
+                or ("confirm" in norm and "close" in norm)
+                or "toclosetheapp" in norm
+                or "closetheapp" in norm
+                or ("wantto" in norm and ("exit" in norm or "quit" in norm or "close" in norm))
+                or norm in {"exit", "quit", "tinggalkan"}
+                or "keluardari" in norm
+                or "tantangan" in norm
+                or "tinggalkan" in norm
+                or "keluar" in norm
+            ):
+                has_context = True
+            if continue_btn is None and (
+                "continue" in norm
+                or norm in {"contin", "continu"}
+                or "lanjut" in norm
+                or "lanjutkan" in norm
+            ):
+                continue_btn = (text, bbox, x, y)
+        if not (has_context or continue_btn):
+            return False
+        if not continue_btn and has_context:
+            continue_btn = ("Lanjut (fallback)", "0.64,0.54,0.2,0.05", 460, 890)
+        if not continue_btn:
+            return False
+        if now - self.last_confirm_close_tap_ts < 2.0:
+            return False
+        self.last_confirm_close_tap_ts = now
+        text, bbox, x, y = continue_btn
+        self.log(f"POPUP KONFIRMASI KELUAR TERDETEKSI: klik Lanjut/Continue '{text}' di ({x},{y}) | bbox={bbox}")
+        self.tap(x, y)
+        time.sleep(0.5)
+        self.dobel_visible = False
+        self.not_now_visible = False
+        return True
 
-        # Bersihkan cache berkala tiap 10 menit
-        if now - self.last_cache_clear_ts > 600:
-            self.last_cache_clear_ts = now
-            self.clear_ad_cache()
+    def handle_wallet_page_if_needed(self, app: Optional[ForegroundApp]) -> bool:
+        """Tutup halaman Dompet Saya/Detail Penarikan dengan panah kiri di kiri judul."""
+        if not app or app.package != TARGET_PACKAGE or self.is_game_ad(app):
+            return False
+        now = time.time()
+        if now - self.last_wallet_check_ts < 2.0:
+            return False
+        self.last_wallet_check_ts = now
 
-        # 1. Deteksi popup reward cerdas (DOBEL SELALU DIKLIK, TIDAK PERNAH KLIK NOW NOT)
-        dobel, not_now, reward_rp = self.find_reward_offer()
-        if dobel:
-            label, dx, dy = dobel
-            # Beri jeda lelang 3.5 detik antar-klik agar SDK TopOn selesai buffering video tanpa interupsi spam tap
-            if now - self.last_reward_tap_ts < 3.5:
-                return
-            self.last_reward_tap_ts = now
+        entries = self.ocr_current_screen("wallet_page")
+        for text, bbox, x, y in entries:
+            norm = self.normalize_text(text)
+            is_wallet_title = (
+                "dompetsaya" in norm
+                or ("dompet" in norm and "saya" in norm)
+                or "detailpenarikan" in norm
+                or "riwayatpenarikan" in norm
+            )
+            # Judul halaman biasanya di area header atas; jangan salah tangkap tombol Penarikan di saldo/header game.
+            if is_wallet_title and 90 <= y <= 280:
+                tap_x = 45
+                tap_y = y
+                self.log(f"HALAMAN DOMPET TERDETEKSI: '{text}' | bbox={bbox} | klik panah kiri di ({tap_x},{tap_y})")
+                self.tap(tap_x, tap_y)
+                time.sleep(0.6)
+                self.dobel_visible = False
+                self.not_now_visible = False
+                self.bubble_watch_active = False
+                return True
+        return False
 
-            s = self.get_current_saldo()
-            if s is not None:
-                self.pre_ad_saldo = s
-            self.was_dobel_clicked = True
-            self.pending_ad_verification = True
-            self.dobel_consecutive_clicks += 1
+    def handle_gagal_popup(self, app: Optional[ForegroundApp]) -> bool:
+        """Jika muncul popup 'gagal' (level kalah/stuck), klik tombol 'Hidup kembali' (prioritas tombol video bawah)."""
+        if not app or app.package != TARGET_PACKAGE or self.is_game_ad(app):
+            return False
 
-            # Titik sentuh presisi di tengah tombol horizontal (x=360)
-            tap_x = 360
-            tap_y = dy
+        now = time.time()
+        if now - self.last_gagal_check_ts < 0.8:
+            return False
+        self.last_gagal_check_ts = now
 
-            # Sesuai instruksi: Jika sudah 15x klik dobel iklan tidak terbuka -> klaim saldo via NOT NOW / AMBIL & restart
-            if self.dobel_consecutive_clicks >= 15:
-                self.log(f"DOBEL TERTUNDA ({self.dobel_consecutive_clicks}x) -> KLAIM SALDO via NOT NOW / AMBIL & RESTART GAME")
-                if not_now:
-                    _, nx, ny = not_now
-                    self.tap(nx, ny)
-                else:
-                    self.tap(360, 1216)
-                time.sleep(2.0)
-                self.launch_game("restart setelah klaim saldo dobel macet 15x", hard_restart=True)
-                self.dobel_consecutive_clicks = 0
-                return
+        entries = self.ocr_current_screen("gagal_popup")
+        if not entries:
+            return False
 
+        has_gagal = False
+        candidates: list[Tuple[str, str, int, int]] = []
+        for text, bbox, x, y in entries:
+            norm = self.normalize_text(text)
+            if "gagal" in norm or "kalah" in norm or "failed" in norm:
+                has_gagal = True
+            if "hidup" in norm or ("kembali" in norm and has_gagal):
+                if 700 <= y <= 1200:
+                    candidates.append((text, bbox, x, y))
 
+        if not (has_gagal or candidates):
+            return False
 
-            rp_info = f" Rp {reward_rp:.2f}" if reward_rp else ""
-            self.log(f"FOKUS IKLAN DOBEL{rp_info}! -> KLIK TENGAH DOBEL di ({tap_x},{tap_y}) [attempt {self.dobel_consecutive_clicks}] via ocr")
-            self.tap(tap_x, tap_y)
-            return
-        else:
-            self.dobel_consecutive_clicks = 0
+        if now - self.last_gagal_tap_ts < 1.2:
+            return True
+        self.last_gagal_tap_ts = now
 
-        # 2. Cari tombol reward umum lainnya (termasuk BUKA / PETI IKLAN)
-        if now - self.last_reward_tap_ts < 3.5:
-            return
-        btn = self.find_reward_button()
-        if btn:
-            label, x, y, src = btn
-            n = self.norm(label).replace(" ", "")
-            if "buka" in n:
-                if now < self.buka_ad_cooldown_until:
-                    remaining = int(self.buka_ad_cooldown_until - now)
-                    self.log(f"IKLAN BELUM TERSEDIA: tombol BUKA dalam cooldown ({remaining}s tersisa) -> tutup popup, tidak retry")
-                    not_now_btn = self.find_not_now_button()
-                    if not_now_btn:
-                        _, nx, ny = not_now_btn
-                        self.tap(nx, ny)
-                    self.buka_consecutive_clicks = 0
-                    self.pending_ad_verification = False
-                    return
-
-                self.buka_consecutive_clicks += 1
-                if self.buka_consecutive_clicks == 1:
-                    wait_sec = 5.0
-                elif self.buka_consecutive_clicks == 2:
-                    wait_sec = 8.0
-                else:
-                    wait_sec = 12.0
-                if self.buka_consecutive_clicks >= MAX_BUKA_AD_ATTEMPTS:
-                    self.buka_ad_cooldown_until = now + BUKA_AD_COOLDOWN_SECONDS
-                    self.log(
-                        f"IKLAN GAGAL DIMUAT ({self.buka_consecutive_clicks}x): aplikasi tidak membuka aktivitas iklan "
-                        f"-> cooldown {BUKA_AD_COOLDOWN_SECONDS // 60} menit, tutup popup tanpa restart"
-                    )
-                    not_now_btn = self.find_not_now_button()
-                    if not_now_btn:
-                        _, nx, ny = not_now_btn
-                        self.tap(nx, ny)
-                    self.buka_consecutive_clicks = 0
-                    self.pending_ad_verification = False
-                    return
-
+        # Prioritaskan tombol video bawah (y > 950, target sekitar y=1041)
+        video_candidates = [c for c in candidates if c[3] > 950]
+        if video_candidates:
+            video_candidates.sort(key=lambda c: abs(c[3] - 1041))
+            best = video_candidates[0]
+            tap_x, tap_y = 360, best[3]
+            log_desc = f"tombol video '{best[0]}' di ({tap_x},{tap_y})"
+        elif candidates:
+            best = candidates[0]
+            if has_gagal and best[3] < 920:
+                tap_x, tap_y = 360, 1041
+                log_desc = f"tombol video di ({tap_x},{tap_y}) (posisi video di bawah '{best[0]}' y={best[3]})"
             else:
-                self.buka_consecutive_clicks = 0
-                wait_sec = 2.0
-
-            s = self.get_current_saldo()
-            if s is not None:
-                self.pre_ad_saldo = s
-            self.was_dobel_clicked = False
-            self.pending_ad_verification = True
-            # Beri jeda 4.5 detik agar SDK TopOn selesai lelang & buffering tanpa interupsi
-            self.last_reward_tap_ts = now + wait_sec
-            self.log(f"FOKUS BUKA IKLAN: '{label}' di ({x},{y}) [attempt {self.buka_consecutive_clicks}] via {src} -> tunggu {wait_sec}s hingga iklan muncul")
-            self.tap(x, y)
-            return
+                tap_x, tap_y = 360, best[3]
+                log_desc = f"tombol '{best[0]}' di ({tap_x},{tap_y})"
         else:
-            self.buka_consecutive_clicks = 0
+            tap_x, tap_y = 360, 1041
+            log_desc = f"tombol video di ({tap_x},{tap_y}) (koordinat default pop-up gagal)"
 
-        # 3. Cari bubble iklan (hijau/kuning) untuk di-tap brutal BARENGAN dengan klik panah puzzle (4X LEBIH CEPAT: 0.15s)
-        if now - self.last_bubble_tap_ts > 0.15:
-            bubble = self.find_ad_bubble()
-            if bubble:
-                bx, by, info = bubble
-                self.last_bubble_tap_ts = now
-                self.log(f"BUBBLE IKLAN + PANAH (4X CEPAT): {info} -> TAP SERENTAK bubble ({bx},{by}) & 5 panah")
-                self.burst_tap_bubble_and_arrows(bx, by)
+        self.log(f"POPUP GAGAL TERDETEKSI: klik Hidup Kembali -> {log_desc}")
+        self.tap(tap_x, tap_y, color="green")
+        time.sleep(0.5)
+        self.dobel_visible = False
+        self.not_now_visible = False
+        self.bubble_watch_active = False
+        return True
+
+    def update_dobel_log(self, app: Optional[ForegroundApp]) -> None:
+        # Cukup cek saat masih di package game, supaya tidak berat dan tidak salah deteksi app lain.
+        # Jika sedang dalam iklan, jangan scan popup hadiah.
+        if not app or app.package != TARGET_PACKAGE or self.is_game_ad(app):
+            self.dobel_visible = False
+            self.not_now_visible = False
+            return
+
+        now = time.time()
+        if now - self.last_dobel_check_ts < DOBEL_CHECK_INTERVAL:
+            return
+        self.last_dobel_check_ts = now
+
+        dobel, buka_btn, not_now, reward_rp, settings_btn, hadiah_sedang_diproses = self.find_reward_offer_buttons()
+
+        if hadiah_sedang_diproses:
+            self.log("TERDETEKSI POPUP: 'Hadiah sedang diproses, mohon tunggu.'")
+            if not_now:
+                nx_text, _nbbox, nx, ny = not_now
+                self.log(f"Klik tombol NOW NOT '{nx_text}' di ({nx},{ny})")
+                self.tap(nx, ny)
+            else:
+                self.log("Tombol NOW NOT tidak terdeteksi via OCR, fallback klik di (360, 1215)")
+                self.tap(360, 1215)
+            time.sleep(0.8)
+            self.close_game_from_recents_and_restart(reason="hadiah sedang diproses")
+            return
+        if settings_btn:
+            stext, sbbox, sx, sy = settings_btn
+            self.log(f"MENEMUKAN POP-UP PENGATURAN: '{stext}' | bbox={sbbox} | klik tombol X di kanan teks di ({sx},{sy})")
+            self.show_tap_marker([(sx, sy, "blue", 1.5, 34)])
+            self.tap(sx, sy)
+            time.sleep(0.5)
+            self.dobel_visible = False
+            self.not_now_visible = False
+            return
+
+        if dobel:
+            self.buka_tap_count = 0
+            text, bbox, x, y = dobel
+            screen_w, _screen_h = self.get_screen_size()
+
+            if not self.dobel_visible:
+                self.dobel_tap_count = 1
+                tap_x = x
+                tap_y = y
+                self.log(f"MENEMUKAN TOMBOL DOBEL: '{text}' | bbox={bbox} | ocr=({x},{y}) | tap=({tap_x},{tap_y}) | reward={reward_rp}")
+                self.notify_dobel_found(text, bbox, x, y, tap_x, tap_y, reward_rp)
+            else:
+                self.dobel_tap_count = getattr(self, "dobel_tap_count", 1) + 1
+                # Jika sudah dicoba 5x tidak memicu iklan, fallback ke NOW NOT agar tidak stuck
+                if self.dobel_tap_count >= 5 and not_now:
+                    nx_text, nbbox, nx, ny = not_now
+                    self.log(f"DOBEL TIDAK MEMICU IKLAN ({self.dobel_tap_count}x coba): fallback klik NOW NOT di ({nx},{ny})")
+                    self.tap(nx, ny)
+                    self.dobel_tap_count = 0
+                    self.dobel_visible = False
+                    return
+                # Bergantian tap tepat pada teks 'DOBEL' dan tengah tombol layar
+                tap_x = x if (self.dobel_tap_count % 2 == 1) else (screen_w // 2 if screen_w else x)
+                tap_y = y
+                self.log(f"DOBEL MASIH TERDETEKSI: '{text}' | bbox={bbox} | ocr=({x},{y}) | retry tap=({tap_x},{tap_y}) [coba #{self.dobel_tap_count}]")
+
+            if (not self.dobel_visible) or (now - self.last_dobel_tap_ts >= DOBEL_TAP_RETRY_SECONDS):
+                self.last_dobel_tap_ts = now
+                self.remember_pending_dobel_reward(reward_rp)
+                self.log(f"KLIK TOMBOL DOBEL di ({tap_x},{tap_y}) | simpan reward DOBEL={reward_rp}")
+                self.tap(tap_x, tap_y)
+            self.dobel_visible = True
+            self.not_now_visible = False
+            self.bubble_watch_active = False
+
+        elif buka_btn:
+            text, bbox, x, y = buka_btn
+            screen_w, _screen_h = self.get_screen_size()
+            tap_x = screen_w // 2 if screen_w else x
+            tap_y = y
+            self.log(f"MENEMUKAN TOMBOL BUKA (PRIORITAS BUKA, JANGAN NOW NOT): '{text}' | bbox={bbox} | ocr=({x},{y}) | tap=({tap_x},{tap_y})")
+            if (not hasattr(self, "last_buka_tap_ts")) or (now - self.last_buka_tap_ts >= 1.2):
+                self.last_buka_tap_ts = now
+                self.buka_tap_count = getattr(self, "buka_tap_count", 0) + 1
+                if self.buka_tap_count >= 4 and not_now:
+                    nx_text, nbbox, nx, ny = not_now
+                    self.log(f"TOMBOL BUKA TIDAK MERESPONS ({self.buka_tap_count}x tap): fallback klik NOW NOT di ({nx},{ny})")
+                    self.tap(nx, ny)
+                    self.buka_tap_count = 0
+                else:
+                    self.log(f"KLIK TOMBOL BUKA di ({tap_x},{tap_y}) [count={self.buka_tap_count}]")
+                    self.tap(tap_x, tap_y, color="green")
+            self.dobel_visible = False
+            self.not_now_visible = False
+            self.bubble_watch_active = False
+
+        elif not_now:
+            self.buka_tap_count = 0
+            text, bbox, x, y = not_now
+            if not self.not_now_visible:
+                self.log(f"TIDAK ADA DOBEL/BUKA, MENEMUKAN TOMBOL NOW NOT/NOT NOW: '{text}' | bbox={bbox} | tap=({x},{y})")
+                self.log(f"KLIK TOMBOL NOW NOT/NOT NOW SEKALI di ({x},{y})")
+                self.tap(x, y)
+                time.sleep(0.3)
+                self.capture_and_report_balance("setelah klik NOW NOT sebelum cari gelembung")
+                self.bubble_watch_active = True
+                self.bubble_watch_start_ts = time.time()
+                self.bubble_search_notified = False
+                self.last_bubble_check_ts = 0.0
+                self.log(f"MODE CARI GELEMBUNG AKTIF: timeout {self.format_duration(BUBBLE_TIMEOUT_SECONDS)}")
+                self.notify_bubble_search_once("setelah klik NOW NOT")
+            self.not_now_visible = True
+            self.dobel_visible = False
+        else:
+            self.buka_tap_count = 0
+            self.dobel_visible = False
+            self.not_now_visible = False
+
+    def find_moving_bubble(self) -> Optional[Tuple[int, int, str]]:
+        """Cari objek bulat/gelembung yang bergerak dari dua screenshot berurutan."""
+        try:
+            import cv2
+            import numpy as np
+        except Exception:
+            return None
+
+        cached_img = getattr(self, "_cached_bubble_frame", None)
+        cached_ts = getattr(self, "_cached_bubble_ts", 0.0)
+        now_pre = time.time()
+        if cached_img is not None and (now_pre - cached_ts < 2.8):
+            img1 = cached_img
+            first_ts = cached_ts
+        else:
+            first_res = self.capture_screenshot()
+            if not first_res:
+                return None
+            first_png, width, height = first_res
+            self.last_bubble_screen_size = (width, height)
+            first_ts = time.time()
+            time.sleep(0.10)
+            img1 = cv2.imdecode(np.frombuffer(first_png, dtype=np.uint8), cv2.IMREAD_COLOR)
+
+        second_ts = time.time()
+        second = self.capture_screenshot()
+        if not second:
+            return None
+        second_png, width, height = second
+        self.last_bubble_screen_size = (width, height)
+
+        img2 = cv2.imdecode(np.frombuffer(second_png, dtype=np.uint8), cv2.IMREAD_COLOR)
+        if img1 is None or img2 is None or img1.shape != img2.shape:
+            return None
+        self._cached_bubble_frame = img2
+        self._cached_bubble_ts = second_ts
+
+        diff = cv2.absdiff(img1, img2)
+        gray = cv2.cvtColor(diff, cv2.COLOR_BGR2GRAY)
+        _, mask = cv2.threshold(gray, 24, 255, cv2.THRESH_BINARY)
+        kernel = np.ones((5, 5), np.uint8)
+        mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
+        mask = cv2.dilate(mask, kernel, iterations=2)
+
+        # Eksklusi zona statis atas saja. Area gelembung sekarang dibuat penuh
+        # sampai bawah layar, mulai dari bawah tombol menu garis-3.
+        scan_top = int(height * BUBBLE_SCAN_TOP_RATIO)
+        scan_bottom = int(height * BUBBLE_SCAN_BOTTOM_RATIO)
+        mask[:scan_top, :] = 0  # saldo / bar atas / tombol menu
+        mask[int(height * 0.83):, :] = 0  # booster bar bawah
+        mask[scan_bottom:, :] = 0  # sisakan margin bawah kecil
+
+        contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        candidates = []
+        for contour in contours:
+            x, y, w, h = cv2.boundingRect(contour)
+            area = cv2.contourArea(contour)
+            if area < 350 or area > 24000:
+                continue
+            if w < 28 or h < 28 or w > 180 or h > 180:
+                continue
+            aspect = w / float(h)
+            if aspect < 0.55 or aspect > 1.8:
+                continue
+
+            perimeter = cv2.arcLength(contour, True)
+            if perimeter > 0:
+                circ = 4 * math.pi * area / (perimeter * perimeter)
+                if circ < 0.55:
+                    continue
+
+            center_x = x + w // 2
+            center_y = y + h // 2
+            if center_y < scan_top or center_y > scan_bottom:
+                continue
+
+            # Abaikan koordinat yang baru saja menyebabkan redirect/bad ad
+            if any(math.hypot(center_x - bx, center_y - by) < 70 for _, bx, by in getattr(self, "bad_bubble_coords", [])):
+                continue
+            if center_x < 30 or center_x > width - 30:
+                continue
+
+            rx1 = max(0, x - 18)
+            ry1 = max(0, y - 18)
+            rx2 = min(width, x + w + 18)
+            ry2 = min(height, y + h + 18)
+            roi1 = img1[ry1:ry2, rx1:rx2]
+            roi2 = img2[ry1:ry2, rx1:rx2]
+            if roi1.size == 0 or roi2.size == 0:
+                continue
+            hsv1 = cv2.cvtColor(roi1, cv2.COLOR_BGR2HSV)
+            hsv2 = cv2.cvtColor(roi2, cv2.COLOR_BGR2HSV)
+
+            green1 = cv2.inRange(hsv1, np.array([35, 55, 75]), np.array([90, 255, 255]))
+            yellow1 = cv2.inRange(hsv1, np.array([15, 60, 90]), np.array([38, 255, 255]))
+            green2 = cv2.inRange(hsv2, np.array([35, 55, 75]), np.array([90, 255, 255]))
+            yellow2 = cv2.inRange(hsv2, np.array([15, 60, 90]), np.array([38, 255, 255]))
+            money1 = cv2.bitwise_or(green1, yellow1)
+            money2 = cv2.bitwise_or(green2, yellow2)
+
+            white1 = cv2.inRange(hsv1, np.array([0, 0, 160]), np.array([179, 85, 255]))
+            white2 = cv2.inRange(hsv2, np.array([0, 0, 160]), np.array([179, 85, 255]))
+            target1 = cv2.bitwise_or(money1, white1)
+            target2 = cv2.bitwise_or(money2, white2)
+            money_ratio = float(money2.mean() / 255.0)
+            white_ratio = float(white2.mean() / 255.0)
+            sat_mean = float(hsv2[:, :, 1].mean())
+
+            if money_ratio < 0.05 and sat_mean < 25:
+                continue
+            if white_ratio < 0.04 and money_ratio < 0.08:
+                continue
+
+            m2 = cv2.moments(target2)
+            if m2["m00"] > 0:
+                latest_x = int(rx1 + m2["m10"] / m2["m00"])
+                latest_y = int(ry1 + m2["m01"] / m2["m00"])
+            else:
+                latest_x, latest_y = center_x, center_y
+
+            vx, vy = 0.0, -160.0
+            m1 = cv2.moments(target1)
+            dt_pair = max(0.001, second_ts - first_ts)
+            calc_vx, calc_vy = 0.0, 0.0
+            if m1["m00"] > 0 and m2["m00"] > 0:
+                old_x = int(rx1 + m1["m10"] / m1["m00"])
+                old_y = int(ry1 + m1["m01"] / m1["m00"])
+                calc_vx = (latest_x - old_x) / dt_pair
+                calc_vy = (latest_y - old_y) / dt_pair
+                if abs(calc_vx) < 900 and abs(calc_vy) < 1200:
+                    vx, vy = calc_vx, calc_vy
+
+            # Filter objek statis / pulsing yang tidak benar-benar bergerak
+            if math.hypot(calc_vx, calc_vy) < 18.0:
+                continue
+
+            # Filter koordinat yang baru saja menyebabkan redirect/bad ad
+            now_t = time.time()
+            self.bad_bubble_coords = [item for item in self.bad_bubble_coords if item[0] > now_t]
+            if any(math.hypot(latest_x - bx, latest_y - by) < 70 for _, bx, by in self.bad_bubble_coords):
+                continue
+
+            lead = 0.34
+            pred_x = int(latest_x + vx * lead)
+            pred_y = int(latest_y + vy * lead)
+            if abs(pred_x - latest_x) > 170 or abs(pred_y - latest_y) > 220:
+                pred_x, pred_y = latest_x, latest_y
+            self.last_bubble_pair_velocity = (vx, vy)
+
+            score = area + money_ratio * 4200 + white_ratio * 2800 + sat_mean * 10
+            candidates.append((score, pred_x, pred_y, f"moving-bubble area={int(area)} bbox=({x},{y},{w},{h}) latest=({latest_x},{latest_y}) v=({vx:.0f},{vy:.0f}) money={money_ratio:.2f} white={white_ratio:.2f}"))
+
+        if not candidates:
+            reward_icon = self.find_reward_bubble_icon(second_png, width, height)
+            if reward_icon:
+                ix, iy, iinfo = reward_icon
+                diff_roi = diff[max(0, iy - 35):min(height, iy + 35), max(0, ix - 35):min(width, ix + 35)]
+                if diff_roi.size > 0 and float(diff_roi.mean()) > 3.5:
+                    return ix, iy, f"motion-confirmed {iinfo}"
+
+        if not candidates:
+            return None
+        candidates.sort(reverse=True)
+        _, cx, cy, info = candidates[0]
+        return int(cx), int(cy), info
+
+    def find_reward_bubble_icon(self, png_data: bytes, width: int, height: int) -> Optional[Tuple[int, int, str]]:
+        """Deteksi cash-bubble reward yang bergerak.
+
+        Target yang benar adalah gelembung transparan berisi uang hijau/kuning.
+        Filter ini menghindari ikon bell kanan-bawah dan objek background seperti kura-kura.
+        """
+        try:
+            import cv2
+            import numpy as np
+        except Exception:
+            return None
+
+        img = cv2.imdecode(np.frombuffer(png_data, dtype=np.uint8), cv2.IMREAD_COLOR)
+        if img is None:
+            return None
+
+        hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+
+        # Warna uang di dalam bubble: hijau + kuning/oranye.
+        green = cv2.inRange(hsv, np.array([35, 60, 80]), np.array([90, 255, 255]))
+        yellow = cv2.inRange(hsv, np.array([15, 70, 100]), np.array([38, 255, 255]))
+        mask = cv2.bitwise_or(green, yellow)
+
+        scan_top = int(height * BUBBLE_SCAN_TOP_RATIO)
+        scan_bottom = int(height * BUBBLE_SCAN_BOTTOM_RATIO)
+        allowed = np.zeros_like(mask)
+        allowed[scan_top:scan_bottom, :] = 255
+        # Exclude papan puzzle tengah dan label Level yang juga hijau/kuning.
+        cv2.rectangle(allowed, (60, int(height * 0.31)), (660, int(height * 0.83)), 0, -1)
+        # Exclude booster row bawah
+        cv2.rectangle(allowed, (0, int(height * 0.83)), (width, height), 0, -1)
+        cv2.rectangle(allowed, (240, 300), (480, 430), 0, -1)
+        # Exclude saldo / tombol atas. Area bawah sengaja tetap aktif.
+        cv2.rectangle(allowed, (0, 0), (width, scan_top), 0, -1)
+        cv2.rectangle(allowed, (0, scan_bottom), (width, height), 0, -1)
+        mask = cv2.bitwise_and(mask, allowed)
+
+        kernel = np.ones((5, 5), np.uint8)
+        mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
+        mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel, iterations=2)
+
+        contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        candidates = []
+        for contour in contours:
+            x, y, w, h = cv2.boundingRect(contour)
+            area = cv2.contourArea(contour)
+            if area < 1000 or area > 28000:
+                continue
+            if w < 35 or h < 35 or w > 230 or h > 230:
+                continue
+
+            perimeter = cv2.arcLength(contour, True)
+            if perimeter <= 0:
+                continue
+            circularity = 4 * np.pi * area / (perimeter * perimeter)
+            if circularity < 0.58:
+                continue
+            center_x = x + w // 2
+            center_y = y + h // 2
+            # Hindari kandidat terlalu mepet tepi layar
+            if center_x < 35 or center_x > width - 45:
+                continue
+            if center_y < scan_top or center_y > scan_bottom:
+                continue
+
+            # Bubble asli punya lingkaran/shine putih transparan di sekitar uang.
+            pad = 70
+            x1 = max(0, center_x - pad)
+            y1 = max(0, center_y - pad)
+            x2 = min(width, center_x + pad)
+            y2 = min(height, center_y + pad)
+            crop_hsv = hsv[y1:y2, x1:x2]
+            if crop_hsv.size == 0:
+                continue
+            white = cv2.inRange(crop_hsv, np.array([0, 0, 165]), np.array([179, 85, 255]))
+            colored = cv2.inRange(crop_hsv, np.array([15, 60, 80]), np.array([95, 255, 255]))
+            white_ratio = float(white.mean() / 255.0)
+            colored_ratio = float(colored.mean() / 255.0)
+            if white_ratio < 0.10 or colored_ratio < 0.12:
+                continue
+
+            # Bubble reward biasanya di area sisi/tengah luar puzzle
+            side_bonus = 1200 if (center_x < width * 0.34 or center_x > width * 0.66) else 0
+            score = area + side_bonus + white_ratio * 6500 + colored_ratio * 1300
+            candidates.append((score, center_x, center_y, f"cash-bubble area={int(area)} bbox=({x},{y},{w},{h}) white={white_ratio:.2f} color={colored_ratio:.2f}"))
+
+        if not candidates:
+            return None
+        candidates.sort(reverse=True)
+        _, x, y, info = candidates[0]
+        return int(x), int(y), info
+
+    def build_bubble_burst_points(self, x: int, y: int, width: int, height: int) -> list[Tuple[int, int]]:
+        """Titik tap aman dan rapat di sekitar gelembung yang sudah terdeteksi.
+
+        Gunakan 7 titik presisi rapat (radius 10 px) di sekitar pusat gelembung,
+        bukan puluhan titik menyebar agar tidak memicu tombol sistem / redirect Play Store.
+        """
+        now = time.time()
+        cx, cy = int(x), int(y)
+        self.prev_bubble_detection = (now, cx, cy)
+        points: list[Tuple[int, int]] = []
+        seen: set[Tuple[int, int]] = set()
+
+        withdraw_rect = (int(width * 0.58), int(height * 0.055), width - 12, int(height * 0.145))
+        menu_rect = (0, int(height * 0.145), int(width * 0.18), int(height * 0.235))
+
+        def in_rect(px: int, py: int, rect: Tuple[int, int, int, int]) -> bool:
+            x1, y1, x2, y2 = rect
+            return x1 <= px <= x2 and y1 <= py <= y2
+
+        def add_point(px: int, py: int) -> None:
+            px, py = int(px), int(py)
+            if px < 18 or px > width - 18:
                 return
+            if py < int(height * BUBBLE_SCAN_TOP_RATIO) or py > int(height * BUBBLE_SCAN_BOTTOM_RATIO):
+                return
+            if in_rect(px, py, withdraw_rect) or in_rect(px, py, menu_rect):
+                return
+            point = (px, py)
+            if point not in seen:
+                seen.add(point)
+                points.append(point)
 
-        # 4. Gameplay aktif super cepat (4X LEBIH CEPAT: 0.12s + 5 panah serentak):
-        if now - self.last_gameplay_tap_ts > 0.12:
-            self.last_gameplay_tap_ts = now
-            w, h = self.screen_size()
-            arrow_pts = [
-                (w // 2 + random.randint(-150, 150), int(h * 0.55) + random.randint(-130, 130))
-                for _ in range(5)
+        add_point(cx, cy)
+        for angle_deg in range(0, 360, 60):
+            rad = math.radians(angle_deg)
+            add_point(cx + int(10 * math.cos(rad)), cy + int(10 * math.sin(rad)))
+
+        self.log(
+            "BUILD TAP GELEMBUNG TERFOKUS: "
+            f"{len(points)} titik presisi | target=({cx},{cy}) | exclude penarikan/menu"
+        )
+        return points[:7] if points else [(cx, cy)]
+
+    def find_gameplay_arrows(self, png_data: bytes, width: int, height: int) -> list[Tuple[int, int]]:
+        """Deteksi posisi panah di area board puzzle Lucky Arrow Escaper."""
+        try:
+            import cv2
+            import numpy as np
+            img = cv2.imdecode(np.frombuffer(png_data, dtype=np.uint8), cv2.IMREAD_COLOR)
+            if img is None:
+                return []
+            crop_y1 = int(height * 0.35)
+            crop_y2 = int(height * 0.75)
+            crop_x1 = int(width * 0.08)
+            crop_x2 = int(width * 0.92)
+            crop = img[crop_y1:crop_y2, crop_x1:crop_x2]
+            gray = cv2.cvtColor(crop, cv2.COLOR_BGR2GRAY)
+            dark = gray < 120
+            contours, _ = cv2.findContours(dark.astype(np.uint8) * 255, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+            pts = []
+            for c in contours:
+                x, y, w, h = cv2.boundingRect(c)
+                area = cv2.contourArea(c)
+                if area > 100:
+                    cx = crop_x1 + x + w // 2
+                    cy = crop_y1 + y + h // 2
+                    if not any(abs(cx - px) < 25 and abs(cy - py) < 25 for px, py in pts):
+                        pts.append((cx, cy))
+            return pts
+        except Exception:
+            return []
+
+    def do_gameplay_arrow_tap(self) -> None:
+        """Tap panah pada board Lucky Arrow Escaper untuk menyelesaikan puzzle dan memicu bubble/reward."""
+        now = time.time()
+        if now - self.last_arrow_tap_ts < 0.7:
+            return
+
+        screenshot = self.capture_screenshot()
+        arrows = []
+        if screenshot:
+            png_data, width, height = screenshot
+            arrows = self.find_gameplay_arrows(png_data, width, height)
+
+        if not arrows:
+            w, h = self.get_screen_size()
+            arrows = [
+                (w // 2, int(h * 0.50)),
+                (w // 2 - 120, int(h * 0.55)),
+                (w // 2 + 120, int(h * 0.55)),
+                (w // 2, int(h * 0.60)),
             ]
-            tap_cmds = " & ".join(f"input tap {x} {y}" for x, y in arrow_pts)
-            self.adb_out(["shell", f"sh -c '{tap_cmds}'"], timeout=2)
 
-    # ===================== MAIN STEP =====================
+        self.last_arrow_tap_ts = now
+        idx = getattr(self, "arrow_tap_index", 0)
+        tap_points = [
+            arrows[idx % len(arrows)],
+            arrows[(idx + 1) % len(arrows)],
+            arrows[(idx + 2) % len(arrows)],
+        ]
+        self.arrow_tap_index = (idx + 3) % len(arrows)
+        self.log(f"TAP PANAH PUZZLE: tap {len(tap_points)} titik panah {tap_points} untuk memicu gelembung/hadiah")
+        for x, y in tap_points:
+            self.tap(x, y, color="yellow")
+            time.sleep(0.06)
 
-    def step(self) -> None:
-        app = self.foreground()
+    def find_ad_bubble(self, png_data: bytes, width: int, height: int) -> Optional[Tuple[int, int, str]]:
+        """Deteksi cepat gelembung uang (hijau/kuning) pada 1 frame screenshot (< 0.05 detik)."""
+        try:
+            import cv2
+            import numpy as np
+            img = cv2.imdecode(np.frombuffer(png_data, dtype=np.uint8), cv2.IMREAD_COLOR)
+            if img is None:
+                return None
+
+            scan_top = int(height * BUBBLE_SCAN_TOP_RATIO)
+            scan_bottom = int(height * BUBBLE_SCAN_BOTTOM_RATIO)
+            roi = img[scan_top:scan_bottom, :]
+            if roi.size == 0:
+                return None
+
+            hsv = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
+            green = cv2.inRange(hsv, np.array([30, 45, 50]), np.array([95, 255, 255]))
+            yellow = cv2.inRange(hsv, np.array([12, 50, 70]), np.array([38, 255, 255]))
+            mask = cv2.bitwise_or(green, yellow)
+
+            # Masking papan puzzle & booster bar agar tidak salah mendeteksi panah puzzle / booster
+            allowed = np.zeros_like(mask)
+            allowed[:, :] = 255
+            pz_top = max(0, int(height * 0.31) - scan_top)
+            pz_bottom = max(0, int(height * 0.83) - scan_top)
+            cv2.rectangle(allowed, (60, pz_top), (660, pz_bottom), 0, -1)
+            booster_top = max(0, int(height * 0.83) - scan_top)
+            cv2.rectangle(allowed, (0, booster_top), (width, mask.shape[0]), 0, -1)
+            mask = cv2.bitwise_and(mask, allowed)
+
+            kernel = np.ones((5, 5), np.uint8)
+            mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
+            mask = cv2.dilate(mask, kernel, iterations=2)
+            contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+            candidates = []
+            for c in contours:
+                area = cv2.contourArea(c)
+                if area < 600 or area > 30000:
+                    continue
+                x, y, bw, bh = cv2.boundingRect(c)
+                if bw < 28 or bh < 28 or bw > 200 or bh > 200:
+                    continue
+                aspect = bw / float(bh)
+                if aspect < 0.65 or aspect > 1.55:
+                    continue
+
+                perimeter = cv2.arcLength(c, True)
+                if perimeter <= 0:
+                    continue
+                circularity = 4 * np.pi * area / (perimeter * perimeter)
+                if circularity < 0.58:
+                    continue
+
+                cx = x + bw // 2
+                cy = scan_top + y + bh // 2
+
+                # Hindari area tepi layar ekstrim
+                if cx < 30 or cx > width - 30:
+                    continue
+                if cy < scan_top or cy > scan_bottom:
+                    continue
+
+                # Cek kemilau / lingkaran transparan putih bubble
+                pad = 55
+                cr_x1 = max(0, cx - pad)
+                cr_y1 = max(0, cy - pad)
+                cr_x2 = min(width, cx + pad)
+                cr_y2 = min(height, cy + pad)
+                crop_hsv = cv2.cvtColor(img[cr_y1:cr_y2, cr_x1:cr_x2], cv2.COLOR_BGR2HSV)
+                if crop_hsv.size == 0:
+                    continue
+                white_mask = cv2.inRange(crop_hsv, np.array([0, 0, 155]), np.array([179, 90, 255]))
+                white_ratio = float(white_mask.mean() / 255.0)
+                if white_ratio < 0.05:
+                    continue
+
+                score = area + circularity * 3000 + white_ratio * 4000
+                candidates.append((score, cx, cy, f"ad-bubble area={int(area)} size={bw}x{bh} circ={circularity:.2f} white={white_ratio:.2f}"))
+
+            if not candidates:
+                return None
+            candidates.sort(reverse=True)
+            _, cx, cy, info = candidates[0]
+            return int(cx), int(cy), info
+        except Exception:
+            return None
+
+    def burst_tap_bubble(self, bx: int, by: int) -> bool:
+        """Kirim tap cepat di area gelembung via shell input tap."""
+        w, h = self.get_screen_size()
+        offsets = [
+            (0, 0),
+            (-18, 0), (18, 0),
+            (0, -18), (0, 18),
+        ]
+        tap_pts = []
+        markers = []
+        for ox, oy in offsets:
+            tx = max(20, min(w - 20, bx + ox))
+            ty = max(int(h * BUBBLE_SCAN_TOP_RATIO), min(int(h * BUBBLE_SCAN_BOTTOM_RATIO), by + oy))
+            tap_pts.append((tx, ty))
+            markers.append((tx, ty, "red", 0.6, 65))
+
+        self.show_tap_marker(markers)
+        cmd_parts = [f"input tap {x} {y}" for x, y in tap_pts]
+        cmd = " & ".join(cmd_parts)
+        self.adb_out(["shell", f"sh -c '{cmd}'"], timeout=3)
+        time.sleep(0.4)
+        after = self.get_foreground_app()
+        return bool(after and self.is_game_ad(after))
+
+    def update_bubble_search(self, app: Optional[ForegroundApp]) -> None:
+        now = time.time()
+        if app and self.is_game_ad(app):
+            self.bubble_watch_active = False
+            self.prev_bubble_detection = None
+            return
+        if not app or app.package != TARGET_PACKAGE:
+            return
+
+        # Saat DOBEL masih terlihat, prioritasnya retry klik DOBEL, bukan scan gelembung.
+        if self.dobel_visible:
+            return
+
+        if self.bubble_watch_active:
+            self.notify_bubble_search_once("mode cari gelembung aktif")
+
+        if now - self.last_bubble_check_ts < BUBBLE_CHECK_INTERVAL:
+            return
+        self.last_bubble_check_ts = now
+
+        detect_start_ts = time.time()
+        screenshot = self.capture_screenshot()
+        found = None
+        if screenshot:
+            png_data, width, height = screenshot
+            # 1. Deteksi instan cepat 1 frame (< 0.05 detik)
+            found = self.find_ad_bubble(png_data, width, height)
+            if not found:
+                icon_res = self.find_reward_bubble_icon(png_data, width, height)
+                if icon_res:
+                    ix, iy, iinfo = icon_res
+                    found = (ix, iy, f"icon {iinfo}")
+        if not found:
+            # 2. Fallback perbandingan frame bergerak jika belum ketemu
+            found = self.find_moving_bubble()
+
+        detect_ms = int((time.time() - detect_start_ts) * 1000)
+        if found:
+            x, y, info = found
+            mode_label = "MODE CARI" if self.bubble_watch_active else "MODE NORMAL"
+            self.log(f"MENEMUKAN GELEMBUNG ({mode_label}): {info} | tap=({x},{y}) | delay_deteksi={detect_ms}ms")
+            if now - self.last_bubble_tap_ts >= 0.25:
+                self.last_bubble_tap_ts = now
+                self.log(f"BURST TAP GELEMBUNG 11 TITIK di sekitar ({x},{y})")
+                opened = self.burst_tap_bubble(x, y)
+                if opened:
+                    after = self.get_foreground_app()
+                    activity = after.activity if after else "unknown"
+                    self.log(f"BERHASIL BUKA IKLAN SETELAH TAP GELEMBUNG: {activity}")
+                    self.notify_ad_opened(activity, source="GELEMBUNG", info=info)
+                    self.bubble_watch_active = False
+                    self.prev_bubble_detection = None
+                    self.bubble_fail_count = 0
+                    self.dobel_tap_count = 0
+                else:
+                    self.bubble_fail_count = getattr(self, "bubble_fail_count", 0) + 1
+                    # Jeda singkat 0.4 detik agar segera retry tap lagi jika bubble masih melayang
+                    self.last_bubble_tap_ts = time.time() + 0.4
+                    self.log(f"TAP GELEMBUNG BELUM MEMBUKA IKLAN (coba #{self.bubble_fail_count}): lanjut tap panah & retry gelembung")
+                    self.do_gameplay_arrow_tap()
+            return
+
+        if not self.bubble_watch_active:
+            self.log("MENUNGGU TARGET: tidak ada DOBEL/NOW NOT, scan cash-bubble normal belum menemukan target")
+            self.do_gameplay_arrow_tap()
+            return
+
+        elapsed = now - self.bubble_watch_start_ts
+        self.log(f"BELUM MENEMUKAN GELEMBUNG BERGERAK | durasi cari {self.format_duration(elapsed)}")
+        self.do_gameplay_arrow_tap()
+        if elapsed >= BUBBLE_TIMEOUT_SECONDS:
+            self.restart_game_for_bubble_search(
+                f"{self.format_duration(elapsed)} tidak menemukan gelembung"
+            )
+
+    def step(self) -> Tuple[str, Optional[ForegroundApp]]:
+        app = self.get_foreground_app()
         if not app:
-            self.launch_game("foreground tidak terbaca")
-            return
-        fg_key = f"{app.package}/{app.activity}"
-        if fg_key != self.last_fg:
-            self.last_fg = fg_key
-            self.log(f"FOREGROUND: {fg_key}")
+            self.update_ad_log(None)
+            self.update_dobel_log(None)
+            self.open_game_from_recents(reason="foreground tidak terbaca")
+            return "open_game_recents_unknown", None
 
-        # Jika bukan game kita -> kembali ke game
-        if app.package != TARGET_PACKAGE:
-            name = BLOCKED_PACKAGES.get(app.package, "aplikasi lain")
-            now = time.time()
-            if now - self.last_external_ts > 2:
-                self.last_external_ts = now
-                self.log(f"KELUAR DARI GAME ke {name} ({app.package}) -> kembali ke game")
-                self.adb_out(["shell", "input", "keyevent", "BACK"], timeout=3)
-                time.sleep(0.7)
-                after = self.foreground()
-                if not after or after.package != TARGET_PACKAGE:
-                    self.launch_game(f"foreground {app.package}")
-            return
+        if app.package == "com.transsion.XOSLauncher":
+            self.open_game_from_recents(reason="terlempar ke launcher")
+            self.last_action = "returned_from_launcher"
+            return "returned_from_launcher", app
 
-        # License error
-        if "license" in app.activity.lower():
-            self.handle_license_error()
-            return
+        if app.package != self.last_foreground:
+            self.last_foreground = app.package
+            self.log(f"Foreground: {app.package}/{app.activity}")
 
-        # Iklan terbuka -> tutup
-        if self.is_ad(app):
-            self.was_in_ad = True
-            self.try_close_ad(app)
-            return
+        if self.handle_confirm_close_popup(app):
+            self.last_action = "clicked_confirm_close_continue"
+            return "clicked_confirm_close_continue", app
 
-        # Kembali dari iklan ke game -> jalankan verifikasi selisih saldo!
-        if self.was_in_ad:
-            self.was_in_ad = False
-            self.log("KEMBALI DARI IKLAN KE GAME -> Verifikasi selisih saldo...")
-            time.sleep(2.0)
-            self.verify_reward_payout()
+        if app.activity == "Application Not Responding":
+            self.clear_apps_and_reopen_game(f"ANR/stuck terdeteksi pada {app.package}")
+            self.last_action = "cleared_anr"
+            return "cleared_anr", app
 
-        # Verifikasi masih di game
-        if not self.verify_still_in_game():
-            return
+        if app.package == TARGET_PACKAGE:
+            self.update_ad_log(app)
+            self.try_finish_ad(app)
+            if self.handle_wallet_page_if_needed(app):
+                self.last_action = "closed_wallet_page"
+                return "closed_wallet_page", app
+            if self.handle_gagal_popup(app):
+                self.last_action = "clicked_hidup_kembali"
+                return "clicked_hidup_kembali", app
+            if self.check_and_handle_hadiah_sedang_diproses(app):
+                self.last_action = "handled_hadiah_sedang_diproses"
+                return "handled_hadiah_sedang_diproses", app
+            self.update_dobel_log(app)
+            self.update_bubble_search(app)
+            self.last_action = "game_ok"
+            return "game_ok", app
 
-        # Handle layar game (cari DOBEL, bubble, dll)
-        self.handle_game_screen()
+        self.update_ad_log(app)
+        self.try_finish_ad(app)
+        self.update_dobel_log(app)
+        self.update_bubble_search(app)
 
-    # ===================== RUN =====================
+        if getattr(self, "seeding_slot_routine", False):
+            return "seeding_slot_routine", app
 
-    def run(self) -> None:
-        self.log("=" * 50)
-        self.log(f"  {TARGET_NAME.upper()} GUARDIAN BOT")
-        self.log("=" * 50)
+        if app.package in BLOCKED_PACKAGES:
+            self.close_blocked_app_and_return(app.package)
+            self.last_action = "closed_blocked_and_returned"
+            return "closed_blocked_and_returned", app
+
+        if getattr(self, "seeding_slot_routine", False):
+            return "seeding_slot_routine", app
+
+        # Tutup aplikasi pihak ketiga jika terbuka akibat redirect iklan sebelum buka riwayat game
+        if app.package not in SYSTEM_PACKAGES:
+            self.force_stop(app.package)
+            self.open_game_from_recents(reason=f"keluar dari {app.package}")
+            self.last_action = "closed_unwanted_and_returned"
+            return "closed_unwanted_and_returned", app
+
+        # Kalau launcher atau quickstep, buka game via riwayat.
+        self.open_game_from_recents(reason=f"foreground sekarang {app.package}")
+        self.last_action = "opened_game_recents"
+        return "opened_game_recents", app
+
+    def run(self, once: bool = False) -> int:
         self.log(f"Bot aktif untuk {TARGET_NAME} ({TARGET_PACKAGE})")
         self.log(f"Log: {LOG_FILE}")
-        if self.serial:
-            self.log(f"Device: {self.serial}")
-        self.launch_game("start bot")
-        while True:
-            try:
+        self.log(f"Status Injeksi Iklan Slot: {"AKTIF" if ENABLE_SLOT_SEEDING_AFTER_AD else "NONAKTIF"}")
+        if not self.has_device():
+            return 2
+        if not self.is_target_installed():
+            self.log(f"Game belum terinstall: {TARGET_PACKAGE}")
+            return 3
+
+        try:
+            while True:
                 self.step()
-            except BaseException as exc:
-                self.log(f"LOOP ERROR/RECOVER: {type(exc).__name__}: {exc}")
-                time.sleep(1.0)
-            time.sleep(self.interval)
+                if once:
+                    return 0
+                time.sleep(0.12 if self.bubble_watch_active else self.interval)
+        except KeyboardInterrupt:
+            self.log("Bot dihentikan oleh user")
+            return 0
 
 
-def main() -> None:
-    p = argparse.ArgumentParser()
-    p.add_argument("--serial", default="")
-    p.add_argument("--interval", type=float, default=0.08)
-    args = p.parse_args()
-    Bot(serial=args.serial, interval=args.interval).run()
+def main() -> int:
+    parser = argparse.ArgumentParser(description="Guardian bot untuk menjaga Woodland Tile Matcher tetap terbuka")
+    parser.add_argument("--serial", "-s", default="", help="Serial device ADB, opsional jika cuma 1 device")
+    parser.add_argument("--interval", "-i", type=float, default=DEFAULT_INTERVAL, help="Interval cek foreground dalam detik")
+    parser.add_argument("--once", action="store_true", help="Cek sekali lalu keluar")
+    parser.add_argument("--dry-run", action="store_true", help="Log aksi tanpa mengeksekusi force-stop/launch")
+    parser.add_argument("--inject", dest="enable_inject", action="store_true", default=None, help="Aktifkan siklus injeksi iklan slot pasca-iklan")
+    parser.add_argument("--no-inject", dest="enable_inject", action="store_false", default=None, help="Matikan siklus injeksi iklan slot pasca-iklan")
+    args = parser.parse_args()
+
+    global ENABLE_SLOT_SEEDING_AFTER_AD
+    if args.enable_inject is not None:
+        ENABLE_SLOT_SEEDING_AFTER_AD = args.enable_inject
+
+    bot = LuckyArrowEscaperGuardian(serial=args.serial, interval=max(0.2, args.interval), dry_run=args.dry_run)
+    return bot.run(once=args.once)
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

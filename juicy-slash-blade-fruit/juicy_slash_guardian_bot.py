@@ -48,10 +48,10 @@ TELEGRAM_SENDER = "/Users/macbookair/telegram_sender.py"
 DEFAULT_INTERVAL = 1.0
 OCR_HELPER = "/Users/macbookair/ocr_helper"
 TAP_MARKER = "/Users/macbookair/scrcpy_tap_marker"
-DOBEL_CHECK_INTERVAL = 2.0
-DOBEL_TAP_RETRY_SECONDS = 4.0
+DOBEL_CHECK_INTERVAL = 1.0
+DOBEL_TAP_RETRY_SECONDS = 2.5
 AD_CLOSE_CHECK_INTERVAL = 1.0
-AD_CLOSE_MIN_SECONDS = 5.0
+AD_CLOSE_MIN_SECONDS = 30.0
 AD_STUCK_RESTART_SECONDS = 120.0
 BUBBLE_CHECK_INTERVAL = 0.0
 BUBBLE_TIMEOUT_SECONDS = 16.0
@@ -137,6 +137,8 @@ class MagicOceanGuardian:
         self.last_progress_log_ts: float = 0.0      # kapan terakhir log progress
         self.last_countdown_sec: int = -1            # detik countdown terakhir terdeteksi (-1 = tidak ada)
         self.last_countdown_log_ts: float = 0.0      # kapan terakhir log countdown
+        self.ad_countdown_active: bool = False       # apakah sedang mengikuti countdown timer
+        self.ad_countdown_finished: bool = False     # countdown sudah selesai (0s atau hilang)
 
     def log(self, message: str) -> None:
         ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -423,6 +425,8 @@ class MagicOceanGuardian:
         self.last_progress_log_ts = 0.0
         self.last_countdown_sec = -1
         self.last_countdown_log_ts = 0.0
+        self.ad_countdown_active = False
+        self.ad_countdown_finished = False
         self.dobel_visible = False
         self.not_now_visible = False
         self.bubble_watch_active = False
@@ -571,6 +575,9 @@ class MagicOceanGuardian:
                 self.ad_start_ts = now
                 self.ad_activity = app.activity
                 self.last_ad_log_second = 0
+                self.ad_countdown_active = False
+                self.ad_countdown_finished = False
+                self.last_countdown_sec = -1
                 self.log(f"IKLAN TERBUKA: {app.activity} | durasi {self.format_duration(0)}")
                 source = "DOBEL" if self.dobel_visible else ("GELEMBUNG" if self.bubble_watch_active else "DETEKSI GAME")
                 if source == "DOBEL" and self.handle_dobel_ad_opened(app.activity):
@@ -598,6 +605,9 @@ class MagicOceanGuardian:
             self.ad_activity = ""
             self.last_ad_log_second = -1
             self.last_ad_close_check_ts = 0.0
+            self.ad_countdown_active = False
+            self.ad_countdown_finished = False
+            self.last_countdown_sec = -1
 
     @staticmethod
     def normalize_text(text: str) -> str:
@@ -933,16 +943,16 @@ class MagicOceanGuardian:
             if not center:
                 continue
             x, y = center
-            # Hindari tombol navigasi Android bawah; tombol close/next iklan biasanya tepi atas/kanan.
-            if y > screen_h * 0.88:
+            is_corner = (y < screen_h * 0.30 and (x < screen_w * 0.35 or x > screen_w * 0.65)) or (y > screen_h * 0.65 and x < screen_w * 0.35 and y < screen_h * 0.96)
+            # Hindari tombol navigasi Android bawah, kecuali tombol close di pojok kiri bawah
+            if y > screen_h * 0.96 or (y > screen_h * 0.88 and not (y > screen_h * 0.65 and x < screen_w * 0.35)):
                 continue
             if raw == "see next" or norm == "seenext" or "seenext" in norm:
                 return "PANAH_KANAN/NEXT", label, x, y
             if raw == "continue" or norm == "continue" or raw == "lanjutkan" or norm == "lanjutkan":
                 return "PANAH_KANAN/NEXT", label, x, y
-            is_corner = y < screen_h * 0.30 and (x < screen_w * 0.35 or x > screen_w * 0.65)
             is_store = raw in {"play", "google play", "buka toko", "open store", "store", "install", "instal"}
-            if x > screen_w * 0.65 or y < screen_h * 0.30 or raw in {"close", "tutup", "skip", "lewati", "next", "see next", "continue", "lanjutkan", "lanjut"}:
+            if x > screen_w * 0.65 or y < screen_h * 0.30 or (y > screen_h * 0.65 and x < screen_w * 0.35) or raw in {"close", "tutup", "skip", "lewati", "next", "see next", "continue", "lanjutkan", "lanjut", "x", "×"}:
                 if is_store and not is_corner:
                     continue
                 kind = "X" if raw in {"x", "×", "close", "tutup"} else ("PLAY/STORE" if is_store else "PANAH_KANAN/NEXT")
@@ -1067,8 +1077,9 @@ class MagicOceanGuardian:
                 continue
             x = int((bx + bw / 2) * width)
             y = int((1 - by - bh / 2) * height)
-            # Conservative: icon/text harus di tepi atas atau sisi kanan, bukan area tombol install.
-            if y > height * 0.88:
+            # Hindari tombol navigasi Android bawah, kecuali tombol X di pojok kiri bawah
+            is_bl_corner = (y > height * 0.65 and x < width * 0.35 and y < height * 0.96)
+            if y > height * 0.96 or (y > height * 0.88 and not is_bl_corner):
                 continue
             if raw == "see next" or norm == "seenext" or "seenext" in norm:
                 return "PANAH_KANAN/NEXT", label, x, y
@@ -1080,6 +1091,9 @@ class MagicOceanGuardian:
             # Tulisan Close/Tutup kadang berupa tombol teks di tengah/bawah iklan.
             # Klik selama masih bukan area navigation bar bawah.
             if kind == "X" and any(token in norm for token in ("close", "tutup")) and y < height * 0.86:
+                return kind, label, x, y
+            # Tombol X di pojok kiri bawah
+            if kind in {"X", "PANAH_KANAN/NEXT"} and is_bl_corner:
                 return kind, label, x, y
             if x > width * 0.60 or y < height * 0.30:
                 return kind, label, x, y
@@ -1449,6 +1463,52 @@ class MagicOceanGuardian:
                 score = area + right_bonus + edge_bonus - abs_y * 2
                 candidates.append((score, tap_x, tap_y, f"top-corner {area_name} area={int(area)} circ={circularity:.2f} bbox=({ax1+x},{ay1+y},{w},{h})"))
 
+        # Deteksi tombol X di pojok kiri bawah (sering muncul di playable / rewarded video)
+        try:
+            bx1, bx2 = 0, int(width * 0.35)
+            by1, by2 = int(height * 0.65), min(height - 35, int(height * 0.96))
+            roi_bl = img[by1:by2, bx1:bx2]
+            if roi_bl.size:
+                gray_bl = cv2.cvtColor(roi_bl, cv2.COLOR_BGR2GRAY)
+                edges_bl = cv2.Canny(gray_bl, 70, 170)
+                contours_bl, _ = cv2.findContours(edges_bl, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+                bl_candidates = []
+                for cnt in contours_bl:
+                    cx, cy, cw, ch = cv2.boundingRect(cnt)
+                    if cw < 14 or ch < 14 or cw > 85 or ch > 85:
+                        continue
+                    casp = cw / float(ch)
+                    if casp < 0.45 or casp > 2.1:
+                        continue
+                    abs_cx = bx1 + cx + cw // 2
+                    abs_cy = by1 + cy + ch // 2
+                    patch_bl = edges_bl[max(0, cy - 4):min(edges_bl.shape[0], cy + ch + 4), max(0, cx - 4):min(edges_bl.shape[1], cx + cw + 4)]
+                    lines_bl = cv2.HoughLinesP(patch_bl, 1, np.pi / 180, threshold=7, minLineLength=9, maxLineGap=4)
+                    if lines_bl is None:
+                        continue
+                    pos_d = 0
+                    neg_d = 0
+                    for l in lines_bl.reshape(-1, 4):
+                        lx1, ly1, lx2, ly2 = [int(v) for v in l]
+                        ldx, ldy = lx2 - lx1, ly2 - ly1
+                        if ldx == 0 and ldy == 0:
+                            continue
+                        lang = np.degrees(np.arctan2(ldy, ldx))
+                        if 25 <= lang <= 75:
+                            pos_d += 1
+                        elif -75 <= lang <= -25:
+                            neg_d += 1
+                    if pos_d >= 1 and neg_d >= 1:
+                        c_area = cv2.contourArea(cnt)
+                        c_score = c_area + (width - abs_cx)
+                        bl_candidates.append((c_score, abs_cx, abs_cy, f"bottom-left X bbox=({bx1+cx},{by1+cy},{cw},{ch})"))
+                if bl_candidates:
+                    bl_candidates.sort(reverse=True)
+                    _score, bx_val, by_val, blabel = bl_candidates[0]
+                    return "X", blabel, int(bx_val), int(by_val)
+        except Exception:
+            pass
+
         if not candidates:
             return None
         candidates.sort(reverse=True)
@@ -1473,6 +1533,7 @@ class MagicOceanGuardian:
             (int(width * 0.70), 0, width, int(height * 0.28)),          # kanan atas
             (0, 0, int(width * 0.30), int(height * 0.28)),              # kiri atas
             (int(width * 0.78), int(height * 0.18), width, int(height * 0.62)),  # sisi kanan
+            (0, int(height * 0.65), int(width * 0.35), int(height * 0.96)),      # kiri bawah
         ]
 
         for ax1, ay1, ax2, ay2 in search_areas:
@@ -1522,7 +1583,8 @@ class MagicOceanGuardian:
                 # Tombol selesai iklan harus sangat atas atau sangat kanan.
                 is_upper_corner = abs_y < height * 0.16 and (abs_x < width * 0.20 or abs_x > width * 0.70)
                 is_right_edge = abs_x > width * 0.88
-                if not (is_upper_corner or is_right_edge):
+                is_lower_left = abs_y > height * 0.65 and abs_x < width * 0.35 and abs_y < height * 0.96
+                if not (is_upper_corner or is_right_edge or is_lower_left):
                     continue
                 if pos_diag >= 1 and neg_diag >= 1:
                     kind = "X" if aspect < 1.35 else "PANAH_KANAN/NEXT"
@@ -1531,48 +1593,77 @@ class MagicOceanGuardian:
                     return "PANAH_KANAN/NEXT", "ikon terdeteksi", abs_x, abs_y
         return None
 
-    def detect_countdown_timer(self, png_data: bytes, width: int, height: int) -> int:
-        """Deteksi countdown timer di pojok kanan/kiri atas dengan OCR hanya pada crop kecil.
-        Jauh lebih cepat dari OCR full-screen karena crop hanya ~15% area.
-        Return: detik (>0), 0 jika habis, -1 jika tidak ada.
+    @staticmethod
+    def parse_countdown_text(text: str) -> Optional[int]:
+        t = text.strip()
+        if not t:
+            return None
+        # 1. format mm:ss, contoh 0:03, 00:05
+        m = re.search(r"\b(\d{1,2}):(\d{2})\b", t)
+        if m:
+            mins, secs = int(m.group(1)), int(m.group(2))
+            val = mins * 60 + secs
+            if 0 <= val <= 120:
+                return val
+        # 2. format '3s', '3 s', '5sec', '5 detik', '5dtk', 'reward in 5s', 'skip in 3s'
+        m = re.search(r"\b(\d{1,2})\s*(?:s|sec|dtk|detik)\b", t, re.IGNORECASE)
+        if m:
+            val = int(m.group(1))
+            if 0 <= val <= 120:
+                return val
+        # 3. angka saja dalam lingkaran, contoh '3', '15'
+        m = re.match(r"^(\d{1,2})$", t)
+        if m:
+            val = int(m.group(1))
+            if 0 <= val <= 120:
+                return val
+        # 4. frasa reward in 3, skip in 5
+        m = re.search(r"(?:reward|hadiah|skip|lewati|bonus|in|dalam)\D{0,10}(\d{1,2})\b", t, re.IGNORECASE)
+        if m:
+            val = int(m.group(1))
+            if 0 <= val <= 120:
+                return val
+        return None
+
+    def detect_countdown_timer(self, png_data: bytes, width: int, height: int) -> Tuple[int, str]:
+        """Deteksi countdown timer di pojok kanan atas, kiri atas, atau kiri bawah.
+        Return: (detik, lokasi). Jika tidak ada return (-1, "").
         """
         if not os.path.exists(OCR_HELPER):
-            return -1
+            return -1, ""
         try:
             import cv2
             import numpy as np
-            from PIL import Image
-            from io import BytesIO
         except Exception:
-            return -1
+            return -1, ""
 
         img_arr = cv2.imdecode(np.frombuffer(png_data, dtype=np.uint8), cv2.IMREAD_COLOR)
         if img_arr is None:
-            return -1
+            return -1, ""
 
-        # Crop hanya pojok kanan atas dan kiri atas (masing-masing 30%x20% layar)
         h, w = img_arr.shape[:2]
-        margin_top    = max(55, int(h * 0.034))
-        crop_h        = int(h * 0.20)
-        crop_w_right  = int(w * 0.35)
-        crop_w_left   = int(w * 0.35)
+        margin_top   = 0
+        crop_h       = int(h * 0.22)
+        crop_w_right = int(w * 0.38)
+        crop_w_left  = int(w * 0.38)
+
+        margin_bot   = int(h * 0.65)
+        crop_bot_h   = int(h * 0.31)
+        crop_w_bot   = int(w * 0.40)
 
         crops = [
-            img_arr[margin_top:margin_top + crop_h, w - crop_w_right:w],   # kanan atas
-            img_arr[margin_top:margin_top + crop_h, 0:crop_w_left],         # kiri atas
+            (img_arr[margin_top:margin_top + crop_h, w - crop_w_right:w], "kanan atas"),
+            (img_arr[margin_top:margin_top + crop_h, 0:crop_w_left], "kiri atas"),
+            (img_arr[margin_bot:margin_bot + crop_bot_h, 0:crop_w_bot], "kiri bawah"),
         ]
 
-        cd_pattern = re.compile(
-            r"^(?:(\d{1,2}):(\d{2})|(\d{1,3})\s*s(?:ec)?\.?|(\d{1,3}))$",
-            re.IGNORECASE,
-        )
         best_sec = -1
+        best_loc = ""
         safe_serial = re.sub(r"[^a-zA-Z0-9_.-]+", "_", self.serial or "default")
 
-        for idx, crop in enumerate(crops):
+        for idx, (crop, loc_name) in enumerate(crops):
             if crop.size == 0:
                 continue
-            # Tulis crop ke file sementara
             crop_path = f"/tmp/juicy_slash_cd_{safe_serial}_{idx}.png"
             ok, buf = cv2.imencode(".png", crop)
             if not ok:
@@ -1588,25 +1679,14 @@ class MagicOceanGuardian:
                 continue
 
             for line in (result.stdout or "").splitlines():
-                text, _, bbox = line.partition("|")
-                text = text.strip()
-                if not text:
-                    continue
-                mm = cd_pattern.match(text)
-                if not mm:
-                    continue
-                if mm.group(1) is not None:
-                    secs = int(mm.group(1)) * 60 + int(mm.group(2))
-                elif mm.group(3) is not None:
-                    secs = int(mm.group(3))
-                else:
-                    secs = int(mm.group(4))
-                    if secs > 120:
-                        continue
-                if secs > best_sec:
-                    best_sec = secs
+                text, _, _bbox = line.partition("|")
+                secs = self.parse_countdown_text(text)
+                if secs is not None:
+                    if secs > best_sec or best_sec == -1:
+                        best_sec = secs
+                        best_loc = loc_name
 
-        return best_sec
+        return best_sec, best_loc
 
     def detect_progress_bar(self, png_data: bytes, width: int, height: int) -> float:
         """Deteksi progress bar horizontal iklan:
@@ -1772,9 +1852,10 @@ class MagicOceanGuardian:
         image_top_found = self.find_ad_finish_button_by_image(png_data, width, height)
         if image_top_found:
             kind, label, x, y = image_top_found
-            is_top_edge = y < height * 0.22 and (x < width * 0.38 or x > width * 0.55)
-            if is_top_edge and kind in {"X", "PANAH_KANAN/NEXT", "PANAH_KANAN/TOP"}:
-                return kind, label, x, y, "image-top"
+            is_valid_corner = (y < height * 0.22 and (x < width * 0.38 or x > width * 0.55)) or (y > height * 0.65 and x < width * 0.35 and y < height * 0.96)
+            if is_valid_corner and kind in {"X", "PANAH_KANAN/NEXT", "PANAH_KANAN/TOP"}:
+                src = "image-bottom-left" if y > height * 0.65 else "image-top"
+                return kind, label, x, y, src
 
         ui_found = self.find_ad_finish_button_by_ui()
         if ui_found:
@@ -1811,9 +1892,7 @@ class MagicOceanGuardian:
 
         now = time.time()
         elapsed = now - self.ad_start_ts
-        if elapsed < AD_CLOSE_MIN_SECONDS:
-            self.log(f"[IKLAN] Menunggu durasi awal video: {elapsed:.0f}s / {AD_CLOSE_MIN_SECONDS:.0f}s...")
-            return
+
         if now - self.last_ad_close_check_ts < AD_CLOSE_CHECK_INTERVAL:
             return
         self.last_ad_close_check_ts = now
@@ -1827,35 +1906,42 @@ class MagicOceanGuardian:
 
         now_log = time.time()
 
-        # ── CEK COUNTDOWN TIMER (pojok kanan/kiri atas) ──────────────────────
-        cd_sec = -1
+        # ── CEK COUNTDOWN TIMER (pojok kanan atas, kiri atas, atau kiri bawah) ──
+        cd_sec, cd_loc = (-1, "")
         if _ss_png:
-            cd_sec = self.detect_countdown_timer(_ss_png, _ss_w, _ss_h)
+            cd_sec, cd_loc = self.detect_countdown_timer(_ss_png, _ss_w, _ss_h)
 
         if cd_sec > 0:
+            self.ad_countdown_active = True
             self.last_countdown_sec = cd_sec
             if now_log - self.last_countdown_log_ts >= 1.5:
                 self.last_countdown_log_ts = now_log
                 self.log(
-                    f"[COUNTDOWN] ⏳ {cd_sec}s tersisa – iklan belum selesai, tunggu countdown hilang "
-                    f"| durasi {self.format_duration(elapsed)}"
+                    f"[COUNTDOWN] ⏳ {cd_sec}s di {cd_loc} – waktu tunggu iklan aktif "
+                    f"(berjalan {self.format_duration(elapsed)})"
                 )
-            return   # jangan klik apapun selama countdown masih ada
+            return   # jangan klik apapun selama countdown masih berjalan
         elif cd_sec == 0:
-            # Countdown mencapai 0 – biarkan lanjut ke pencarian tombol
-            if now_log - self.last_countdown_log_ts >= 1.0:
-                self.last_countdown_log_ts = now_log
-                self.log(f"[COUNTDOWN] ✅ Countdown habis (0s) – lanjut cari tombol tutup")
+            if self.ad_countdown_active or not self.ad_countdown_finished:
+                self.log(f"[COUNTDOWN] ✅ Waktu tunggu iklan ({cd_loc}) habis (0s) – lanjut cari tombol tutup")
+            self.ad_countdown_active = False
+            self.ad_countdown_finished = True
             self.last_countdown_sec = 0
-        elif self.last_countdown_sec > 0:
-            # Countdown sebelumnya ada, sekarang tidak terdeteksi → kemungkinan hilang = selesai
-            if now_log - self.last_countdown_log_ts >= 1.0:
-                self.last_countdown_log_ts = now_log
-                self.log(
-                    f"[COUNTDOWN] ✅ Countdown hilang (sebelumnya {self.last_countdown_sec}s) "
-                    f"– lanjut cari tombol tutup"
-                )
+        elif self.ad_countdown_active and self.last_countdown_sec > 0:
+            # Countdown sebelumnya terdeteksi, sekarang hilang → waktu tunggu habis
+            self.log(
+                f"[COUNTDOWN] ✅ Waktu tunggu iklan selesai (sebelumnya {self.last_countdown_sec}s) "
+                f"– lanjut cari tombol tutup"
+            )
+            self.ad_countdown_active = False
+            self.ad_countdown_finished = True
             self.last_countdown_sec = -1
+
+        # Jika countdown belum pernah aktif dan belum selesai, patuhi durasi default
+        if not self.ad_countdown_finished:
+            if elapsed < AD_CLOSE_MIN_SECONDS:
+                self.log(f"[IKLAN] Menunggu durasi awal video: {elapsed:.0f}s / {AD_CLOSE_MIN_SECONDS:.0f}s...")
+                return
 
         # ── CEK PROGRESS BAR ─────────────────────────────────────────────────
         pb_ratio = -1.0
@@ -2053,13 +2139,49 @@ class MagicOceanGuardian:
                 reward_candidates.append((y, value, text, x, y))
 
             norm = self.normalize_text(text)
-            # Tombol DOBEL / DOUBLE / BUKA PETI
+            raw_lower = text.strip().lower()
+
+            # Filter unsur iklan / bukan reward game
+            # Contoh iklan: 'dapat Learn more', 'Get now', 'Daftar sekarang', 'SPIN GRATIS'
+            is_ad_promo = (
+                "learn" in norm
+                or "getnow" in norm
+                or ("get" in norm and "now" in norm)
+                or "daftar" in norm
+                or "unduh" in norm
+                or "download" in norm
+                or "install" in norm
+                or "instal" in norm
+                or "playstore" in norm
+                or "googleplay" in norm
+                or "spin" in norm
+                or "tumble" in norm
+                or "kemenangan" in norm
+                or "maxwin" in norm
+                or "member" in norm
+                or "bonus" in norm
+                or "bukatoko" in norm
+                or ("dapat" in norm and ("learn" in norm or "more" in norm))
+            )
+            if is_ad_promo:
+                continue
+
+            # Tombol DOBEL / DOUBLE / GRATIS / GANDAKAN / 2X / BUKA PETI
+            # Sesuai instruksi: jika muncul tombol hanya bertuliskan Gratis / gRatis dsb, tetap di-klik
+            is_gratis = (
+                norm == "gratis"
+                or ("gratis" in norm and len(norm) <= 20)
+            )
             is_dobel = (
                 "dobel" in norm
                 or "double" in norm
+                or "d0bel" in norm
+                or "gandakan" in norm
+                or bool(re.search(r"(?<!\d)2x\b|\bx2\b", raw_lower))
+                or is_gratis
                 or ("buka" in norm and y > 850)
             )
-            if dobel is None and is_dobel and y > 600:
+            if dobel is None and is_dobel and y > 500:
                 dobel = (text, bbox, x, y)
                 continue
 
@@ -2113,18 +2235,30 @@ class MagicOceanGuardian:
                 or ("dompet" in norm and "saya" in norm)
                 or "detailpenarikan" in norm
                 or "riwayatpenarikan" in norm
+                or "catatanpenarikan" in norm
+                or "akunpenarikan" in norm
                 or "pilihmetodepenarikan" in norm
                 or ("pilih" in norm and "metode" in norm and "penarikan" in norm)
-                or norm in {"penarikan", "tarik", "withdraw", "withdrawal"}
             )
             # Judul halaman biasanya di area header atas. Untuk teks "Pilih metode penarikan"
-            # kadang muncul sedikit lebih bawah sebagai judul panel.
+            # muncul sebagai judul panel modal popup penarikan.
             is_withdraw_panel = (
                 "pilihmetodepenarikan" in norm
                 or ("pilih" in norm and "metode" in norm and "penarikan" in norm)
             )
-            is_withdraw_button = norm in {"penarikan", "tarik", "withdraw", "withdrawal"}
-            if is_wallet_title and ((90 <= y <= 360) or is_withdraw_panel or (is_withdraw_button and y < 520)):
+            if is_withdraw_panel:
+                # Dialog popup penarikan modal: tombol X ada di pojok kanan atas box dialog (x~662, y~539)
+                screen_w, screen_h = self.get_screen_size()
+                tap_x = int(screen_w * (662 / 720)) if screen_w else 662
+                tap_y = int(screen_h * (539 / 1640)) if screen_h else 539
+                self.log(f"POPUP PENARIKAN TERDETEKSI: '{text}' | klik tombol X popup di ({tap_x},{tap_y})")
+                self.tap(tap_x, tap_y)
+                time.sleep(0.6)
+                self.dobel_visible = False
+                self.not_now_visible = False
+                self.bubble_watch_active = False
+                return True
+            elif is_wallet_title and (90 <= y <= 360):
                 tap_x = 45
                 tap_y = max(95, min(240, y))
                 self.log(f"HALAMAN PENARIKAN/DOMPET TERDETEKSI: '{text}' | bbox={bbox} | kembali ke halaman utama via ({tap_x},{tap_y}) + BACK")
@@ -2172,16 +2306,16 @@ class MagicOceanGuardian:
                 return True
         return False
 
-    def update_dobel_log(self, app: Optional[ForegroundApp]) -> None:
-        # Cukup cek saat masih di package game, supaya tidak berat dan tidak salah deteksi app lain.
-        if not app or app.package != TARGET_PACKAGE:
+    def update_dobel_log(self, app: Optional[ForegroundApp]) -> bool:
+        # Cukup cek saat masih di package game dan BUKAN di activity iklan / sedang iklan.
+        if not app or app.package != TARGET_PACKAGE or self.is_game_ad(app) or self.is_ad_active():
             self.dobel_visible = False
             self.not_now_visible = False
-            return
+            return False
 
         now = time.time()
         if now - self.last_dobel_check_ts < DOBEL_CHECK_INTERVAL:
-            return
+            return self.dobel_visible
         self.last_dobel_check_ts = now
 
         dobel, not_now, reward_rp, settings_btn = self.find_reward_offer_buttons()
@@ -2218,6 +2352,7 @@ class MagicOceanGuardian:
             self.dobel_visible = True
             self.not_now_visible = False
             self.bubble_watch_active = False
+            return True
         elif not_now:
             # Sesuai instruksi: Jika hanya ada AMBIL tanpa DOBEL maka klik AMBIL, cek Rp dan laporkan ke telegram, lalu lanjut klik bubble
             text, bbox, x, y = not_now
@@ -2248,9 +2383,11 @@ class MagicOceanGuardian:
                 self.notify_bubble_search_once("setelah klik AMBIL")
             self.not_now_visible = True
             self.dobel_visible = False
+            return True
         else:
             self.dobel_visible = False
             self.not_now_visible = False
+            return False
 
     def find_moving_bubble(self) -> Optional[Tuple[int, int, str]]:
         """Cari objek bulat/gelembung yang bergerak dari dua screenshot berurutan."""
@@ -2648,21 +2785,24 @@ class MagicOceanGuardian:
         if app.package == TARGET_PACKAGE:
             self.update_ad_log(app)
             self.try_finish_ad(app)
+            if self.is_game_ad(app) or self.is_ad_active():
+                self.last_action = "ad_active"
+                return "ad_active", app
+            if self.update_dobel_log(app):
+                self.last_action = "dobel_or_popup_handled"
+                return "dobel_or_popup_handled", app
             if self.handle_wallet_page_if_needed(app):
                 self.last_action = "closed_wallet_page"
                 return "closed_wallet_page", app
             if self.handle_weapon_page_if_needed(app):
                 self.last_action = "closed_weapon_page"
                 return "closed_weapon_page", app
-            self.update_dobel_log(app)
             self.update_bubble_search(app)
             self.last_action = "game_ok"
             return "game_ok", app
 
         self.update_ad_log(app)
         self.try_finish_ad(app)
-        self.update_dobel_log(app)
-        self.update_bubble_search(app)
 
         if app.package in BLOCKED_PACKAGES:
             self.log(f"[REDIRECT TERDETEKSI] Aplikasi dialihkan ke {BLOCKED_PACKAGES.get(app.package, app.package)}. Segera menutup dan kembali ke Fruit Blade...")

@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">Game Bot Hub</string>
+    <string name="accessibility_service_label">Game Bot Hub Automation Service</string>
+    <string name="accessibility_service_description">Layanan otomatisasi rotasi game, penjagaan anti-redirect iklan, dan auto-close reward untuk seluruh game bot.</string>
+</resources>
