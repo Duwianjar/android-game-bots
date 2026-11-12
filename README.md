@@ -31,35 +31,35 @@ Urutan ini dibuat dari catatan penarikan yang sudah ada. **Tidak ada data yang m
 
 <div style="overflow-x: auto;">
 
-| Prioritas | Game | Package `com` | Instalasi Pertama | Instalasi Kedua | Saran instalasi |
-|---:|---|---|---|---|---|
-| 1 | [Lucky Arrow Escape](lucky-arrow-escaper/) | `com.starlightgame.luckyarrowescaper` | Tersedia bot guardian otomatis. | Penarikan 25 dan 27 aman DANA. | **Instal paling pertama.** Coba tunggu gede dulu atau 25k baru tarik. |
-| 2 | Bus Jam Parking Master | `com.busjam.parking.master` | 29 kali penarikan; banyak nominal Rp2.000–Rp7.000. Target terbesar sekitar Rp10.000 belum cair. | Di restart kedua: pencairan bisa pending 2 hari dan tidak bisa rekening yang sama. | Instal setelah Lucky Arrow Escape; pantau nominal besar. Bot paling aman tapi kurang maksimal. |
-| 3 | [Tangkap Hewan Lucu / Zoo Tile](zoo-tile/) | `com.zoo.tile.cute.animal.elephant.mouse.fox` | **15 kali lancar semua**, maksimum Rp8.022. | Restart kedua 3.000 dan masih DANA aman pencairan. **Hati-hati terblokir koneksi.** | Instal setelah Bus Jam Parking Master; waspada dan pantau koneksi di instalasi kedua. |
-| 4 | Magic Ocean Tile Crush | `com.starlightgame.magicoceantilecrush` | Masuk kelompok pemantauan nominal di atas Rp5.000 tetapi pending; data nominal dan pending belum tercatat. **Rawan terblokir.** | Pencairan DANA aman. | Pantau ketat. Bot tidak aman tapi pencairan DANA aman, tinggal perbaiki bot. |
-| 5 | Woodland Tile Match | `com.starlightgame.woodlandtilematcher` | Masuk kelompok pemantauan nominal di atas Rp5.000 tetapi pending; data nominal dan pending belum tercatat. **Rawan terblokir.** | Aman seperti Magic Ocean (pencairan DANA aman). | Pantau ketat. |
-| 6 | [Crazy Fruit Blade Winner](crazy-fruit-blade-winner/) | `com.starlightgame.crazyfruitbladewinner` | Belum ada catatan penarikan. **Sekitar Rp200 per hari di awal, tetapi langsung turun setelahnya; lumayan, tetapi rawan block iklan.** | Tetap DANA dan awalnya bisa capai Rp15.000. | Rekomendasi menengah. |
-| 7 | [Color Power Pop](color-power-pop/) | `com.giraffeeapp.power` | 19 kali penarikan; Rp1.000 sebanyak 4 kali dan Rp4.000 sekali. | DANA aman tapi cuma sedikit karena kemungkinan instalnya di akhir. | Rekomendasi menengah. |
-| 8 | [Snake Out Jam](snake-out-jam/) | `com.wiwvitsugeh.snack` | Ada penarikan Rp9.237. Setelah penarikan sekitar Rp9.000, proses terasa susah. | Instalasi kedua susah iklan slotnya. | Instal berikutnya dengan target kecil dulu. ([Panduan Instalasi & Bypass Lisensi](snake-out-jam/README.md)) |
-| 9 | [Magical Gems Match 3](magic-gems-match/) | `com.glow.magical.match3` | 13 kali penarikan; ada nominal Rp1.050. | DANA normal tapi sedikit kemungkinan karena terakhir. | Instal dengan target kecil. |
-| 10 | Color Sand Blast | `com.xteleremobilecompanyltd.ColorSandBlast` | 11 kali penarikan; maksimum Rp2.311. Tidak ada gagal yang dicatat. | DANA aman dan stabil. | Rekomendasi setelah prioritas utama. |
-| 11 | [Coin Sort Dash](coin-dash-shot/) | `com.coin.sortdash.remove` | 3 kali penarikan; ada Rp1.017. **Rawan terblokir iklan.** | DANA normal tapi sedikit kemungkinan karena terakhir. | Instal setelah prioritas utama. |
-| 12 | Veg Cup Blast | `com.xteleremobilecompanyltd.VegCupBlast` | 5 kali penarikan; maksimum Rp2.191. | DANA tetap aman, tapi cuma dapat sedikit karena kemungkinan di akhir. | Rekomendasi setelah prioritas utama. |
-| 13 | Toy Drop | `com.NAMMUNIS.ToyDrop` | 4 kali penarikan; maksimum Rp1.670. | DANA aman, paling banyak Rp1.300. | Rekomendasi setelah prioritas utama. |
-| 14 | Planet Slice Master | `com.smartgames.planetslicemaster` | Belum pernah dicoba. | DANA aman, penarikan kecil sekitar 5.900-an sebanyak 3 kali. | Rekomendasi setelah prioritas utama; coba target penarikan kecil dulu (Rp5.900-an). |
-| 15 | [Soda Jam Puzzle](soda-jam-puzzle/) | `com.armg.sodajam` | Tidak ikut tercatat. | Penarikan 700 aman DANA. | Instalasi kedua aman penarikan 700. |
-| 16 | Harvest Block Crush | `com.harvest.block.crush` | Tidak ikut tercatat. | DANA aman tapi cuma 400. | Instalasi kedua aman tapi nominal kecil (Rp400). |
-| 17 | Mahjong Ajaib *(Magic Mahjong)* | `com.Lucinda.MagicMahjong` | Tidak ikut tercatat. | DANA masih aman 300-an. | Coba target penarikan kecil (sekitar Rp300-an). |
-| 18 | Magic Merge | `com.xteleremobilecompanyltd.MagicMerge` | Belum ada catatan awal. | DANA masih aman 300-an. | Coba target penarikan kecil (sekitar Rp300-an). |
-| 19 | [Soda Pack Puzzle](soda-pack-puzzle/) | `com.soda.pack.puzzle` | Ada bot otomatis (belum dites botnya). | DANA masih aman 200-an. | Coba target penarikan kecil (sekitar Rp200-an); bot belum dites. |
-| 20 | Magic Star Crush Journey **[RAWAN TERBLOKIR]** | `com.starlightgame.magicstarcrushjourney` | 1 kali penarikan Rp951; rawan terblokir. | Penarikan kedua DANA masih aman 600-an. | Pantau ketat (rawan terblokir); target kedua sekitar Rp600-an aman DANA. |
-| 21 | Panah Penghasil Uang *(Panah Lepas)* | `com.pelangiarena.panahlepas` | Tidak ada catatan awal. | DANA aman 200-an. | Coba target penarikan kecil (sekitar Rp200-an). |
-| 22 | Tangkap Tile Zoo *(Catch Zoo Tiles)* | `com.agmalik.CatchZooTiles` | Belum ada catatan (kosong). | DANA aman 300-an. | Coba target penarikan kecil (sekitar Rp300-an). |
-| 23 | Cuan Maze | Belum dicatat | Belum ada catatan (kosong). | DANA aman 300-an. | Coba target penarikan kecil (sekitar Rp300-an). |
-| 24 | Panah Sentuh *(Arrow Tap)* | Belum dicatat | Belum ada catatan (kosong). | DANA aman 800-an. | Target kedua lumayan (sekitar Rp800-an aman DANA). |
-| 25 | [Dragon Arrow Escape *(Naga Panah)*](dragon-arrow-escape/) | `com.dragonarrowescape.game` | Belum ada catatan awal. | DANA aman 1.000-an (2 kali). | Target kedua aman (sekitar Rp1.000-an). |
-| 26 | Fortune Tile Mahjong | `com.NAMMUNIS.FortuneTileMahjong` | 3 kali penarikan (maks Rp212). | DANA masih aman 500-an. | Coba target penarikan kecil (sekitar Rp500-an). |
-| 27 | Cut Fruit Winner | `com.starlightgame.cutfruitwinner` | Tidak ada catatan awal. | DANA aman sekitar 1.000-an. | Target kedua lumayan aman (sekitar Rp1.000-an). |
+| Prioritas | Game | Package `com` | Instalasi Pertama | Instalasi Kedua | Instalasi Ketiga | Saran instalasi |
+|---:|---|---|---|---|---|---|
+| 1 | [Lucky Arrow Escape](lucky-arrow-escaper/) | `com.starlightgame.luckyarrowescaper` | Tersedia bot guardian otomatis. | Penarikan 25 dan 27 aman DANA. | Berhasil tarik DANA Rp6.000, tetapi tarikan kedua Rp12.000 error karena penarikan dilakukan malam hari. | **Instal paling pertama.** Coba tunggu gede dulu atau 25k baru tarik. **Jangan melakukan penarikan pada malam hari** agar tidak error. |
+| 2 | Bus Jam Parking Master | `com.busjam.parking.master` | 29 kali penarikan; banyak nominal Rp2.000–Rp7.000. Target terbesar sekitar Rp10.000 belum cair. | Di restart kedua: pencairan bisa pending 2 hari dan tidak bisa rekening yang sama. | Belum ada catatan. | Instal setelah Lucky Arrow Escape; pantau nominal besar. Bot paling aman tapi kurang maksimal. |
+| 3 | [Tangkap Hewan Lucu / Zoo Tile](zoo-tile/) | `com.zoo.tile.cute.animal.elephant.mouse.fox` | **15 kali lancar semua**, maksimum Rp8.022. | Restart kedua 3.000 dan masih DANA aman pencairan. **Hati-hati terblokir koneksi.** | Belum ada catatan. | Instal setelah Bus Jam Parking Master; waspada dan pantau koneksi di instalasi kedua. |
+| 4 | Magic Ocean Tile Crush | `com.starlightgame.magicoceantilecrush` | Masuk kelompok pemantauan nominal di atas Rp5.000 tetapi pending; data nominal dan pending belum tercatat. **Rawan terblokir.** | Pencairan DANA aman. | Belum ada catatan. | Pantau ketat. Bot tidak aman tapi pencairan DANA aman, tinggal perbaiki bot. |
+| 5 | Woodland Tile Match | `com.starlightgame.woodlandtilematcher` | Masuk kelompok pemantauan nominal di atas Rp5.000 tetapi pending; data nominal dan pending belum tercatat. **Rawan terblokir.** | Aman seperti Magic Ocean (pencairan DANA aman). | Belum ada catatan. | Pantau ketat. |
+| 6 | [Crazy Fruit Blade Winner](crazy-fruit-blade-winner/) | `com.starlightgame.crazyfruitbladewinner` | Belum ada catatan penarikan. **Sekitar Rp200 per hari di awal, tetapi langsung turun setelahnya; lumayan, tetapi rawan block iklan.** | Tetap DANA dan awalnya bisa capai Rp15.000. | Belum ada catatan. | Rekomendasi menengah. |
+| 7 | [Color Power Pop](color-power-pop/) | `com.giraffeeapp.power` | 19 kali penarikan; Rp1.000 sebanyak 4 kali dan Rp4.000 sekali. | DANA aman tapi cuma sedikit karena kemungkinan instalnya di akhir. | Belum ada catatan. | Rekomendasi menengah. |
+| 8 | [Snake Out Jam](snake-out-jam/) | `com.wiwvitsugeh.snack` | Ada penarikan Rp9.237. Setelah penarikan sekitar Rp9.000, proses terasa susah. | Instalasi kedua susah iklan slotnya. | Belum ada catatan. | Instal berikutnya dengan target kecil dulu. ([Panduan Instalasi & Bypass Lisensi](snake-out-jam/README.md)) |
+| 9 | [Magical Gems Match 3](magic-gems-match/) | `com.glow.magical.match3` | 13 kali penarikan; ada nominal Rp1.050. | DANA normal tapi sedikit kemungkinan karena terakhir. | Belum ada catatan. | Instal dengan target kecil. |
+| 10 | Color Sand Blast | `com.xteleremobilecompanyltd.ColorSandBlast` | 11 kali penarikan; maksimum Rp2.311. Tidak ada gagal yang dicatat. | DANA aman dan stabil. | Belum ada catatan. | Rekomendasi setelah prioritas utama. |
+| 11 | [Coin Sort Dash](coin-dash-shot/) | `com.coin.sortdash.remove` | 3 kali penarikan; ada Rp1.017. **Rawan terblokir iklan.** | DANA normal tapi sedikit kemungkinan karena terakhir. | Belum ada catatan. | Instal setelah prioritas utama. |
+| 12 | Veg Cup Blast | `com.xteleremobilecompanyltd.VegCupBlast` | 5 kali penarikan; maksimum Rp2.191. | DANA tetap aman, tapi cuma dapat sedikit karena kemungkinan di akhir. | Belum ada catatan. | Rekomendasi setelah prioritas utama. |
+| 13 | Toy Drop | `com.NAMMUNIS.ToyDrop` | 4 kali penarikan; maksimum Rp1.670. | DANA aman, paling banyak Rp1.300. | Belum ada catatan. | Rekomendasi setelah prioritas utama. |
+| 14 | Planet Slice Master | `com.smartgames.planetslicemaster` | Belum pernah dicoba. | DANA aman, penarikan kecil sekitar 5.900-an sebanyak 3 kali. | Belum ada catatan. | Rekomendasi setelah prioritas utama; coba target penarikan kecil dulu (Rp5.900-an). |
+| 15 | [Soda Jam Puzzle](soda-jam-puzzle/) | `com.armg.sodajam` | Tidak ikut tercatat. | Penarikan 700 aman DANA. | Belum ada catatan. | Instalasi kedua aman penarikan 700. |
+| 16 | Harvest Block Crush | `com.harvest.block.crush` | Tidak ikut tercatat. | DANA aman tapi cuma 400. | Belum ada catatan. | Instalasi kedua aman tapi nominal kecil (Rp400). |
+| 17 | Mahjong Ajaib *(Magic Mahjong)* | `com.Lucinda.MagicMahjong` | Tidak ikut tercatat. | DANA masih aman 300-an. | Belum ada catatan. | Coba target penarikan kecil (sekitar Rp300-an). |
+| 18 | Magic Merge | `com.xteleremobilecompanyltd.MagicMerge` | Belum ada catatan awal. | DANA masih aman 300-an. | Belum ada catatan. | Coba target penarikan kecil (sekitar Rp300-an). |
+| 19 | [Soda Pack Puzzle](soda-pack-puzzle/) | `com.soda.pack.puzzle` | Ada bot otomatis (belum dites botnya). | DANA masih aman 200-an. | Belum ada catatan. | Coba target penarikan kecil (sekitar Rp200-an); bot belum dites. |
+| 20 | Magic Star Crush Journey **[RAWAN TERBLOKIR]** | `com.starlightgame.magicstarcrushjourney` | 1 kali penarikan Rp951; rawan terblokir. | Penarikan kedua DANA masih aman 600-an. | Belum ada catatan. | Pantau ketat (rawan terblokir); target kedua sekitar Rp600-an aman DANA. |
+| 21 | Panah Penghasil Uang *(Panah Lepas)* | `com.pelangiarena.panahlepas` | Tidak ada catatan awal. | DANA aman 200-an. | Belum ada catatan. | Coba target penarikan kecil (sekitar Rp200-an). |
+| 22 | Tangkap Tile Zoo *(Catch Zoo Tiles)* | `com.agmalik.CatchZooTiles` | Belum ada catatan (kosong). | DANA aman 300-an. | Belum ada catatan. | Coba target penarikan kecil (sekitar Rp300-an). |
+| 23 | Cuan Maze | Belum dicatat | Belum ada catatan (kosong). | DANA aman 300-an. | Belum ada catatan. | Coba target penarikan kecil (sekitar Rp300-an). |
+| 24 | Panah Sentuh *(Arrow Tap)* | Belum dicatat | Belum ada catatan (kosong). | DANA aman 800-an. | Belum ada catatan. | Target kedua lumayan (sekitar Rp800-an aman DANA). |
+| 25 | [Dragon Arrow Escape *(Naga Panah)*](dragon-arrow-escape/) | `com.dragonarrowescape.game` | Belum ada catatan awal. | DANA aman 1.000-an (2 kali). | Belum ada catatan. | Target kedua aman (sekitar Rp1.000-an). |
+| 26 | Fortune Tile Mahjong | `com.NAMMUNIS.FortuneTileMahjong` | 3 kali penarikan (maks Rp212). | DANA masih aman 500-an. | Belum ada catatan. | Coba target penarikan kecil (sekitar Rp500-an). |
+| 27 | Cut Fruit Winner | `com.starlightgame.cutfruitwinner` | Tidak ada catatan awal. | DANA aman sekitar 1.000-an. | Belum ada catatan. | Target kedua lumayan aman (sekitar Rp1.000-an). |
 
 </div>
 
