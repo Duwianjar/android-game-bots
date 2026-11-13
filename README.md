@@ -34,6 +34,7 @@ Game yang instalasi keduanya sudah aman dan instalasi ketiganya lumayan — perl
 | No. | Game | Package `com` | Instalasi Kedua | Instalasi Ketiga | Aksi |
 |---:|---|---|---|---|---|
 | 1 | Cut Fruit Winner | `com.starlightgame.cutfruitwinner` | DANA aman sekitar Rp1.000-an. | Penghasilan lumayan — **perlu cek tarik.** | [ ] Sudah tarik |
+| 2 | Cuan Maze | Belum dicatat | DANA aman sekitar Rp300-an. | Belum ada catatan instalasi ketiga — **perlu cek tarik.** | [ ] Sudah tarik |
 
 </div>
 
@@ -65,7 +66,7 @@ Urutan ini dibuat dari catatan penarikan yang sudah ada. **Tidak ada data yang m
 | 18 | Mahjong Ajaib *(Magic Mahjong)* | `com.Lucinda.MagicMahjong` | Tidak ikut tercatat. | DANA masih aman 300-an. | DANA aman tapi tidak sampai Rp100. | Diturunkan 2 peringkat; instalasi ketiga DANA aman tapi tidak sampai Rp100. |
 | 19 | Panah Penghasil Uang *(Panah Lepas)* | `com.pelangiarena.panahlepas` | Tidak ada catatan awal. | DANA aman 200-an. | Belum ada catatan. | Coba target penarikan kecil (sekitar Rp200-an). |
 | 20 | Tangkap Tile Zoo *(Catch Zoo Tiles)* | `com.agmalik.CatchZooTiles` | Belum ada catatan (kosong). | DANA aman 300-an. | Belum ada catatan. | Coba target penarikan kecil (sekitar Rp300-an). |
-| 21 | Cuan Maze | Belum dicatat | Belum ada catatan (kosong). | DANA aman 300-an. | Belum ada catatan. | Coba target penarikan kecil (sekitar Rp300-an). |
+| 21 | Cuan Maze | Belum dicatat | Belum ada catatan (kosong). | DANA aman 300-an. | Belum ada catatan instalasi ketiga — perlu cek tarik. | Instalasi kedua aman sekitar Rp300-an; instalasi ketiga belum dicoba — perlu cek tarik segera. |
 | 22 | Panah Sentuh *(Arrow Tap)* | Belum dicatat | Belum ada catatan (kosong). | DANA aman 800-an. | Belum ada catatan. | Target kedua lumayan (sekitar Rp800-an aman DANA). |
 | 23 | [Dragon Arrow Escape *(Naga Panah)*](dragon-arrow-escape/) | `com.dragonarrowescape.game` | Belum ada catatan awal. | DANA aman 1.000-an (2 kali). | Belum ada catatan. | Target kedua aman (sekitar Rp1.000-an). |
 | 24 | Fortune Tile Mahjong | `com.NAMMUNIS.FortuneTileMahjong` | 3 kali penarikan (maks Rp212). | DANA masih aman 500-an. | Belum ada catatan. | Coba target penarikan kecil (sekitar Rp500-an). |
@@ -216,7 +217,7 @@ Keterangan kategori: game-game ini **susah, tetapi tetap cair**. Data pencairan 
 | 4 | Bus Jam Rush | `putulive.app.bus` | StudyPort | Game bus jam penumpang warna. **Penarikan 200 aman.** | Belum dicatat | [ ] |
 | 5 | [Soda Jam Puzzle](soda-jam-puzzle/) | `com.armg.sodajam` | Muhammad Armghan Abbas | Game soda jam puzzle. Tersedia bot otomatis. Instalasi pertama tidak ikut tercatat. **Instalasi kedua penarikan 700 aman DANA.** | Belum dicatat | [x] |
 | 6 | Panah Penghasil Uang *(Panah Lepas)* | `com.pelangiarena.panahlepas` | Sub Akademi Game | Puzzle panah / arrow unblock penghasil saldo. Instalasi pertama tidak ada catatan. **Instalasi kedua DANA aman 200-an.** | Belum dicatat | [ ] |
-| 7 | Cuan Maze | Belum dicatat | Belum dicatat | Game puzzle labirin/maze cuan. Instalasi pertama tidak ada catatan. **Instalasi kedua DANA aman 300-an.** | Belum dicatat | [ ] |
+| 7 | Cuan Maze | Belum dicatat | Belum dicatat | Game puzzle labirin/maze cuan. Instalasi pertama tidak ada catatan. **Instalasi kedua DANA aman 300-an. Instalasi ketiga belum ada catatan — perlu cek tarik.** | Belum dicatat | [ ] |
 | 8 | Panah Sentuh *(Arrow Tap)* | Belum dicatat | Belum dicatat | Game ketuk panah / tap arrow puzzle. Instalasi pertama belum ada catatan. **Instalasi kedua DANA aman 800-an.** | Belum dicatat | [ ] |
 | 9 | [Dragon Arrow Escape *(Naga Panah)*](dragon-arrow-escape/) | `com.dragonarrowescape.game` | Tidak tercantum | Game panah putar / dragon arrow unblock. Tersedia bot otomatis. Instalasi pertama belum ada catatan. **Instalasi kedua DANA aman 1.000-an (2 kali).** | Belum dicatat | [x] |
 
