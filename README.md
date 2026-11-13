@@ -8,7 +8,7 @@ Urutan aplikasi dan bot yang **wajib dipasang & dijalankan** di HP setelah resta
 
 1. **Bot Blocked Game Detector (`blocked-game-detector/`)**:
    - **Wajib di-install pertama kali** sebagai sistem proteksi dini di HP Android.
-   - Database detector disinkronkan dengan **Daftar Blocked terbaru (43 game)**.
+   - Database detector disinkronkan dengan **Daftar Blocked terbaru (44 game)**.
    - Berjalan sebagai service watchdog untuk memantau package yang terpasang di HP. Jika ada game berbahaya/blocked terpasang, langsung memunculkan alert agar akun DANA/perangkat tidak ikut terblokir.
 
 2. **Inject Iklan (`inject-iklan/` & `inject-iklan-android/`)**:
@@ -144,13 +144,12 @@ Keterangan kategori: game-game ini **susah, tetapi tetap cair**. Data pencairan 
 | 4 | Cute Fish Link Fun | `com.xteleremobilecompanyltd.FishLink` | Sporting 2024 / محمد السيد عبدالرحيم محمود | Aman, penarikan 1100 (Maks Rp1.100). | Belum dicatat | [ ] |
 | 5 | Magical Gems Match 3 | `com.glow.magical.match3` | DKSHUBDeveloper / Ghulam Yaseen | **13 kali penarikan:** Rp20, Rp89, Rp51, Rp81, Rp210, Rp107, Rp182, Rp1.050, Rp354, Rp531, Rp206, Rp273, dan Rp290 (Maks Rp1.050). Susah, tetapi tetap cair. | Lumayan | [x] |
 | 6 | Coin Sort Dash [RAWAN TERBLOKIR IKLAN] | `com.coin.sortdash.remove` | أحمد البكري خميس موسي | Developer sama dengan Bus Jam Parking. **3 kali penarikan:** Rp1.017, Rp627, dan Rp20 (Maks Rp1.017). Lumayan, tetapi rawan terblokir iklan. | Lumayan | [x] |
-| 7 | Soccer Tap Guard | `goal.soccertap.guardfrenzy` | MIC3 / Michael Jones | Perlu waspada; developer sama dengan Soda Pack Sort (Daftar Blocked). **Penarikan 1.000 aman.** | Belum dicatat | [ ] |
-| 8 | Pyramid Gem Blast | `com.pyramid.gem.blast` | أحمد البكري خميس موسي | Developer sama dengan Bus Jam Parking. **2 kali penarikan:** Rp490 dan Rp20 (Maks Rp490). | Belum dicatat | [ ] |
-| 9 | Fresh Veggie Pop | `com.fresh.veggie.pop` | Tidak tercantum / BAE Publishing LLC | **4 kali penarikan:** Rp20, Rp95, Rp256, dan Rp74 (Maks Rp256). Susah, tetapi tetap cair. | Belum dicatat | [ ] |
-| 10 | Bottle Jam Solver | `com.bottle.jam.solver` | Tidak tercantum / UNJIBBED LTD | Game susah, penarikan sedikit. **4 kali penarikan:** Rp206, Rp108, Rp200, dan Rp202 (Maks Rp206). | Belum dicatat | [ ] |
-| 11 | Gold Gems Journey | `com.gems.adventure.journey` | DKSHUBDeveloper / Ghulam Yaseen | Developer sama dengan Magical Gems Match 3. Tema match gems. **Penarikan 200 aman DANA.** | Belum dicatat | [ ] |
-| 12 | Bus Escape: Traffic Puzzle | `sb.ad.hyper.busflow` | MIC3 / Michael Jones | Perlu waspada; developer sama dengan Soda Pack Sort (di Daftar Blocked). Tema bus escape/traffic. **Penarikan 200 aman.** | Belum dicatat | [ ] |
-| 13 | [Bus Parking Dash](bus-parking-dash/) | `com.bus.parking.dash` | Freelancer Jibon | Tema bus parking. Tersedia bot otomatis. Instalasi kedua cuma bisa selain rekening yang sudah (seperti Bus Jam Parking), atau bisa OVO. | Lumayan | [x] |
+| 7 | Pyramid Gem Blast | `com.pyramid.gem.blast` | أحمد البكري خميس موسي | Developer sama dengan Bus Jam Parking. **2 kali penarikan:** Rp490 dan Rp20 (Maks Rp490). **Instalasi ketiga DANA masih aman dan cair 300 aman.** | Belum dicatat | [ ] |
+| 8 | Fresh Veggie Pop | `com.fresh.veggie.pop` | Tidak tercantum / BAE Publishing LLC | **4 kali penarikan:** Rp20, Rp95, Rp256, dan Rp74 (Maks Rp256). Susah, tetapi tetap cair. | Belum dicatat | [ ] |
+| 9 | Bottle Jam Solver | `com.bottle.jam.solver` | Tidak tercantum / UNJIBBED LTD | Game susah, penarikan sedikit. **4 kali penarikan:** Rp206, Rp108, Rp200, dan Rp202 (Maks Rp206). | Belum dicatat | [ ] |
+| 10 | Gold Gems Journey | `com.gems.adventure.journey` | DKSHUBDeveloper / Ghulam Yaseen | Developer sama dengan Magical Gems Match 3. Tema match gems. **Penarikan 200 aman DANA.** | Belum dicatat | [ ] |
+| 11 | Bus Escape: Traffic Puzzle | `sb.ad.hyper.busflow` | MIC3 / Michael Jones | Perlu waspada; developer sama dengan Soda Pack Sort (di Daftar Blocked). Tema bus escape/traffic. **Penarikan 200 aman.** | Belum dicatat | [ ] |
+| 12 | [Bus Parking Dash](bus-parking-dash/) | `com.bus.parking.dash` | Freelancer Jibon | Tema bus parking. Tersedia bot otomatis. Instalasi kedua cuma bisa selain rekening yang sudah (seperti Bus Jam Parking), atau bisa OVO. | Lumayan | [x] |
 
 ## Bubble Crush
 
@@ -295,6 +294,7 @@ Keterangan kategori: game-game ini **susah, tetapi tetap cair**. Data pencairan 
 | 41 | Cut Fruit Blade Master | `com.goodgamecut.cutfruitblademaster` | Belum diketahui | Instalasi kedua memiliki penarikan Rp18.000 yang pending. |
 | 42 | LuckyScrewSort | Belum diketahui | Belum diketahui | Penarikan Rp6.000 gagal dua kali; diduga tidak bisa memakai rekening DANA yang sama. |
 | 43 | Magic Star Crush Journey | `com.starlightgame.magicstarcrushjourney` | ACM PROJECTS & AUTOMATION LTD / Elias Galvin | **Instalasi pertama:** 1 kali penarikan Rp951, rawan terblokir. **Instalasi kedua:** DANA masih aman, penarikan sekitar Rp600-an. **Instalasi ketiga:** terblokir, tidak bisa tarik. |
+| 44 | Soccer Tap Guard | `goal.soccertap.guardfrenzy` | MIC3 / Michael Jones | Developer sama dengan Soda Pack Sort (Daftar Blocked). Penarikan 1.000 aman di awal; sekarang dipindahkan ke daftar Blocked. |
 
 ## 🏢 Kategori Game Berdasarkan Pengembang
 
@@ -318,6 +318,7 @@ Keterangan kategori: game-game ini **susah, tetapi tetap cair**. Data pencairan 
 
 - [Bus Jam Parking Master](bus-jam-parking/) — `com.busjam.parking.master`
 - [Coin Sort Dash](coin-dash-shot/) **[RAWAN TERBLOKIR IKLAN]** — `com.coin.sortdash.remove` — Lumayan, tetapi rawan terblokir iklan.
+- Pyramid Gem Blast — `com.pyramid.gem.blast`
 
 ### Pengembang lain
 
