@@ -36,6 +36,7 @@ Game yang instalasi keduanya sudah aman dan instalasi ketiganya lumayan — perl
 | 1 | Cut Fruit Winner | `com.starlightgame.cutfruitwinner` | DANA aman sekitar Rp1.000-an. | Penghasilan lumayan — **perlu cek tarik.** | [ ] Sudah tarik |
 | 2 | Cuan Maze | Belum dicatat | DANA aman sekitar Rp300-an. | Belum ada catatan instalasi ketiga — **perlu cek tarik.** | [ ] Sudah tarik |
 | 3 | Tangkap Tile Zoo *(Catch Zoo Tiles)* | `com.agmalik.CatchZooTiles` | DANA aman sekitar Rp300-an. | Belum ada catatan instalasi ketiga — **perlu cek tarik.** | [ ] Sudah tarik |
+| 4 | [Dragon Arrow Escape *(Naga Panah)*](dragon-arrow-escape/) | `com.dragonarrowescape.game` | DANA aman sekitar Rp1.000-an (2 kali). | Belum ada catatan instalasi ketiga — **perlu cek tarik.** | [ ] Sudah tarik |
 
 </div>
 
@@ -69,7 +70,7 @@ Urutan ini dibuat dari catatan penarikan yang sudah ada. **Tidak ada data yang m
 | 20 | Tangkap Tile Zoo *(Catch Zoo Tiles)* | `com.agmalik.CatchZooTiles` | Belum ada catatan (kosong). | DANA aman 300-an. | Belum ada catatan instalasi ketiga — perlu cek tarik. | Instalasi kedua aman sekitar Rp300-an; instalasi ketiga belum dicoba — perlu cek tarik segera. |
 | 21 | Cuan Maze | Belum dicatat | Belum ada catatan (kosong). | DANA aman 300-an. | Belum ada catatan instalasi ketiga — perlu cek tarik. | Instalasi kedua aman sekitar Rp300-an; instalasi ketiga belum dicoba — perlu cek tarik segera. |
 | 22 | Panah Sentuh *(Arrow Tap)* | Belum dicatat | Belum ada catatan (kosong). | DANA aman 800-an. | Belum ada catatan. | Target kedua lumayan (sekitar Rp800-an aman DANA). |
-| 23 | [Dragon Arrow Escape *(Naga Panah)*](dragon-arrow-escape/) | `com.dragonarrowescape.game` | Belum ada catatan awal. | DANA aman 1.000-an (2 kali). | Belum ada catatan. | Target kedua aman (sekitar Rp1.000-an). |
+| 23 | [Dragon Arrow Escape *(Naga Panah)*](dragon-arrow-escape/) | `com.dragonarrowescape.game` | Belum ada catatan awal. | DANA aman 1.000-an (2 kali). | Belum ada catatan instalasi ketiga — perlu cek tarik. | Instalasi kedua aman 2 kali sekitar Rp1.000-an; instalasi ketiga belum dicoba — perlu cek tarik segera. |
 | 24 | Fortune Tile Mahjong | `com.NAMMUNIS.FortuneTileMahjong` | 3 kali penarikan (maks Rp212). | DANA masih aman 500-an. | Belum ada catatan. | Coba target penarikan kecil (sekitar Rp500-an). |
 | 25 | Cut Fruit Winner | `com.starlightgame.cutfruitwinner` | Tidak ada catatan awal. | DANA aman sekitar 1.000-an. | Penghasilan lumayan, perlu cek tarik. | Instalasi kedua aman; instalasi ketiga penghasilan lumayan — perlu cek tarik segera. |
 | 26 | [Soda Pack Puzzle](soda-pack-puzzle/) | `com.soda.pack.puzzle` | Ada bot otomatis (belum dites botnya). | DANA masih aman 200-an. | DANA aman, nominal kecil sekitar Rp200-an. | Diturunkan ke posisi terakhir; instalasi ketiga DANA aman, nominal kecil sekitar Rp200-an; bot belum dites. |
@@ -220,7 +221,7 @@ Keterangan kategori: game-game ini **susah, tetapi tetap cair**. Data pencairan 
 | 6 | Panah Penghasil Uang *(Panah Lepas)* | `com.pelangiarena.panahlepas` | Sub Akademi Game | Puzzle panah / arrow unblock penghasil saldo. Instalasi pertama tidak ada catatan. **Instalasi kedua DANA aman 200-an.** | Belum dicatat | [ ] |
 | 7 | Cuan Maze | Belum dicatat | Belum dicatat | Game puzzle labirin/maze cuan. Instalasi pertama tidak ada catatan. **Instalasi kedua DANA aman 300-an. Instalasi ketiga belum ada catatan — perlu cek tarik.** | Belum dicatat | [ ] |
 | 8 | Panah Sentuh *(Arrow Tap)* | Belum dicatat | Belum dicatat | Game ketuk panah / tap arrow puzzle. Instalasi pertama belum ada catatan. **Instalasi kedua DANA aman 800-an.** | Belum dicatat | [ ] |
-| 9 | [Dragon Arrow Escape *(Naga Panah)*](dragon-arrow-escape/) | `com.dragonarrowescape.game` | Tidak tercantum | Game panah putar / dragon arrow unblock. Tersedia bot otomatis. Instalasi pertama belum ada catatan. **Instalasi kedua DANA aman 1.000-an (2 kali).** | Belum dicatat | [x] |
+| 9 | [Dragon Arrow Escape *(Naga Panah)*](dragon-arrow-escape/) | `com.dragonarrowescape.game` | Tidak tercantum | Game panah putar / dragon arrow unblock. Tersedia bot otomatis. Instalasi pertama belum ada catatan. **Instalasi kedua DANA aman 1.000-an (2 kali). Instalasi ketiga belum ada catatan — perlu cek tarik.** | Belum dicatat | [x] |
 
 ## Kategori Tile, Match & Sort (Studio Tunggal)
 
