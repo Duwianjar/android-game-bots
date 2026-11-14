@@ -55,6 +55,9 @@ public class BotForegroundService extends Service {
     private long rewardClickedAt = 0;
     private int consecutiveBlankCount = 0;
     private long gameLaunchedAt = 0;
+    private long lastScreenSignature = 0;
+    private long lastScreenChangeAt = 0;
+    private int noMatchCount = 0;
 
     private int captureWidth = 0;
     private int captureHeight = 0;
@@ -205,8 +208,9 @@ public class BotForegroundService extends Service {
                     // Jalankan pembaca OCR untuk mendeteksi countdown iklan, tombol skip/close, report ads, dan popup reward
                     adTimerReader.readIfDue(screenshot);
                     ScreenAnalyzer.Result result = ScreenAnalyzer.analyze(screenshot);
+                    long signature = ScreenAnalyzer.computeScreenSignature(screenshot);
 
-                    runOneStep(result);
+                    runOneStep(result, signature);
                 } catch (Throwable ignored) {
                 } finally {
                     screenshot.recycle();
@@ -217,7 +221,7 @@ public class BotForegroundService extends Service {
         }
     }
 
-    private void runOneStep(ScreenAnalyzer.Result result) {
+    private void runOneStep(ScreenAnalyzer.Result result, long screenSignature) {
         BotAccessibilityService service = BotAccessibilityService.getInstance();
         if (service == null) return;
 
@@ -231,6 +235,8 @@ public class BotForegroundService extends Service {
                 adStartedAt = 0;
                 adWaitDone = false;
                 rewardClickedPendingAd = false;
+                lastScreenSignature = 0;
+                lastScreenChangeAt = 0;
                 restartGameFresh();
                 sleep(2500);
             }
@@ -239,7 +245,30 @@ public class BotForegroundService extends Service {
             consecutiveBlankCount = 0;
         }
 
+        // 0b. Deteksi layar stuck 2 menit (120 detik) tidak berubah:
+        //     Jika layar tidak berubah selama 2 menit, bersihkan SEMUA riwayat aplikasi lalu buka game ulang!
+        long nowTime = SystemClock.elapsedRealtime();
+        if (lastScreenSignature == 0 || screenSignature != lastScreenSignature) {
+            lastScreenSignature = screenSignature;
+            lastScreenChangeAt = nowTime;
+        } else {
+            if (nowTime - lastScreenChangeAt >= 120_000L) {
+                BotAccessibilityService.showBotLog("[!] Layar stuck 2 menit tidak berubah!\nMembersihkan SEMUA riwayat aplikasi & buka game ulang...");
+                lastScreenSignature = 0;
+                lastScreenChangeAt = nowTime;
+                adStartedAt = 0;
+                adWaitDone = false;
+                rewardClickedPendingAd = false;
+                service.clearAllRecents(result.width, result.height);
+                sleep(1000);
+                restartGameFresh();
+                sleep(3000);
+                return;
+            }
+        }
+
         String fgPkg = BotAccessibilityService.getForegroundPackage();
+        String fgClass = BotAccessibilityService.getForegroundClass();
 
         // 1. Tangani jika terlempar ke Play Store atau Chrome
         if (fgPkg.contains("vending") || fgPkg.contains("chrome")) {
@@ -253,20 +282,45 @@ public class BotForegroundService extends Service {
             return;
         }
 
-        // 1b. Jika game sedang memuat (loading screen / splash) -> tunggu halaman slot muncul dulu, JANGAN KLIK APAPUN!
-        long currentTime = SystemClock.elapsedRealtime();
-        boolean hasLoading = adTimerReader.hasRecentLoadingText();
-        boolean justLaunched = gameLaunchedAt > 0 && (currentTime - gameLaunchedAt < 12000);
-        if (fgPkg.equals(GAME_PACKAGE) && (hasLoading || justLaunched) && !result.boardVisible) {
-            BotAccessibilityService.showBotLog("Game sedang memuat... Menunggu halaman slot & wadah muncul dulu tanpa klik apa pun.");
-            sleep(600);
-            return;
-        }
-        if (result.boardVisible) {
-            gameLaunchedAt = 0;
+        // 2. PRIORITAS UTAMA: Tombol modal reward (Klaim / Koleksi / Bebas Klik / Menarik)
+        //    PENTING: Harus dieksekusi SEBELUM loading check agar tombol klaim tidak pernah salah terdeteksi sebagai "game sedang memuat"!
+        if (!result.isLandscape) {
+            if (adTimerReader.hasRecentRewardModal()) {
+                float rewX = adTimerReader.getRewardButtonX();
+                float rewY = adTimerReader.getRewardButtonY();
+                BotAccessibilityService.showBotLog("[★] Klik tombol Klaim/Koleksi di (" + (int)rewX + ", " + (int)rewY + ")");
+                service.tap(rewX, rewY);
+                sleep(400);
+                adTimerReader.reset();
+                rewardClickedPendingAd = true;
+                rewardClickedAt = SystemClock.elapsedRealtime();
+                return;
+            } else if (service.clickRewardOrClaimNode()) {
+                BotAccessibilityService.showBotLog("[★] Klik tombol Klaim/Koleksi via Accessibility Node");
+                sleep(400);
+                adTimerReader.reset();
+                rewardClickedPendingAd = true;
+                rewardClickedAt = SystemClock.elapsedRealtime();
+                return;
+            }
         }
 
-        // 2. Tangani popup Report Ads (klik tombol X di sebelah kanan teks)
+        // 3. Setelah klik klaim / koleksi dan tombol klaim / koleksi sudah hilang, MAKA ITU HALAMAN IKLAN!
+        if (rewardClickedPendingAd) {
+            long elapsedSinceClaim = SystemClock.elapsedRealtime() - rewardClickedAt;
+            if (!adTimerReader.hasRecentRewardModal() && elapsedSinceClaim >= 400) {
+                rewardClickedPendingAd = false;
+                adStartedAt = SystemClock.elapsedRealtime();
+                adWaitDone = false;
+                BotAccessibilityService.showBotLog("Tombol Klaim hilang -> Terkonfirmasi masuk halaman iklan!\nWajib tunggu 30s sebelum klik apa pun...");
+                sleep(400);
+                return;
+            } else if (elapsedSinceClaim > 5000) {
+                rewardClickedPendingAd = false;
+            }
+        }
+
+        // 4. Tangani popup Report Ads (klik tombol X di sebelah kanan teks)
         if (adTimerReader.hasRecentReportAds()) {
             float rx = adTimerReader.getReportAdsCloseX();
             float ry = adTimerReader.getReportAdsCloseY();
@@ -279,7 +333,7 @@ public class BotForegroundService extends Service {
             return;
         }
 
-        // 3. Tangani dialog Confirm to Close (klik Continue)
+        // 5. Tangani dialog Confirm to Close (klik Continue)
         if (adTimerReader.hasRecentConfirmClose()) {
             float cx = adTimerReader.getContinueButtonX();
             float cy = adTimerReader.getContinueButtonY();
@@ -290,33 +344,20 @@ public class BotForegroundService extends Service {
             return;
         }
 
-        // 4. Tangani tombol modal reward (Klaim / Koleksi / Bebas Klik / Menarik)
-        //    Setelah klaim reward jangan klik slot kartu apa pun (karena iklan biasanya langsung terbuka).
-        if (adTimerReader.hasRecentRewardModal() && !result.isLandscape) {
-            float rewX = adTimerReader.getRewardButtonX();
-            float rewY = adTimerReader.getRewardButtonY();
-            BotAccessibilityService.showBotLog("[★] Klaim di (" + (int)rewX + ", " + (int)rewY + ")");
-            service.tap(rewX, rewY);
-            sleep(400);
-            adTimerReader.reset();
-            rewardClickedPendingAd = true;
-            rewardClickedAt = SystemClock.elapsedRealtime();
+        // 6. Game sedang memuat (loading screen / splash) -> tunggu halaman slot muncul dulu, JANGAN KLIK APAPUN!
+        long currentTime = SystemClock.elapsedRealtime();
+        boolean hasLoading = adTimerReader.hasRecentLoadingText();
+        boolean justLaunched = gameLaunchedAt > 0 && (currentTime - gameLaunchedAt < 12000);
+        if (fgPkg.equals(GAME_PACKAGE) && (hasLoading || justLaunched) && !result.boardVisible && adStartedAt == 0 && !rewardClickedPendingAd) {
+            BotAccessibilityService.showBotLog("Game sedang memuat... Menunggu halaman slot & wadah muncul dulu tanpa klik apa pun.");
+            sleep(600);
             return;
         }
-
-        // Setelah klik koleksi dan tombol koleksi hilang, maka itu adalah HALAMAN IKLAN!
-        if (rewardClickedPendingAd) {
-            if (!adTimerReader.hasRecentRewardModal()) {
-                rewardClickedPendingAd = false;
-                adStartedAt = SystemClock.elapsedRealtime();
-                adWaitDone = false;
-                BotAccessibilityService.showBotLog("Tombol Klaim hilang -> Terkonfirmasi masuk halaman iklan! Wajib tunggu 30s...");
-            } else if (SystemClock.elapsedRealtime() - rewardClickedAt > 5000) {
-                rewardClickedPendingAd = false;
-            }
+        if (result.boardVisible) {
+            gameLaunchedAt = 0;
         }
 
-        // Cek apakah aplikasi berada di luar game Color Power Pop (aplikasi lain selain bot dan bukan activity iklan)
+        // 7. Cek apakah activity saat ini adalah ad activity (Google AdActivity, Mintegral, Unity, Pangle, dll)
         boolean isAdActivity = fgPkg.toLowerCase().contains("reward")
                 || fgPkg.toLowerCase().contains("adactivity")
                 || fgPkg.toLowerCase().contains("mbridge")
@@ -327,10 +368,20 @@ public class BotForegroundService extends Service {
                 || fgPkg.toLowerCase().contains("vungle")
                 || fgPkg.toLowerCase().contains("ironsource")
                 || fgPkg.toLowerCase().contains("pangle")
-                || fgPkg.toLowerCase().contains("bytedance");
+                || fgPkg.toLowerCase().contains("bytedance")
+                || fgClass.toLowerCase().contains("adactivity")
+                || fgClass.toLowerCase().contains("reward")
+                || fgClass.toLowerCase().contains("mbridge")
+                || fgClass.toLowerCase().contains("applovin")
+                || fgClass.toLowerCase().contains("mintegral")
+                || fgClass.toLowerCase().contains("unity3d")
+                || fgClass.toLowerCase().contains("pangle")
+                || fgClass.toLowerCase().contains("bytedance");
 
         boolean isGamePackage = fgPkg.equals(GAME_PACKAGE);
         boolean isBotPackage = fgPkg.equals(getPackageName());
+
+        // 8. Berada di aplikasi lain selain game dan bukan iklan -> buka riwayat aplikasi (Recents) untuk kembali tanpa reload game
         if (!isGamePackage && !isBotPackage && !isAdActivity && !result.isLandscape) {
             BotAccessibilityService.showBotLog("Di aplikasi lain: " + fgPkg + "\nBuka riwayat aplikasi (Recents) untuk kembali tanpa reload game...");
             resumeGameWithoutRestart(result.width, result.height);
@@ -338,12 +389,13 @@ public class BotForegroundService extends Service {
             return;
         }
 
-        // 5. Cek apakah sedang di layar iklan (activity iklan, landscape ad, board game tertutup, atau masih masa wajib tunggu)
+        // 9. Cek apakah sedang di layar iklan:
+        //    (activity iklan, landscape ad, board game tertutup, visual close tampak, atau masa wajib tunggu iklan)
         boolean isAd = (adStartedAt > 0 && !adWaitDone)
                 || isAdActivity
                 || result.isLandscape
                 || result.adScreenLikely
-                || !result.boardVisible;
+                || (!result.boardVisible && !hasLoading && !justLaunched);
 
         if (isAd) {
             long now = SystemClock.elapsedRealtime();
@@ -359,12 +411,14 @@ public class BotForegroundService extends Service {
             boolean hasActionBtn = hasSkip || hasClose;
 
             // ATURAN WAJIB (INSTRUKSI USER): Tunggu penuh 30 detik sebelum klik apa pun!
+            // JANGAN KLIK SLOT APAPUN SAAT DI HALAMAN IKLAN!
             if (adElapsedSec < 30 && !adWaitDone) {
                 long sisaWajib = 30 - adElapsedSec;
-                String status = "Iklan: wajib tunggu " + sisaWajib + "s lagi (total 30s)"
+                String status = "Iklan: wajib tunggu " + sisaWajib + "s lagi (total 30s) sebelum klik apa pun..."
                         + (remTimer > 0 ? " | Timer: " + remTimer + "s" : "")
                         + (result.isLandscape ? " [Landscape]" : " [Portrait]");
                 BotAccessibilityService.showBotLog(status);
+                sleep(400);
                 return; // DIAM MUTLAK, TIDAK KLIK APAPUN!
             }
 
@@ -372,6 +426,7 @@ public class BotForegroundService extends Service {
             if (remTimer > 0 && !hasActionBtn && adElapsedSec < 45) {
                 String status = "Iklan: 30s selesai, menunggu countdown " + remTimer + "s...";
                 BotAccessibilityService.showBotLog(status);
+                sleep(400);
                 return;
             }
 
@@ -425,7 +480,7 @@ public class BotForegroundService extends Service {
             }
 
             // Prioritas 4: Fallback mengetuk 3 sudut target (kanan atas, kiri atas, kanan bawah) disesuaikan portrait/landscape
-            BotAccessibilityService.showBotLog("[★] Waktu 30s selesai. Mengetuk kandidat tombol di pojok kanan atas, kiri atas, & kanan bawah...");
+            BotAccessibilityService.showBotLog("[★] 30s selesai. Mengetuk tombol x / >> di pojok kanan atas, kiri atas, & kanan bawah...");
             if (result.isLandscape) {
                 // Landscape: w > h
                 service.tap(w - 65, 65);
@@ -464,9 +519,9 @@ public class BotForegroundService extends Service {
             return;
         }
 
-        // 6. Gameplay aktif di HALAMAN UTAMA game:
-        //    Jangan klik slot apapun saat di halaman iklan!
-        //    Hanya klik slot setelah dipastikan benar-benar kembali di halaman utama game Color Power Pop.
+        // 10. Gameplay aktif di HALAMAN UTAMA game:
+        //     Jangan klik slot apapun saat di halaman iklan!
+        //     Hanya klik slot setelah dipastikan benar-benar berada di halaman utama game Color Power Pop.
         boolean isMainGameBoard = isGamePackage
                 && !isAdActivity
                 && !result.isLandscape
@@ -476,6 +531,7 @@ public class BotForegroundService extends Service {
             adStartedAt = 0;
             adWaitDone = false;
             if (!result.matchingCardsToTap.isEmpty()) {
+                noMatchCount = 0;
                 StringBuilder sb = new StringBuilder();
                 sb.append("Slot: ");
                 for (ScreenAnalyzer.SlotCard s : result.topSlots) {
@@ -492,8 +548,22 @@ public class BotForegroundService extends Service {
                     service.tap(target.x, target.y);
                     sleep(160);
                 }
+            } else if (!result.topSlots.isEmpty()) {
+                noMatchCount++;
+                if (noMatchCount >= 5) {
+                    // Fallback tap: jika kartu di slot atas ada tetapi belum cocok dengan baris 1 wadah bawah selama ~2 detik,
+                    // ketuk kartu slot atas yang ada secara berurutan agar alur game tetap jalan!
+                    int pickIdx = (noMatchCount - 5) % result.topSlots.size();
+                    ScreenAnalyzer.SlotCard fallbackCard = result.topSlots.get(pickIdx);
+                    BotAccessibilityService.showBotLog("Halaman utama: Fallback tap Slot " + fallbackCard.slotIndex + " (" + fallbackCard.color + ")");
+                    service.tap(fallbackCard.x, fallbackCard.y);
+                    sleep(200);
+                } else {
+                    BotAccessibilityService.showBotLog("Halaman utama (" + result.topSlots.size() + " slot): Menunggu kartu cocok / wadah...");
+                    sleep(300);
+                }
             } else {
-                BotAccessibilityService.showBotLog("Halaman utama: Menunggu kartu cocok / reward...");
+                BotAccessibilityService.showBotLog("Halaman utama: Menunggu slot kartu muncul...");
                 sleep(300);
             }
             return;

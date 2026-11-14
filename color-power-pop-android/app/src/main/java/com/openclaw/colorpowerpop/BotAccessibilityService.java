@@ -390,4 +390,77 @@ public class BotAccessibilityService extends AccessibilityService {
         }
         return false;
     }
+
+    public boolean clearAllRecents(int screenWidth, int screenHeight) {
+        boolean opened = performGlobalAction(GLOBAL_ACTION_RECENTS);
+        if (!opened) return false;
+        SystemClock.sleep(850);
+
+        AccessibilityNodeInfo root = getRootInActiveWindow();
+        boolean cleared = false;
+        if (root != null) {
+            try {
+                cleared = clickNodeByTarget(root, "",
+                        "hapus semua", "clear all", "tutup semua", "close all",
+                        "hapus riwayat", "hapus", "clear", "bersihkan", "clear_all");
+            } catch (Throwable ignored) {
+            } finally {
+                root.recycle();
+            }
+        }
+
+        if (!cleared) {
+            // Fallback tap tombol Hapus Semua di antarmuka Recents (Infinix XOS / HiOS / Android standard)
+            float cx = screenWidth > 0 ? screenWidth / 2f : 360f;
+            float cy = screenHeight > 0 ? screenHeight * 0.88f : 1440f;
+            tap(cx, cy);
+            SystemClock.sleep(500);
+            tap(cx, screenHeight > 0 ? screenHeight * 0.82f : 1340f);
+        }
+
+        SystemClock.sleep(600);
+        performGlobalAction(GLOBAL_ACTION_HOME);
+        SystemClock.sleep(400);
+        return true;
+    }
+
+    public boolean clickRewardOrClaimNode() {
+        AccessibilityNodeInfo root = getRootInActiveWindow();
+        if (root == null) return false;
+        try {
+            return findAndClickRewardNode(root);
+        } catch (Throwable ignored) {
+        } finally {
+            root.recycle();
+        }
+        return false;
+    }
+
+    private boolean findAndClickRewardNode(AccessibilityNodeInfo node) {
+        if (node == null) return false;
+        CharSequence txt = node.getText();
+        CharSequence desc = node.getContentDescription();
+        String textStr = (txt != null ? txt.toString() : "") + " " + (desc != null ? desc.toString() : "");
+        String lower = textStr.toLowerCase().trim();
+        if (!lower.isEmpty() && !lower.contains("color power pop") && !lower.contains("bot") && !lower.contains("wajib tunggu")) {
+            if (lower.contains("klaim") || lower.contains("claim") || lower.contains("koleksi")
+                    || lower.contains("collect") || lower.contains("bebas klik") || lower.contains("menarik")
+                    || lower.contains("gandakan") || lower.contains("ganda") || lower.contains("dapatkan")
+                    || lower.contains("ambil") || lower.contains("terima")) {
+                if (performClickOnNodeOrParent(node)) {
+                    return true;
+                }
+            }
+        }
+        int count = node.getChildCount();
+        for (int i = 0; i < count; i++) {
+            AccessibilityNodeInfo child = node.getChild(i);
+            if (child != null) {
+                boolean clicked = findAndClickRewardNode(child);
+                child.recycle();
+                if (clicked) return true;
+            }
+        }
+        return false;
+    }
 }

@@ -122,12 +122,22 @@ public final class ScreenAnalyzer {
         Set<String> allBottomColors = new HashSet<>();
         int halfW = (int) (35 * sx);
         int halfH = (int) (25 * sy);
+        int[] bottomYOffsets = {-30, -15, 0, 15, 30};
         for (int i = 0; i < baseBottom.length; i++) {
             int bx = (int) (baseBottom[i][0] * sx);
-            int by = (int) (baseBottom[i][1] * sy);
-            String col = getPatchDominantColor(bitmap, bx, by, halfW, halfH);
+            String col = null;
+            int foundBy = (int) (baseBottom[i][1] * sy);
+            for (int dyOff : bottomYOffsets) {
+                int by = (int) ((baseBottom[i][1] + dyOff) * sy);
+                String c = getPatchDominantColor(bitmap, bx, by, halfW, halfH);
+                if (c != null) {
+                    col = c;
+                    foundBy = by;
+                    break;
+                }
+            }
             if (col != null) {
-                result.bottomBoxes.add(new BottomBox(i + 1, col, bx, by));
+                result.bottomBoxes.add(new BottomBox(i + 1, col, bx, foundBy));
                 allBottomColors.add(col);
                 if (i < 3) {
                     row1Colors.add(col);
@@ -165,8 +175,12 @@ public final class ScreenAnalyzer {
             }
         }
 
-        // Board game Color Power Pop asli selalu memiliki minimal 2 wadah bawah DAN minimal 2 kartu slot atas
-        result.boardVisible = result.bottomBoxes.size() >= 2 && result.topSlots.size() >= 2;
+        // Board game Color Power Pop asli:
+        // Jika 4 slot atas terlihat (atau minimal 2 slot atas terdeteksi), halaman utama game pasti aktif!
+        // Ataupun jika wadah bawah terdeteksi minimal 2, atau minimal 1 wadah + 1 slot.
+        result.boardVisible = (result.topSlots.size() >= 2)
+                || (result.bottomBoxes.size() >= 2)
+                || (result.topSlots.size() >= 1 && result.bottomBoxes.size() >= 1);
 
         // 3. Tombol close iklan hanya dicari jika board game TIDAK terlihat (tertutup iklan)
         if (!result.boardVisible) {
@@ -364,5 +378,28 @@ public final class ScreenAnalyzer {
             return "putih semua";
         }
         return null;
+    }
+
+    /**
+     * Menghitung signature visual layar untuk mendeteksi stuck 2 menit (layar tidak berubah).
+     */
+    public static long computeScreenSignature(Bitmap bitmap) {
+        if (bitmap == null || bitmap.isRecycled()) return 0L;
+        int w = bitmap.getWidth();
+        int h = bitmap.getHeight();
+        long hash = 1125899906842597L;
+        int stepX = Math.max(2, w / 16);
+        int stepY = Math.max(2, h / 16);
+        for (int y = stepY; y < h - stepY; y += stepY) {
+            for (int x = stepX; x < w - stepX; x += stepX) {
+                int p = bitmap.getPixel(x, y);
+                int r = (Color.red(p) >> 3) & 0x1F;
+                int g = (Color.green(p) >> 2) & 0x3F;
+                int b = (Color.blue(p) >> 3) & 0x1F;
+                int val = (r << 11) | (g << 5) | b;
+                hash = (hash ^ val) * 1099511628211L;
+            }
+        }
+        return hash;
     }
 }

@@ -125,15 +125,30 @@ public final class AdTimerReader {
             String text = block.getText().trim();
             String lower = text.toLowerCase();
 
-            // Tentukan posisi sudut layar: kanan atas, kiri atas, atau kanan bawah
-            boolean atTopRight = box.centerX() >= screenWidth * 0.58f && box.centerY() <= screenHeight * 0.35f;
-            boolean atTopLeft = box.centerX() <= screenWidth * 0.42f && box.centerY() <= screenHeight * 0.35f;
-            boolean atBottomRight = box.centerX() >= screenWidth * 0.55f && box.centerY() >= screenHeight * 0.65f;
+            boolean isLandscape = screenWidth > screenHeight;
+
+            // Tentukan posisi sudut layar: kanan atas, kiri atas, atau kanan bawah (adaptif portrait & landscape)
+            float topMaxY = isLandscape ? screenHeight * 0.40f : screenHeight * 0.28f;
+            float bottomMinY = isLandscape ? screenHeight * 0.60f : screenHeight * 0.70f;
+            float leftMaxX = isLandscape ? screenWidth * 0.38f : screenWidth * 0.45f;
+            float rightMinX = isLandscape ? screenWidth * 0.62f : screenWidth * 0.55f;
+
+            int edgeCornerX = isLandscape ? 240 : 200;
+            int edgeCornerY = isLandscape ? 160 : 200;
+            int edgeCornerBottomY = isLandscape ? 180 : 220;
+
+            boolean edgeTopRight = box.centerX() >= screenWidth - edgeCornerX && box.centerY() <= edgeCornerY;
+            boolean edgeTopLeft = box.centerX() <= edgeCornerX && box.centerY() <= edgeCornerY;
+            boolean edgeBottomRight = box.centerX() >= screenWidth - edgeCornerX && box.centerY() >= screenHeight - edgeCornerBottomY;
+
+            boolean atTopRight = edgeTopRight || (box.centerX() >= rightMinX && box.centerY() <= topMaxY);
+            boolean atTopLeft = edgeTopLeft || (box.centerX() <= leftMaxX && box.centerY() <= topMaxY);
+            boolean atBottomRight = edgeBottomRight || (box.centerX() >= rightMinX && box.centerY() >= bottomMinY);
             boolean inTargetCorner = atTopRight || atTopLeft || atBottomRight;
             String cornerLabel = atTopRight ? "kanan atas" : (atTopLeft ? "kiri atas" : (atBottomRight ? "kanan bawah" : ""));
 
             // 1. Countdown timer di bagian atas atau kanan bawah
-            if (box.centerY() <= screenHeight * 0.35f || atBottomRight) {
+            if (box.centerY() <= topMaxY || atBottomRight) {
                 Matcher matcher = TIMER.matcher(text);
                 if (matcher.find()) {
                     String group = matcher.group(1) != null ? matcher.group(1) : matcher.group(2);
@@ -195,22 +210,29 @@ public final class AdTimerReader {
                 }
             }
 
-            // 5. Modal reward dialog (Klaim / Koleksi / Bebas Klik / Menarik)
-            if (box.centerY() > screenHeight * 0.50f) {
-                if (lower.equals("klaim") || lower.equals("claim") || lower.equals("koleksi")
-                        || lower.equals("collect") || lower.contains("bebas klik") || lower.equals("menarik")
-                        || lower.contains("gandakan")) {
+            // 5. Modal reward dialog (Klaim / Koleksi / Bebas Klik / Menarik / Gandakan / Dapatkan)
+            //    Gunakan contains agar variasi seperti "Klaim (2000)" atau "Koleksi Hadiah" tetap cocok
+            if (box.centerY() > screenHeight * 0.40f && !lower.contains("color power pop") && !lower.contains("bot") && !lower.contains("wajib tunggu")) {
+                if (lower.contains("klaim") || lower.contains("claim")
+                        || lower.contains("koleksi") || lower.contains("collect")
+                        || lower.contains("bebas klik") || lower.contains("menarik")
+                        || lower.contains("gandakan") || lower.contains("ganda")
+                        || lower.contains("dapatkan") || lower.contains("ambil")
+                        || lower.contains("terima")) {
                     foundReward = true;
                     rewX = box.centerX();
                     rewY = box.centerY();
                 }
             }
 
-            // 6. Teks loading / memuat game
-            if (lower.contains("loading") || lower.contains("memuat") || lower.contains("sedang memuat")
-                    || lower.contains("please wait") || lower.contains("menghubungkan")
-                    || text.matches(".*[0-9]{1,3}%.*")) {
-                foundLoading = true;
+            // 6. Teks loading / memuat game (HANYA jika bukan modal reward dan bukan tombol klaim)
+            //    HAPUS regex persen sendirian agar bonus multiplier tidak salah terdeteksi loading!
+            if (!foundReward && !lower.contains("klaim") && !lower.contains("koleksi") && !lower.contains("claim") && !lower.contains("collect")) {
+                if (lower.contains("loading") || lower.contains("sedang memuat")
+                        || (lower.contains("memuat") && !lower.contains("menarik"))
+                        || lower.contains("please wait") || lower.contains("menghubungkan")) {
+                    foundLoading = true;
+                }
             }
         }
 
@@ -253,11 +275,11 @@ public final class AdTimerReader {
             rewardModalVisible = true;
             rewardButtonX = rewX;
             rewardButtonY = rewY;
+            loadingTextVisible = false; // Jika tombol klaim/reward muncul, JANGAN PERNAH anggap loading!
         } else {
             rewardModalVisible = false;
+            loadingTextVisible = foundLoading;
         }
-
-        loadingTextVisible = foundLoading;
         updatedAt = SystemClock.elapsedRealtime();
     }
 
@@ -266,10 +288,14 @@ public final class AdTimerReader {
         String clean = raw.trim();
         if (SKIP_BTN.matcher(clean).matches()) return true;
         String nospaces = clean.replaceAll("\\s+", "").toLowerCase();
+        if (clean.length() <= 12 && (clean.contains(">>|") || clean.contains(">|") || clean.contains(">>") || clean.contains(">"))) {
+            return true;
+        }
         return nospaces.equals(">") || nospaces.equals(">>") || nospaces.equals(">|") || nospaces.equals(">>|")
                 || nospaces.equals(">i") || nospaces.equals(">>i") || nospaces.equals(">l") || nospaces.equals(">>l")
                 || nospaces.equals(">1") || nospaces.equals(">>1") || nospaces.equals("|>") || nospaces.equals("|>>")
                 || nospaces.equals("»") || nospaces.equals("›") || nospaces.equals("→")
+                || nospaces.contains(">>") || nospaces.contains(">>|") || nospaces.contains(">|")
                 || nospaces.startsWith("skip") || nospaces.startsWith("next")
                 || nospaces.startsWith("lewati") || nospaces.startsWith("lanjut");
     }
@@ -279,6 +305,9 @@ public final class AdTimerReader {
         String clean = raw.trim();
         if (CLOSE_BTN.matcher(clean).matches()) return true;
         String nospaces = clean.replaceAll("\\s+", "").toLowerCase();
+        if (clean.length() <= 8 && (clean.equalsIgnoreCase("x") || clean.contains("×") || clean.equalsIgnoreCase("close") || clean.equalsIgnoreCase("tutup"))) {
+            return true;
+        }
         return nospaces.equals("x") || nospaces.equals("×") || nospaces.equals("✕") || nospaces.equals("✖")
                 || nospaces.equals("+") || nospaces.equals("close") || nospaces.equals("tutup");
     }
