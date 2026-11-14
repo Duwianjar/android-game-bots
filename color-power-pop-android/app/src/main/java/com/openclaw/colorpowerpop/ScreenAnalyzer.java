@@ -90,23 +90,21 @@ public final class ScreenAnalyzer {
         float sx = result.width / 720f;
         float sy = result.height / 1640f;
 
-        // 1. Periksa tombol close X iklan visual di 3 pojok (kanan atas, kiri atas, kanan bawah)
-        CloseButtonResult closeBtn = findAdCloseButton(bitmap);
-        if (closeBtn != null) {
-            result.adCloseButtonVisible = true;
-            result.adCloseButtonX = closeBtn.x;
-            result.adCloseButtonY = closeBtn.y;
-            result.adCloseButtonCorner = closeBtn.corner;
-        }
-
         // Jika layar sedang landscape, game Color Power Pop yang portrait pasti tertutup iklan landscape
         if (result.isLandscape) {
             result.boardVisible = false;
             result.adScreenLikely = true;
+            CloseButtonResult closeBtn = findAdCloseButton(bitmap);
+            if (closeBtn != null) {
+                result.adCloseButtonVisible = true;
+                result.adCloseButtonX = closeBtn.x;
+                result.adCloseButtonY = closeBtn.y;
+                result.adCloseButtonCorner = closeBtn.corner;
+            }
             return result;
         }
 
-        // 2. Deteksi warna 6 wadah/kotak bawah (hanya pada orientasi portrait game)
+        // 1. Deteksi warna 6 wadah/kotak bawah (hanya pada orientasi portrait game)
         int[][] baseBottom = {
                 {160, 1235}, {360, 1235}, {560, 1235},
                 {160, 1380}, {360, 1380}, {560, 1380}
@@ -131,7 +129,7 @@ public final class ScreenAnalyzer {
         // Target warna: prioritaskan wadah baris 1 (posisi 1-3)
         Set<String> targetColors = !row1Colors.isEmpty() ? row1Colors : allBottomColors;
 
-        // 3. Deteksi warna kartu paling bawah pada 4 slot/tumpukan atas
+        // 2. Deteksi warna kartu paling bawah pada 4 slot/tumpukan atas
         int[] baseSlotX = {188, 303, 418, 535};
         int[] scanOffsetsY = {764, 720, 680, 640, 600, 560, 520, 480, 440, 400};
         int slotHalfW = (int) (36 * sx);
@@ -158,8 +156,23 @@ public final class ScreenAnalyzer {
             }
         }
 
+        // Board game terlihat jika ada wadah bawah ATAU kartu slot atas terdeteksi
         result.boardVisible = !result.bottomBoxes.isEmpty() || !result.topSlots.isEmpty();
-        result.adScreenLikely = !result.boardVisible && (looksLikeAdScreen(bitmap) || result.adCloseButtonVisible);
+
+        // 3. Tombol close iklan hanya dicari jika board game TIDAK terlihat (tertutup iklan)
+        if (!result.boardVisible) {
+            CloseButtonResult closeBtn = findAdCloseButton(bitmap);
+            if (closeBtn != null) {
+                result.adCloseButtonVisible = true;
+                result.adCloseButtonX = closeBtn.x;
+                result.adCloseButtonY = closeBtn.y;
+                result.adCloseButtonCorner = closeBtn.corner;
+            }
+            result.adScreenLikely = looksLikeAdScreen(bitmap) || result.adCloseButtonVisible;
+        } else {
+            result.adCloseButtonVisible = false;
+            result.adScreenLikely = false;
+        }
 
         return result;
     }
@@ -248,17 +261,18 @@ public final class ScreenAnalyzer {
         int cornerW = (int) (w * 0.22f);
         int cornerH = (int) (h * 0.22f);
 
-        // 1. Pojok kanan atas
+        // 1. Pojok kanan atas (hindari area status bar di y < 60)
         int rx1 = Math.max(0, w - cornerW);
+        int ry1 = (int) (60 * (h / 1640f));
         int ry2 = Math.min(h, cornerH);
-        if (hasXCrossShape(bitmap, rx1, 0, w, ry2)) {
-            return new CloseButtonResult((rx1 + w) / 2f, ry2 / 2f, "kanan atas");
+        if (hasXCrossShape(bitmap, rx1, ry1, w, ry2)) {
+            return new CloseButtonResult((rx1 + w) / 2f, (ry1 + ry2) / 2f, "kanan atas");
         }
 
-        // 2. Pojok kiri atas
+        // 2. Pojok kiri atas (hindari area status bar di y < 60)
         int lx2 = Math.min(w, cornerW);
-        if (hasXCrossShape(bitmap, 0, 0, lx2, ry2)) {
-            return new CloseButtonResult(lx2 / 2f, ry2 / 2f, "kiri atas");
+        if (hasXCrossShape(bitmap, 0, ry1, lx2, ry2)) {
+            return new CloseButtonResult(lx2 / 2f, (ry1 + ry2) / 2f, "kiri atas");
         }
 
         // 3. Pojok kanan bawah (berlaku di landscape maupun portrait)

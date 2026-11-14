@@ -417,13 +417,7 @@ public class BotForegroundService extends Service {
         boolean isMainGameBoard = isGamePackage
                 && !isAdActivity
                 && !result.isLandscape
-                && !result.adScreenLikely
-                && !result.adCloseButtonVisible
-                && !adTimerReader.hasRecentSkipButton()
-                && !adTimerReader.hasRecentCloseButton()
-                && adTimerReader.recentRemainingSeconds() < 0
-                && !result.bottomBoxes.isEmpty()
-                && !result.topSlots.isEmpty();
+                && result.boardVisible;
 
         if (isMainGameBoard) {
             adStartedAt = 0;
@@ -449,6 +443,7 @@ public class BotForegroundService extends Service {
                 BotAccessibilityService.showBotLog("Halaman utama: Menunggu kartu cocok / reward...");
                 sleep(300);
             }
+            return;
         } else {
             // Jika bukan di halaman utama game, JANGAN ketuk slot apa pun!
             if (!fgPkg.equals(GAME_PACKAGE)) {
