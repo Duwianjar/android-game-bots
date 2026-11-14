@@ -1332,6 +1332,20 @@ class CanSortRunner:
         self.bring_game_to_foreground()
         time.sleep(0.25)
 
+    def is_blank_screen(self, img):
+        """Cek apakah layar game putih semua atau hitam semua."""
+        if img is None:
+            return False, ""
+        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        mean_val = float(np.mean(gray))
+        std_val = float(np.std(gray))
+        if std_val < 15:
+            if mean_val < 25:
+                return True, "hitam semua"
+            elif mean_val > 230:
+                return True, "putih semua"
+        return False, ""
+
     def is_confirmed_ad_screen(self, img=None):
         """Pastikan layar adalah iklan, bukan papan kotak/kartu game."""
         if img is None:
@@ -1352,13 +1366,9 @@ class CanSortRunner:
             return True, "activity SDK iklan"
 
         has_bottom, has_top = self.get_board_presence(img)
-        if has_bottom or has_top:
-            detected = []
-            if has_bottom:
-                detected.append("kotak bawah")
-            if has_top:
-                detected.append("kartu atas")
-            return False, "papan game masih terbaca (" + ", ".join(detected) + ")"
+        # Papan game hanya valid jika KEDUA elemen hadir bersamaan (bukan warna video iklan)
+        if has_bottom and has_top:
+            return False, "papan game lengkap (kotak bawah dan kartu atas)"
 
         # Timer adalah bukti visual tambahan untuk iklan yang dirender di activity game.
         if self.detect_ad_countdown_seconds(img):
@@ -1405,16 +1415,8 @@ class CanSortRunner:
                     time.sleep(0.4)
                     continue
 
-                still_ad, _ = self.is_confirmed_ad_screen(img_during_wait)
-                has_bottom, has_top = self.get_board_presence(img_during_wait)
-                if not still_ad and (has_bottom or has_top):
-                    print(
-                        f"{self.tag} [✔] Halaman utama game sudah kembali. "
-                        "Membatalkan sisa mode diam iklan.",
-                        flush=True,
-                    )
-                    self.on_ad_finished()
-                    return True
+                # Selama masa wajib tunggu 30 detik: DIAM TOTAL, jangan batalkan mode diam karena warna video iklan.
+                pass
             if remaining != last_reported and (remaining % 5 == 0 or remaining <= 3):
                 print(f"{self.tag}    -> Mode diam iklan: sisa {remaining} detik, tanpa input.", flush=True)
                 last_reported = remaining
@@ -3026,17 +3028,14 @@ class CanSortRunner:
             if not clicked_reward:
                 time.sleep(0.08)
                 return
-            # Setelah popup Klaim/Koleksi diklik, jangan ketuk slot apa pun karena iklan sering langsung terbuka.
-            # Tunggu dan periksa apakah layar berganti ke iklan.
-            time.sleep(0.35)
+            # Setelah tombol Klaim diklik dan tombolnya hilang, maka itu adalah HALAMAN IKLAN!
+            time.sleep(0.6)
             img_after = self.get_screenshot()
-            # Jangan klik ulang walaupun OCR masih melihat tombol. Tap kedua sering
-            # jatuh ke iklan/endcard dan membuka Play Store.
-
-            if img_after is not None:
-                cans_after = self.detect_shelf_cans(img_after)
-                if not cans_after:
-                    self.wait_ad_and_close_ad("Iklan Terbuka Setelah Klik Koleksi / Bebas Klik")
+            ocr_after = self.run_full_ocr(img_after) if img_after is not None else []
+            btn_after = detect_popup_reward_button_fast(ocr_after, img_after, self.scale_x, self.scale_y) if img_after is not None else None
+            if not btn_after:
+                print(f"{self.tag} [✔] Tombol {desc} sudah hilang -> Terkonfirmasi masuk halaman iklan! Menjalankan mode tunggu 30s...", flush=True)
+                self.wait_ad_and_close_ad(f"Iklan Terbuka Setelah Klik {desc}")
             return
 
         # 8b. Deteksi Bubble / Balon Hadiah Terbang dimatikan untuk Color Power Pop

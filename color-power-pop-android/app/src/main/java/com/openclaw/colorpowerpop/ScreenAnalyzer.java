@@ -67,6 +67,8 @@ public final class ScreenAnalyzer {
         public int width;
         public int height;
         public boolean isLandscape;
+        public boolean isBlankScreen;
+        public String blankReason = "";
         public final List<SlotCard> topSlots = new ArrayList<>();
         public final List<BottomBox> bottomBoxes = new ArrayList<>();
         public final List<SlotCard> matchingCardsToTap = new ArrayList<>();
@@ -87,6 +89,13 @@ public final class ScreenAnalyzer {
         result.width = bitmap.getWidth();
         result.height = bitmap.getHeight();
         result.isLandscape = result.width > result.height;
+        String blank = checkAllBlackOrWhite(bitmap);
+        if (blank != null) {
+            result.isBlankScreen = true;
+            result.blankReason = blank;
+            result.boardVisible = false;
+            return result;
+        }
         float sx = result.width / 720f;
         float sy = result.height / 1640f;
 
@@ -156,8 +165,8 @@ public final class ScreenAnalyzer {
             }
         }
 
-        // Board game terlihat jika ada wadah bawah ATAU kartu slot atas terdeteksi
-        result.boardVisible = !result.bottomBoxes.isEmpty() || !result.topSlots.isEmpty();
+        // Board game Color Power Pop asli selalu memiliki minimal 2 wadah bawah DAN minimal 2 kartu slot atas
+        result.boardVisible = result.bottomBoxes.size() >= 2 && result.topSlots.size() >= 2;
 
         // 3. Tombol close iklan hanya dicari jika board game TIDAK terlihat (tertutup iklan)
         if (!result.boardVisible) {
@@ -320,5 +329,40 @@ public final class ScreenAnalyzer {
             }
         }
         return total > 0 && ((float) darkPixels / total) >= 0.45f;
+    }
+    public static String checkAllBlackOrWhite(Bitmap bitmap) {
+        int w = bitmap.getWidth();
+        int h = bitmap.getHeight();
+        int total = 0;
+        int blackCount = 0;
+        int whiteCount = 0;
+
+        int stepX = Math.max(4, w / 35);
+        int stepY = Math.max(4, h / 35);
+
+        for (int y = 0; y < h; y += stepY) {
+            for (int x = 0; x < w; x += stepX) {
+                int p = bitmap.getPixel(x, y);
+                int r = Color.red(p);
+                int g = Color.green(p);
+                int b = Color.blue(p);
+
+                total++;
+                if (r < 25 && g < 25 && b < 25) {
+                    blackCount++;
+                } else if (r > 230 && g > 230 && b > 230) {
+                    whiteCount++;
+                }
+            }
+        }
+
+        if (total == 0) return null;
+        if ((float) blackCount / total >= 0.90f) {
+            return "hitam semua";
+        }
+        if ((float) whiteCount / total >= 0.90f) {
+            return "putih semua";
+        }
+        return null;
     }
 }

@@ -51,6 +51,9 @@ public class BotForegroundService extends Service {
     private AdTimerReader adTimerReader;
     private long adStartedAt = 0;
     private boolean adWaitDone = false;
+    private boolean rewardClickedPendingAd = false;
+    private long rewardClickedAt = 0;
+    private int consecutiveBlankCount = 0;
 
     private int captureWidth = 0;
     private int captureHeight = 0;
@@ -217,6 +220,24 @@ public class BotForegroundService extends Service {
         BotAccessibilityService service = BotAccessibilityService.getInstance();
         if (service == null) return;
 
+        // 0. Jika layar game hitam semua atau putih semua -> buka ulang game
+        if (result.isBlankScreen) {
+            consecutiveBlankCount++;
+            BotAccessibilityService.showBotLog("Layar game " + result.blankReason + " (" + consecutiveBlankCount + "/4)...");
+            if (consecutiveBlankCount >= 4) {
+                BotAccessibilityService.showBotLog("Layar game " + result.blankReason + "! Membuka ulang game...");
+                consecutiveBlankCount = 0;
+                adStartedAt = 0;
+                adWaitDone = false;
+                rewardClickedPendingAd = false;
+                restartGameFresh();
+                sleep(2500);
+            }
+            return;
+        } else {
+            consecutiveBlankCount = 0;
+        }
+
         String fgPkg = BotAccessibilityService.getForegroundPackage();
 
         // 1. Tangani jika terlempar ke Play Store atau Chrome
@@ -260,11 +281,25 @@ public class BotForegroundService extends Service {
         if (adTimerReader.hasRecentRewardModal() && !result.isLandscape) {
             float rewX = adTimerReader.getRewardButtonX();
             float rewY = adTimerReader.getRewardButtonY();
-            BotAccessibilityService.showBotLog("[★] Klaim / Koleksi Hadiah di (" + (int)rewX + ", " + (int)rewY + ")");
+            BotAccessibilityService.showBotLog("[★] Klaim di (" + (int)rewX + ", " + (int)rewY + ")");
             service.tap(rewX, rewY);
             sleep(400);
             adTimerReader.reset();
+            rewardClickedPendingAd = true;
+            rewardClickedAt = SystemClock.elapsedRealtime();
             return;
+        }
+
+        // Setelah klik koleksi dan tombol koleksi hilang, maka itu adalah HALAMAN IKLAN!
+        if (rewardClickedPendingAd) {
+            if (!adTimerReader.hasRecentRewardModal()) {
+                rewardClickedPendingAd = false;
+                adStartedAt = SystemClock.elapsedRealtime();
+                adWaitDone = false;
+                BotAccessibilityService.showBotLog("Tombol Klaim hilang -> Terkonfirmasi masuk halaman iklan! Wajib tunggu 30s...");
+            } else if (SystemClock.elapsedRealtime() - rewardClickedAt > 5000) {
+                rewardClickedPendingAd = false;
+            }
         }
 
         // Cek apakah aplikasi berada di luar game Color Power Pop (aplikasi lain selain bot dan bukan activity iklan)
@@ -289,8 +324,12 @@ public class BotForegroundService extends Service {
             return;
         }
 
-        // 5. Cek apakah sedang di layar iklan (activity iklan, landscape ad, atau board game tertutup)
-        boolean isAd = isAdActivity || result.isLandscape || result.adScreenLikely || !result.boardVisible;
+        // 5. Cek apakah sedang di layar iklan (activity iklan, landscape ad, board game tertutup, atau masih masa wajib tunggu)
+        boolean isAd = (adStartedAt > 0 && !adWaitDone)
+                || isAdActivity
+                || result.isLandscape
+                || result.adScreenLikely
+                || !result.boardVisible;
 
         if (isAd) {
             long now = SystemClock.elapsedRealtime();
@@ -481,7 +520,19 @@ public class BotForegroundService extends Service {
         }
     }
 
+    private void restartGameFresh() {
+        try {
+            Intent launch = getPackageManager().getLaunchIntentForPackage(GAME_PACKAGE);
+            if (launch != null) {
+                launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+                startActivity(launch);
+            }
+        } catch (Throwable ignored) {
+        }
+    }
+
     private void sleep(long ms) {
+
         try {
             Thread.sleep(ms);
         } catch (InterruptedException ignored) {
