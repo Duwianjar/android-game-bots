@@ -109,10 +109,12 @@ def detect_popup_reward_button_ocr(ocr_items, scale_y=1.0):
     footer_phrases = ["lebih banyak video", "bonus tambahan", "syarat", "ketentuan"]
     candidates = []
     for it in ocr_items:
-        t = it["text"].lower()
+        t = it["text"].lower().strip()
         cy = it["cy"]
         if int(850 * scale_y) <= cy <= int(1160 * scale_y):
             if any(fp in t for fp in footer_phrases):
+                continue
+            if t.startswith("-") or t.startswith("•") or len(t) > 22 or "otomatis" in t or "bot" in t:
                 continue
             if any(kw in t for kw in multiplier_keywords):
                 candidates.append((0, it["cx"], cy, f"Tombol Multiplier '{it['text']}'"))
@@ -585,6 +587,22 @@ class CanSortRunner:
 
         return ""
 
+    def wait_for_game_board_ready(self, timeout=25):
+        """Menunggu game selesai memuat (loading) dan halaman slot/wadah muncul dulu tanpa klik apa pun."""
+        start_t = time.monotonic()
+        while time.monotonic() - start_t < timeout:
+            img = self.get_screenshot()
+            if img is None:
+                time.sleep(0.5)
+                continue
+            has_bottom, has_top = self.get_board_presence(img)
+            if has_bottom and has_top:
+                print(f"{self.tag} [✔] Game selesai memuat! Halaman slot dan wadah sudah muncul.", flush=True)
+                return True
+            print(f"{self.tag} [⏳] Game sedang memuat (loading)... Menunggu halaman slot & wadah muncul dulu tanpa klik apa pun.", flush=True)
+            time.sleep(0.8)
+        return False
+
     def bring_game_to_foreground(self):
         """Membawa aplikasi game kembali ke layar depan via riwayat aplikasi (Recents) tanpa reload game."""
         pkg = self.auto_detect_game_package()
@@ -600,6 +618,7 @@ class CanSortRunner:
         if pkg not in focus:
             # Fallback jika belum di game: panggil activity tanpa me-reset task
             self.run_adb(["shell", "monkey", "-p", pkg, "-c", "android.intent.category.LAUNCHER", "1"])
+            self.wait_for_game_board_ready(timeout=15)
 
     def press_back(self):
         # Marker biru di area tombol BACK agar aksi BACK juga terlihat di scrcpy.

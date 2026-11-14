@@ -65,6 +65,9 @@ public final class AdTimerReader {
     private volatile float rewardButtonX = -1;
     private volatile float rewardButtonY = -1;
 
+    // Game loading screen detection
+    private volatile boolean loadingTextVisible;
+
     private volatile long updatedAt;
     private long lastRequestAt;
 
@@ -114,6 +117,7 @@ public final class AdTimerReader {
 
         boolean foundReward = false;
         float rewX = -1, rewY = -1;
+        boolean foundLoading = false;
 
         for (Text.TextBlock block : result.getTextBlocks()) {
             Rect box = block.getBoundingBox();
@@ -201,6 +205,13 @@ public final class AdTimerReader {
                     rewY = box.centerY();
                 }
             }
+
+            // 6. Teks loading / memuat game
+            if (lower.contains("loading") || lower.contains("memuat") || lower.contains("sedang memuat")
+                    || lower.contains("please wait") || lower.contains("menghubungkan")
+                    || text.matches(".*[0-9]{1,3}%.*")) {
+                foundLoading = true;
+            }
         }
 
         if (foundTimer >= 0) {
@@ -246,6 +257,7 @@ public final class AdTimerReader {
             rewardModalVisible = false;
         }
 
+        loadingTextVisible = foundLoading;
         updatedAt = SystemClock.elapsedRealtime();
     }
 
@@ -351,6 +363,10 @@ public final class AdTimerReader {
         return rewardButtonY;
     }
 
+    public boolean hasRecentLoadingText() {
+        return SystemClock.elapsedRealtime() - updatedAt <= FRESH_RESULT_MS && loadingTextVisible;
+    }
+
     public void reset() {
         remainingSeconds = -1;
         skipButtonVisible = false;
@@ -372,6 +388,7 @@ public final class AdTimerReader {
         rewardModalVisible = false;
         rewardButtonX = -1;
         rewardButtonY = -1;
+        loadingTextVisible = false;
         updatedAt = 0;
     }
 

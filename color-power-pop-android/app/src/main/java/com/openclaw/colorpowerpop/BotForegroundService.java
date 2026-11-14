@@ -54,6 +54,7 @@ public class BotForegroundService extends Service {
     private boolean rewardClickedPendingAd = false;
     private long rewardClickedAt = 0;
     private int consecutiveBlankCount = 0;
+    private long gameLaunchedAt = 0;
 
     private int captureWidth = 0;
     private int captureHeight = 0;
@@ -250,6 +251,19 @@ public class BotForegroundService extends Service {
                 resumeGameWithoutRestart(result.width, result.height);
             }
             return;
+        }
+
+        // 1b. Jika game sedang memuat (loading screen / splash) -> tunggu halaman slot muncul dulu, JANGAN KLIK APAPUN!
+        long currentTime = SystemClock.elapsedRealtime();
+        boolean hasLoading = adTimerReader.hasRecentLoadingText();
+        boolean justLaunched = gameLaunchedAt > 0 && (currentTime - gameLaunchedAt < 12000);
+        if (fgPkg.equals(GAME_PACKAGE) && (hasLoading || justLaunched) && !result.boardVisible) {
+            BotAccessibilityService.showBotLog("Game sedang memuat... Menunggu halaman slot & wadah muncul dulu tanpa klik apa pun.");
+            sleep(600);
+            return;
+        }
+        if (result.boardVisible) {
+            gameLaunchedAt = 0;
         }
 
         // 2. Tangani popup Report Ads (klik tombol X di sebelah kanan teks)
@@ -495,6 +509,7 @@ public class BotForegroundService extends Service {
     }
 
     private void resumeGameWithoutRestart(int width, int height) {
+        gameLaunchedAt = SystemClock.elapsedRealtime();
         BotAccessibilityService service = BotAccessibilityService.getInstance();
         if (service != null) {
             boolean switched = service.switchToGameFromRecents(width, height);
@@ -521,6 +536,7 @@ public class BotForegroundService extends Service {
     }
 
     private void restartGameFresh() {
+        gameLaunchedAt = SystemClock.elapsedRealtime();
         try {
             Intent launch = getPackageManager().getLaunchIntentForPackage(GAME_PACKAGE);
             if (launch != null) {
