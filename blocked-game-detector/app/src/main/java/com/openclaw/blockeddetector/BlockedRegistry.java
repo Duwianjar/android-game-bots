@@ -57,6 +57,8 @@ public class BlockedRegistry {
         list.add(new BlockedItem(42, "LuckyScrewSort", "", "Belum diketahui", "Penarikan Rp6.000 gagal dua kali; diduga tidak bisa memakai rekening DANA yang sama.", "luckyscrewsort", "lucky screw sort"));
         list.add(new BlockedItem(43, "Magic Star Crush Journey", "com.starlightgame.magicstarcrushjourney", "ACM PROJECTS & AUTOMATION LTD / Elias Galvin", "Instalasi pertama 951, kedua 600 aman, ketiga terblokir tidak bisa tarik.", "magicstarcrushjourney", "magic star crush journey"));
         list.add(new BlockedItem(44, "Soccer Tap Guard", "goal.soccertap.guardfrenzy", "MIC3 / Michael Jones", "Developer sama dengan Soda Pack Sort. Penarikan 1.000 aman di awal; dipindahkan ke daftar Blocked.", "soccertap.guardfrenzy", "soccer tap guard"));
+        list.add(new BlockedItem(45, "Crazy Tile Match Winner", "com.moonshotcube.crazytilematchwinner", "Elias Galvin", "Penarikan 500 cair DANA di awal; dipindahkan ke daftar Blocked.", "crazytilematchwinner", "crazy tile match winner"));
+        list.add(new BlockedItem(46, "Cute Fairy Blast Tale", "com.msxcleargamer.cutefairyblasttale", "DEVVVS 0043", "Penarikan Rp100 tidak cair.", "cutefairyblasttale", "cute fairy blast tale"));
         ITEMS = Collections.unmodifiableList(list);
     }
 

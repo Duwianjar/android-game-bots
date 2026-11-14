@@ -8,7 +8,7 @@ Urutan aplikasi dan bot yang **wajib dipasang & dijalankan** di HP setelah resta
 
 1. **Bot Blocked Game Detector (`blocked-game-detector/`)**:
    - **Wajib di-install pertama kali** sebagai sistem proteksi dini di HP Android.
-   - Database detector disinkronkan dengan **Daftar Blocked terbaru (44 game)**.
+   - Database detector disinkronkan dengan **Daftar Blocked terbaru (46 game)**.
    - Berjalan sebagai service watchdog untuk memantau package yang terpasang di HP. Jika ada game berbahaya/blocked terpasang, langsung memunculkan alert agar akun DANA/perangkat tidak ikut terblokir.
 
 2. **Inject Iklan (`inject-iklan/` & `inject-iklan-android/`)**:
@@ -34,7 +34,7 @@ Game yang instalasi keduanya sudah aman dan instalasi ketiganya lumayan — perl
 | No. | Game | Package `com` | Instalasi Kedua | Instalasi Ketiga | Aksi |
 |---:|---|---|---|---|---|
 | 1 | Cut Fruit Winner | `com.starlightgame.cutfruitwinner` | DANA aman sekitar Rp1.000-an. | Penghasilan lumayan — **perlu cek tarik.** | [ ] Sudah tarik |
-| 2 | Cuan Maze | Belum dicatat | DANA aman sekitar Rp300-an. | Belum ada catatan instalasi ketiga — **perlu cek tarik.** | [ ] Sudah tarik |
+| 2 | Cuan Maze | Belum dicatat | DANA aman sekitar Rp300-an. | DANA masih aman 100. | [x] Sudah tarik |
 | 3 | Tangkap Tile Zoo *(Catch Zoo Tiles)* | `com.agmalik.CatchZooTiles` | DANA aman sekitar Rp300-an. | Belum ada catatan instalasi ketiga — **perlu cek tarik.** | [ ] Sudah tarik |
 | 4 | [Dragon Arrow Escape *(Naga Panah)*](dragon-arrow-escape/) | `com.dragonarrowescape.game` | DANA aman sekitar Rp1.000-an (2 kali). | Belum ada catatan instalasi ketiga — **perlu cek tarik.** | [ ] Sudah tarik |
 
@@ -70,7 +70,7 @@ Urutan ini dibuat dari catatan penarikan yang sudah ada. **Tidak ada data yang m
 | 20 | [Dragon Arrow Escape *(Naga Panah)*](dragon-arrow-escape/) | `com.dragonarrowescape.game` | Belum ada catatan awal. | DANA aman 1.000-an (2 kali). | Belum ada catatan instalasi ketiga — perlu cek tarik. | Dinaikkan; instalasi kedua aman 2 kali sekitar Rp1.000-an — perlu cek tarik segera. |
 | 21 | Cut Fruit Winner | `com.starlightgame.cutfruitwinner` | Tidak ada catatan awal. | DANA aman sekitar 1.000-an. | Penghasilan lumayan, perlu cek tarik. | Instalasi kedua aman; instalasi ketiga penghasilan lumayan — perlu cek tarik segera. |
 | 22 | Tangkap Tile Zoo *(Catch Zoo Tiles)* | `com.agmalik.CatchZooTiles` | Belum ada catatan (kosong). | DANA aman 300-an. | Belum ada catatan instalasi ketiga — perlu cek tarik. | Instalasi kedua aman sekitar Rp300-an; instalasi ketiga belum dicoba — perlu cek tarik segera. |
-| 23 | Cuan Maze | Belum dicatat | Belum ada catatan (kosong). | DANA aman 300-an. | Belum ada catatan instalasi ketiga — perlu cek tarik. | Instalasi kedua aman sekitar Rp300-an; instalasi ketiga belum dicoba — perlu cek tarik segera. |
+| 23 | Cuan Maze | Belum dicatat | Belum ada catatan (kosong). | DANA aman 300-an. | DANA masih aman 100. | Instalasi kedua aman Rp300-an; instalasi ketiga DANA masih aman 100. |
 | 24 | Panah Sentuh *(Arrow Tap)* | Belum dicatat | Belum ada catatan (kosong). | DANA aman 800-an. | Belum ada catatan. | Target kedua lumayan (sekitar Rp800-an aman DANA). |
 | 25 | Fortune Tile Mahjong | `com.NAMMUNIS.FortuneTileMahjong` | 3 kali penarikan (maks Rp212). | DANA masih aman 500-an. | Belum ada catatan. | Coba target penarikan kecil (sekitar Rp500-an). |
 | 26 | [Soda Pack Puzzle](soda-pack-puzzle/) | `com.soda.pack.puzzle` | Ada bot otomatis (belum dites botnya). | DANA masih aman 200-an. | DANA aman, nominal kecil sekitar Rp200-an. | Diturunkan ke posisi terakhir; instalasi ketiga DANA aman, nominal kecil sekitar Rp200-an; bot belum dites. |
@@ -108,9 +108,8 @@ Keterangan kategori: game-game ini terasa paling cepat, tetapi relatif mudah ter
 |---:|---|---|---|---|---|:---:|
 | 1 | Magic Ocean Tile Crush **[RAWAN TERBLOKIR]** | `com.starlightgame.magicoceantilecrush` | ACM PROJECTS & AUTOMATION LTD / Elias Galvin | Belum ada catatan penarikan; rawan terblokir. | Belum dicatat | [x] |
 | 2 | Woodland Tile Match **[RAWAN TERBLOKIR]** | `com.starlightgame.woodlandtilematcher` | ACM PROJECTS & AUTOMATION LTD / Elias Galvin | Belum ada catatan penarikan; rawan terblokir. | Belum dicatat | [x] |
-| 3 | Crazy Tile Match Winner | `com.moonshotcube.crazytilematchwinner` | Elias Galvin | Penarikan 500 cair DANA. | Belum dicatat | [ ] |
-| 4 | Lucky Pop Crush | `com.starlightgame.luckypopcrusher` | ACM PROJECTS & AUTOMATION LTD / Elias Galvin | Penarikan 300 cair DANA. | Belum dicatat | [ ] |
-| 5 | Cut Fruit Winner | `com.starlightgame.cutfruitwinner` | ACM PROJECTS & AUTOMATION LTD / Elias Galvin | Game iris buah / fruit cutter. Instalasi pertama tidak ada catatan. **Instalasi kedua DANA aman sekitar 1.000-an. Instalasi ketiga penghasilan lumayan — perlu cek tarik.** | Belum dicatat | [ ] |
+| 3 | Lucky Pop Crush | `com.starlightgame.luckypopcrusher` | ACM PROJECTS & AUTOMATION LTD / Elias Galvin | Penarikan 300 cair DANA. | Belum dicatat | [ ] |
+| 4 | Cut Fruit Winner | `com.starlightgame.cutfruitwinner` | ACM PROJECTS & AUTOMATION LTD / Elias Galvin | Game iris buah / fruit cutter. Instalasi pertama tidak ada catatan. **Instalasi kedua DANA aman sekitar 1.000-an. Instalasi ketiga penghasilan lumayan — perlu cek tarik.** | Belum dicatat | [ ] |
 
 ## Lucky Food
 
@@ -147,7 +146,7 @@ Keterangan kategori: game-game ini **susah, tetapi tetap cair**. Data pencairan 
 | 7 | Pyramid Gem Blast | `com.pyramid.gem.blast` | أحمد البكري خميس موسي | Developer sama dengan Bus Jam Parking. **2 kali penarikan:** Rp490 dan Rp20 (Maks Rp490). **Instalasi ketiga DANA masih aman dan cair 300 aman.** | Belum dicatat | [ ] |
 | 8 | Fresh Veggie Pop | `com.fresh.veggie.pop` | Tidak tercantum / BAE Publishing LLC | **4 kali penarikan:** Rp20, Rp95, Rp256, dan Rp74 (Maks Rp256). Susah, tetapi tetap cair. | Belum dicatat | [ ] |
 | 9 | Bottle Jam Solver | `com.bottle.jam.solver` | Tidak tercantum / UNJIBBED LTD | Game susah, penarikan sedikit. **4 kali penarikan:** Rp206, Rp108, Rp200, dan Rp202 (Maks Rp206). | Belum dicatat | [ ] |
-| 10 | Gold Gems Journey | `com.gems.adventure.journey` | DKSHUBDeveloper / Ghulam Yaseen | Developer sama dengan Magical Gems Match 3. Tema match gems. **Penarikan 200 aman DANA.** | Belum dicatat | [ ] |
+| 10 | Gold Gems Journey | `com.gems.adventure.journey` | DKSHUBDeveloper / Ghulam Yaseen | Developer sama dengan Magical Gems Match 3. Tema match gems. **Penarikan 200 aman DANA.** **Instalasi ketiga DANA masih aman 200.** | Belum dicatat | [ ] |
 | 11 | Bus Escape: Traffic Puzzle | `sb.ad.hyper.busflow` | MIC3 / Michael Jones | Perlu waspada; developer sama dengan Soda Pack Sort (di Daftar Blocked). Tema bus escape/traffic. **Penarikan 200 aman.** | Belum dicatat | [ ] |
 | 12 | [Bus Parking Dash](bus-parking-dash/) | `com.bus.parking.dash` | Freelancer Jibon | Tema bus parking. Tersedia bot otomatis. Instalasi kedua cuma bisa selain rekening yang sudah (seperti Bus Jam Parking), atau bisa OVO. | Lumayan | [x] |
 
@@ -218,7 +217,7 @@ Keterangan kategori: game-game ini **susah, tetapi tetap cair**. Data pencairan 
 | 4 | Bus Jam Rush | `putulive.app.bus` | StudyPort | Game bus jam penumpang warna. **Penarikan 200 aman.** | Belum dicatat | [ ] |
 | 5 | [Soda Jam Puzzle](soda-jam-puzzle/) | `com.armg.sodajam` | Muhammad Armghan Abbas | Game soda jam puzzle. Tersedia bot otomatis. Instalasi pertama tidak ikut tercatat. **Instalasi kedua penarikan 700 aman DANA.** | Belum dicatat | [x] |
 | 6 | Panah Penghasil Uang *(Panah Lepas)* | `com.pelangiarena.panahlepas` | Sub Akademi Game | Puzzle panah / arrow unblock penghasil saldo. Instalasi pertama tidak ada catatan. **Instalasi kedua DANA aman 200-an.** | Belum dicatat | [ ] |
-| 7 | Cuan Maze | Belum dicatat | Belum dicatat | Game puzzle labirin/maze cuan. Instalasi pertama tidak ada catatan. **Instalasi kedua DANA aman 300-an. Instalasi ketiga belum ada catatan — perlu cek tarik.** | Belum dicatat | [ ] |
+| 7 | Cuan Maze | Belum dicatat | Belum dicatat | Game puzzle labirin/maze cuan. Instalasi pertama tidak ada catatan. **Instalasi kedua DANA aman 300-an. Instalasi ketiga DANA masih aman 100.** | Belum dicatat | [ ] |
 | 8 | Panah Sentuh *(Arrow Tap)* | Belum dicatat | Belum dicatat | Game ketuk panah / tap arrow puzzle. Instalasi pertama belum ada catatan. **Instalasi kedua DANA aman 800-an.** | Belum dicatat | [ ] |
 | 9 | [Dragon Arrow Escape *(Naga Panah)*](dragon-arrow-escape/) | `com.dragonarrowescape.game` | Tidak tercantum | Game panah putar / dragon arrow unblock. Tersedia bot otomatis. Instalasi pertama belum ada catatan. **Instalasi kedua DANA aman 1.000-an (2 kali). Instalasi ketiga belum ada catatan — perlu cek tarik.** | Belum dicatat | [x] |
 
@@ -227,7 +226,7 @@ Keterangan kategori: game-game ini **susah, tetapi tetap cair**. Data pencairan 
 | No. | Game | Package `com` | Developer / perusahaan | Keterangan | Iklan Slot | Bot |
 |---:|---|---|---|---|---|:---:|
 | 1 | Sweet Block Puzzle Clear | `com.sweet.bloco.quebra` | AS_ZR | Game block puzzle bertema manis. **Penarikan 1.200 sukses DANA.** | Belum dicatat | [ ] |
-| 2 | Fruit Block Sort | `com.fruitblocksort.sortpack.gp` | Bejodev | Game sortir blok buah ke dalam pack. **Penarikan 400 sukses DANA.** | Belum dicatat | [ ] |
+| 2 | Fruit Block Sort | `com.fruitblocksort.sortpack.gp` | Bejodev | Game sortir blok buah ke dalam pack. **Penarikan 400 sukses DANA. Instalasi ketiga OVO 100 aman.** | Belum dicatat | [ ] |
 | 3 | Harvest Block Crush | `com.harvest.block.crush` | Muhammad Shabbir Hussain | Game block crush puzzle. Instalasi pertama tidak ikut tercatat. **Instalasi kedua DANA aman tapi cuma 400.** | Belum dicatat | [ ] |
 | 4 | [Soda Pack Puzzle](soda-pack-puzzle/) | `com.soda.pack.puzzle` | AbkAppStore / Abubakar Ahmad Yusuf | Game sortir soda pack. Ada bot otomatis tetapi belum dites botnya. **Instalasi kedua DANA masih aman 200-an. Instalasi ketiga DANA aman, nominal kecil sekitar Rp200-an.** | Belum dicatat | [x] |
 | 5 | Tangkap Tile Zoo *(Catch Zoo Tiles)* | `com.agmalik.CatchZooTiles` | Agmalik006 | Game match 3 tile tema hewan zoo. Instalasi pertama kosong / belum dicatat. **Instalasi kedua DANA aman 300-an. Instalasi ketiga belum ada catatan — perlu cek tarik.** | Belum dicatat | [ ] |
@@ -295,6 +294,8 @@ Keterangan kategori: game-game ini **susah, tetapi tetap cair**. Data pencairan 
 | 42 | LuckyScrewSort | Belum diketahui | Belum diketahui | Penarikan Rp6.000 gagal dua kali; diduga tidak bisa memakai rekening DANA yang sama. |
 | 43 | Magic Star Crush Journey | `com.starlightgame.magicstarcrushjourney` | ACM PROJECTS & AUTOMATION LTD / Elias Galvin | **Instalasi pertama:** 1 kali penarikan Rp951, rawan terblokir. **Instalasi kedua:** DANA masih aman, penarikan sekitar Rp600-an. **Instalasi ketiga:** terblokir, tidak bisa tarik. |
 | 44 | Soccer Tap Guard | `goal.soccertap.guardfrenzy` | MIC3 / Michael Jones | Developer sama dengan Soda Pack Sort (Daftar Blocked). Penarikan 1.000 aman di awal; sekarang dipindahkan ke daftar Blocked. |
+| 45 | Crazy Tile Match Winner | `com.moonshotcube.crazytilematchwinner` | Elias Galvin | Penarikan 500 cair DANA di awal; sekarang dipindahkan ke daftar Blocked. |
+| 46 | Cute Fairy Blast Tale | `com.msxcleargamer.cutefairyblasttale` | DEVVVS 0043 | Penarikan Rp100 tidak cair. |
 
 ## 🏢 Kategori Game Berdasarkan Pengembang
 
@@ -331,11 +332,13 @@ Keterangan kategori: game-game ini **susah, tetapi tetap cair**. Data pencairan 
 - [Color Power Pop](color-power-pop/) — Giraffee App — `com.giraffeeapp.power`
 - [Animal Blast: Win Prize Game](jungle-animal-eliminate/) — Faisal Developers — `com.jungle.bear.tiger.wild.animal.eliminate`
 - [Magical Gems Match 3](magic-gems-match/) — DKSHUBDeveloper — `com.glow.magical.match3`
+- Gold Gems Journey — DKSHUBDeveloper / Ghulam Yaseen — `com.gems.adventure.journey`
 - Planet Slice Master — Go Bananas Studio — `com.smartgames.planetslicemaster`
 - Harvest Block Crush — Muhammad Shabbir Hussain — `com.harvest.block.crush`
 - Mahjong Ajaib — ALEXANDER DEJARNETTE — `com.Lucinda.MagicMahjong`
 - Panah Penghasil Uang *(Panah Lepas)* — Sub Akademi Game — `com.pelangiarena.panahlepas`
 - Tangkap Tile Zoo *(Catch Zoo Tiles)* — Agmalik006 — `com.agmalik.CatchZooTiles`
+- Fruit Block Sort — Bejodev — `com.fruitblocksort.sortpack.gp`
 
 ### Belum terverifikasi
 
