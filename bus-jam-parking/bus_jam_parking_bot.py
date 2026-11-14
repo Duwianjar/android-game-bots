@@ -168,6 +168,29 @@ def detect_dialog_close_x_button(img, scale_x=1.0, scale_y=1.0):
         return best[0], best[1], "Tombol X Tutup Modal"
     return None
 
+def is_ad_skip_or_close_symbol(raw_text):
+    """Mendeteksi apakah teks OCR adalah tombol skip / fast-forward / close:
+    >> , >| , >>| , > , x , X , ✕ , ✖ , × , skip , close , tutup , lewati , dsb."""
+    t = (raw_text or "").strip().lower()
+    compact = re.sub(r"\s+", "", t)
+    if not compact:
+        return False, ""
+    symbols = {
+        ">>", ">|", ">>|", ">", "»", "›", "››", "》", ">>l", ">l", ">i", ">>i",
+        ">!", ">1", ">>!", ">>1", "▶", "▶|", "▶▶", "⏭", "|<<", "->", "-->",
+        "x", "✕", "✖", "×", "+"
+    }
+    if compact in symbols:
+        return True, f"simbol '{compact}'"
+    if any(k in compact for k in [">>", ">|", ">>|", ">l", ">>l", ">i", ">>i"]):
+        return True, f"pola skip '{compact}'"
+    if len(compact) == 1 and compact in "xX✕✖×+":
+        return True, f"simbol x '{compact}'"
+    for w in ["skip", "close", "tutup", "lewati"]:
+        if w in compact:
+            return True, f"kata '{w}'"
+    return False, ""
+
 def is_right_chevron(cnt, bw, bh):
     pts = cnt[:, 0, :]
     by = pts[:, 1].min()
@@ -552,14 +575,16 @@ class BusParkingDashRunner:
             return ""
 
     def detect_ad_countdown_seconds(self, img=None):
-        """Mendeteksi countdown timer iklan di pojok kiri atas (misal: '53s left to be rewarded' / '16s left')."""
+        """Mendeteksi countdown timer iklan di pojok atas (misal: '53s left to be rewarded' / '16s left')."""
         if img is None:
             img = self.get_screenshot()
         if img is None:
             return None
+        h = img.shape[0]
         ocr_items = self.run_full_ocr(img)
+        max_cy = max(180, int(h * 0.25))
         for it in ocr_items:
-            if it["cy"] < int(350 * self.scale_y):
+            if it["cy"] < max_cy:
                 t = it["text"].lower()
                 m = re.search(r'(\d{1,2})\s*s\s*(?:left|to be rewarded|remaining|sisa|detik)?', t, re.IGNORECASE)
                 if m:
@@ -570,9 +595,8 @@ class BusParkingDashRunner:
 
     def find_ad_x_button(self, img=None):
         """
-        Mencari tombol X / Tutup / Skip secara presisi di POJOK KANAN ATAS atau POJOK KIRI ATAS.
-        HANYA memeriksa area header aman (y: 45..140 * sy), DILARANG KERAS menyentuh y > 145
-        agar tidak salah klik isi webview iklan / banner promosi yang membuka Chrome/Play Store.
+        Mencari tombol Tutup / Skip / Fast-Forward (>>, >|, >>|, >, X, Close, dsb)
+        di POJOK KANAN ATAS, POJOK KIRI ATAS, atau POJOK KANAN BAWAH (khususnya saat iklan terbuka landscape).
         Mengembalikan (x, y, desc) jika ditemukan, atau None.
         """
         if img is None:
@@ -580,26 +604,46 @@ class BusParkingDashRunner:
         if img is None:
             return None
 
-        sx, sy = self.scale_x, self.scale_y
-        min_y = int(45 * sy)
-        max_y = int(140 * sy)
+        h, w = img.shape[:2]
+        is_landscape = w > h
 
-        # 1. Cek via OCR di header aman: pojok kanan atas (x >= 540) atau kiri atas (x <= 180)
+        if is_landscape:
+            # Mode Landscape (layar mendatar / iklan landscape)
+            top_y1, top_y2 = 10, min(180, int(h * 0.28))
+            bot_y1, bot_y2 = max(h - 180, int(h * 0.72)), h - 10
+            left_x1, left_x2 = 10, min(240, int(w * 0.22))
+            right_x1, right_x2 = max(w - 240, int(w * 0.78)), w - 10
+        else:
+            # Mode Portrait (layar tegak)
+            top_y1, top_y2 = 25, min(220, int(h * 0.16))
+            bot_y1, bot_y2 = max(h - 220, int(h * 0.84)), h - 25
+            left_x1, left_x2 = 15, min(220, int(w * 0.32))
+            right_x1, right_x2 = max(w - 220, int(w * 0.68)), w - 15
+
+        corner_boxes = [
+            ("Kanan Atas", right_x1, top_y1, right_x2, top_y2),
+            ("Kanan Bawah", right_x1, bot_y1, right_x2, bot_y2),
+            ("Kiri Atas", left_x1, top_y1, left_x2, top_y2),
+            ("Kiri Bawah", left_x1, bot_y1, left_x2, bot_y2),
+        ]
+
+        # 1. Cek via OCR di semua sudut aman (prioritas Kanan Atas, Kanan Bawah, Kiri Atas)
         ocr_items = self.run_full_ocr(img)
         for it in ocr_items:
             cx, cy = it["cx"], it["cy"]
-            if min_y <= cy <= max_y:
-                t = it["text"].strip().lower()
-                compact = re.sub(r"\s+", "", t)
-                is_x_sym = compact in ["x", "✕", "✖", "×", ">>", ">", "»", "›", "››", ">|", ">l", ">i", "▶|", "⏭", "+"] or ">>" in compact or ">|" in compact or (len(compact) == 1 and compact in "xX+")
-                is_skip_word = any(k == t or t.startswith(k) for k in ["skip", "close", "tutup", "lewati", "reward"])
-                if (is_x_sym or is_skip_word) and (cx >= int(540 * sx) or cx <= int(180 * sx)):
-                    return (cx, cy, f"OCR '{it['text']}'")
+            for c_name, rx1, ry1, rx2, ry2 in corner_boxes:
+                if rx1 <= cx <= rx2 and ry1 <= cy <= ry2:
+                    is_match, reason = is_ad_skip_or_close_symbol(it["text"])
+                    if is_match:
+                        return (cx, cy, f"OCR '{it['text']}' ({reason}) di {c_name}")
 
-        # 1b. Visual >> / >| di pojok atas. Ini sering tidak terbaca OCR.
-        cy1, cy2 = int(30 * sy), int(220 * sy)
-        for side, x1, x2 in [("kanan", int(520 * sx), int(710 * sx)), ("kiri", int(10 * sx), int(200 * sx))]:
-            crop = img[cy1:cy2, x1:x2]
+        # 1b. Visual >> / >| / >>| / > via deteksi chevron OpenCV di Kanan Atas, Kanan Bawah, Kiri Atas
+        for c_name, rx1, ry1, rx2, ry2 in [
+            ("Kanan Atas", right_x1, top_y1, right_x2, top_y2),
+            ("Kanan Bawah", right_x1, bot_y1, right_x2, bot_y2),
+            ("Kiri Atas", left_x1, top_y1, left_x2, top_y2),
+        ]:
+            crop = img[ry1:ry2, rx1:rx2]
             if crop.size <= 0:
                 continue
             gray = cv2.cvtColor(crop, cv2.COLOR_BGR2GRAY)
@@ -607,148 +651,230 @@ class BusParkingDashRunner:
                 _, bin_img = cv2.threshold(gray, thresh_val, 255, cv2.THRESH_BINARY)
                 cnts, _ = cv2.findContours(bin_img, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
                 chevrons, bars = [], []
+                min_cw = max(4, int(4 * (w / 720.0)))
+                max_cw = max(20, int(45 * (w / 720.0)))
+                min_ch = max(8, int(10 * (h / 1640.0))) if not is_landscape else 10
+                max_ch = max(35, int(60 * (h / 1640.0))) if not is_landscape else min(65, int(h * 0.15))
+
                 for cnt in cnts:
                     bx, by, bw, bh = cv2.boundingRect(cnt)
-                    if int(6 * sx) <= bw <= int(40 * sx) and int(12 * sy) <= bh <= int(55 * sy):
-                        if 0.25 <= bw / float(bh) <= 0.95 and is_right_chevron(cnt, bw, bh):
+                    if min_cw <= bw <= max_cw and min_ch <= bh <= max_ch:
+                        if 0.20 <= bw / float(bh) <= 1.1 and is_right_chevron(cnt, bw, bh):
                             chevrons.append((bx, by, bw, bh))
-                    if int(2 * sx) <= bw <= int(9 * sx) and int(12 * sy) <= bh <= int(55 * sy):
+                    if 2 <= bw <= int(12 * (w / 720.0)) and min_ch <= bh <= max_ch:
                         bars.append((bx, by, bw, bh))
+
+                # Pasangan double chevron: >> atau >>|
                 for i, c1 in enumerate(chevrons):
-                    for c2 in chevrons[i + 1:] + bars:
-                        if abs((c1[1] + c1[3] / 2) - (c2[1] + c2[3] / 2)) > int(10 * sy):
-                            continue
-                        left_c, right_c = (c1, c2) if c1[0] < c2[0] else (c2, c1)
-                        gap = right_c[0] - (left_c[0] + left_c[2])
-                        if -int(3 * sx) <= gap <= int(30 * sx):
-                            cx = x1 + (left_c[0] + right_c[0] + right_c[2]) // 2
-                            cy = cy1 + (left_c[1] + left_c[3] // 2)
-                            return (cx, cy, f"Visual >>/>| {side} atas")
+                    for c2 in chevrons[i + 1:]:
+                        if abs((c1[1] + c1[3] / 2) - (c2[1] + c2[3] / 2)) <= 15:
+                            left_c, right_c = (c1, c2) if c1[0] < c2[0] else (c2, c1)
+                            gap = right_c[0] - (left_c[0] + left_c[2])
+                            if -5 <= gap <= 35:
+                                has_bar = any(
+                                    abs((b[1] + b[3] / 2) - (right_c[1] + right_c[3] / 2)) <= 15
+                                    and 0 <= b[0] - (right_c[0] + right_c[2]) <= 30
+                                    for b in bars
+                                )
+                                label = ">>|" if has_bar else ">>"
+                                cx = rx1 + (left_c[0] + right_c[0] + right_c[2]) // 2
+                                cy = ry1 + (left_c[1] + left_c[3] // 2)
+                                return (cx, cy, f"Visual {label} di {c_name}")
 
-        # 2. Cek kontur presisi di Pojok Kanan Atas (x: 580..705, y: 45..140)
-        rx1, rx2 = int(580 * sx), int(705 * sx)
-        crop_r = img[min_y:max_y, rx1:rx2]
-        if crop_r.size > 0:
-            gray = cv2.cvtColor(crop_r, cv2.COLOR_BGR2GRAY)
+                # Pasangan single chevron + bar: >|
+                for c1 in chevrons:
+                    for b in bars:
+                        if abs((c1[1] + c1[3] / 2) - (b[1] + b[3] / 2)) <= 15:
+                            gap = b[0] - (c1[0] + c1[2])
+                            if 0 <= gap <= 30:
+                                cx = rx1 + (c1[0] + b[0] + b[2]) // 2
+                                cy = ry1 + (c1[1] + c1[3] // 2)
+                                return (cx, cy, f"Visual >| di {c_name}")
+
+                # Single chevron > di sudut
+                if len(chevrons) == 1:
+                    c = chevrons[0]
+                    cx = rx1 + c[0] + c[2] // 2
+                    cy = ry1 + c[1] + c[3] // 2
+                    return (cx, cy, f"Visual > di {c_name}")
+
+        # 2. Cek kontur tombol X lingkaran/silang di Kanan Atas, Kanan Bawah, dan Kiri Atas
+        for c_name, rx1, ry1, rx2, ry2, sort_dir in [
+            ("Kanan Atas", right_x1, top_y1, right_x2, top_y2, "top_right"),
+            ("Kanan Bawah", right_x1, bot_y1, right_x2, bot_y2, "bot_right"),
+            ("Kiri Atas", left_x1, top_y1, left_x2, top_y2, "top_left"),
+        ]:
+            crop = img[ry1:ry2, rx1:rx2]
+            if crop.size <= 0:
+                continue
+            gray = cv2.cvtColor(crop, cv2.COLOR_BGR2GRAY)
             edges = cv2.Canny(gray, 40, 140)
             cnts, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-            min_dim = int(14 * min(sx, sy))
-            max_dim = int(48 * max(sx, sy))
-            right_cands = []
+            min_dim = 14
+            max_dim = 55
+            cands = []
             for cnt in cnts:
-                x, y, w, h = cv2.boundingRect(cnt)
-                if min_dim <= w <= max_dim and min_dim <= h <= max_dim:
-                    aspect = w / float(h)
+                x, y, w_cnt, h_cnt = cv2.boundingRect(cnt)
+                if min_dim <= w_cnt <= max_dim and min_dim <= h_cnt <= max_dim:
+                    aspect = w_cnt / float(h_cnt)
                     if 0.65 <= aspect <= 1.5:
-                        patch = crop_r[y:y+h, x:x+w]
+                        patch = crop[y:y+h_cnt, x:x+w_cnt]
                         if patch.std() > 18:
-                            cand_x = rx1 + x + w // 2
-                            cand_y = min_y + y + h // 2
-                            # Prioritas paling dekat ke pojok kanan atas
-                            score = cand_x - (cand_y * 1.5)
-                            right_cands.append((score, cand_x, cand_y))
-            if right_cands:
-                right_cands.sort(key=lambda item: item[0], reverse=True)
-                _, bx, by = right_cands[0]
-                return (bx, by, f"Kontur Kanan Atas ({bx},{by})")
-
-        # 3. Cek kontur presisi di Pojok Kiri Atas (x: 50..145, y: 45..140)
-        # Hindari x < 50 agar tidak salah klik lencana AdChoices/info yang membuka browser
-        lx1, lx2 = int(50 * sx), int(145 * sx)
-        crop_l = img[min_y:max_y, lx1:lx2]
-        if crop_l.size > 0:
-            gray = cv2.cvtColor(crop_l, cv2.COLOR_BGR2GRAY)
-            edges = cv2.Canny(gray, 40, 140)
-            cnts, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-            min_dim = int(14 * min(sx, sy))
-            max_dim = int(48 * max(sx, sy))
-            left_cands = []
-            for cnt in cnts:
-                x, y, w, h = cv2.boundingRect(cnt)
-                if min_dim <= w <= max_dim and min_dim <= h <= max_dim:
-                    aspect = w / float(h)
-                    if 0.65 <= aspect <= 1.5:
-                        patch = crop_l[y:y+h, x:x+w]
-                        if patch.std() > 18:
-                            cand_x = lx1 + x + w // 2
-                            cand_y = min_y + y + h // 2
-                            # Prioritas paling dekat ke pojok kiri atas
-                            score = -cand_x - (cand_y * 1.5)
-                            left_cands.append((score, cand_x, cand_y))
-            if left_cands:
-                left_cands.sort(key=lambda item: item[0], reverse=True)
-                _, bx, by = left_cands[0]
-                return (bx, by, f"Kontur Kiri Atas ({bx},{by})")
+                            cand_x = rx1 + x + w_cnt // 2
+                            cand_y = ry1 + y + h_cnt // 2
+                            if sort_dir == "top_right":
+                                score = cand_x - (cand_y * 1.5)
+                            elif sort_dir == "bot_right":
+                                score = cand_x + (cand_y * 1.5)
+                            else:
+                                score = -cand_x - (cand_y * 1.5)
+                            cands.append((score, cand_x, cand_y))
+            if cands:
+                cands.sort(key=lambda item: item[0], reverse=True)
+                _, bx, by = cands[0]
+                return (bx, by, f"Kontur X di {c_name} ({bx},{by})")
 
         return None
 
     def detect_and_click_ad_x_button(self, img=None):
-        """Mendeteksi dan mengeklik tombol X / Tutup di pojok kanan atas pada layar iklan."""
+        """Mendeteksi dan mengeklik tombol X / Tutup / Skip (termasuk pojok kanan bawah & landscape)."""
         if img is None:
             img = self.get_screenshot()
         if img is None:
             return False
 
-        sx, sy = self.scale_x, self.scale_y
+        h, w = img.shape[:2]
+        is_landscape = w > h
+
         found = self.find_ad_x_button(img)
         if found:
             fx, fy, desc = found
-            print(f"{self.tag} [★] Menemukan tombol Tutup/X Iklan ({desc}) di ({fx}, {fy})! Mengeklik...", flush=True)
+            print(f"{self.tag} [★] Menemukan tombol Tutup/Skip Iklan ({desc}) di ({fx}, {fy})! Mengeklik...", flush=True)
             self.tap(fx, fy)
             time.sleep(0.4)
             focus_check = self.get_foreground_focus()
             if any(pkg in focus_check.lower() for pkg in ["com.android.vending", "com.android.chrome"]):
                 self.run_adb(["shell", "am", "force-stop", "com.android.vending"])
                 self.run_adb(["shell", "am", "force-stop", "com.android.chrome"])
-                self.bring_game_to_foreground()
+                self.reopen_game_from_home_screen("menutup redirect browser/play store")
             return True
 
-        # Fallback HANYA ke header aman (y <= 115) di pojok kanan & kiri atas (DILARANG KERAS menyentuh y > 145)
-        safe_header_x_pts = [
-            (int(665 * sx), int(80 * sy)),
-            (int(665 * sx), int(115 * sy)),
-            (int(640 * sx), int(80 * sy)),
-            (int(675 * sx), int(85 * sy)),
-            (int(55 * sx), int(80 * sy)),
-            (int(55 * sx), int(115 * sy)),
-        ]
-        self.tap_burst(safe_header_x_pts, delay=0.04)
+        # Fallback burst taps: pojok kanan atas, kiri atas, dan pojok kanan bawah
+        if is_landscape:
+            fallback_pts = [
+                # Kanan atas
+                (int(w * 0.95), int(h * 0.08)),
+                (int(w * 0.92), int(h * 0.10)),
+                (int(w * 0.96), int(h * 0.12)),
+                # Kanan bawah (khusus landscape)
+                (int(w * 0.95), int(h * 0.90)),
+                (int(w * 0.92), int(h * 0.88)),
+                (int(w * 0.96), int(h * 0.92)),
+                # Kiri atas
+                (int(w * 0.05), int(h * 0.08)),
+                (int(w * 0.08), int(h * 0.10)),
+            ]
+        else:
+            sx, sy = self.scale_x, self.scale_y
+            fallback_pts = [
+                # Kanan atas
+                (int(665 * sx), int(80 * sy)),
+                (int(665 * sx), int(115 * sy)),
+                (int(640 * sx), int(80 * sy)),
+                (int(675 * sx), int(85 * sy)),
+                # Kiri atas
+                (int(55 * sx), int(80 * sy)),
+                (int(55 * sx), int(115 * sy)),
+                # Kanan bawah (banner atau landscape container)
+                (int(w * 0.92), int(h * 0.94)),
+                (int(w * 0.95), int(h * 0.92)),
+                (int(w * 0.88), int(h * 0.95)),
+            ]
+        self.tap_burst(fallback_pts, delay=0.04)
         return True
 
-    def close_ad_screen_thoroughly(self):
-        """Menutup iklan secara menyeluruh: BACK -> Dialog Konfirmasi Tutup ('Continue') -> Endcard X -> Kembali Game."""
-        sx, sy = self.scale_x, self.scale_y
-        self.press_back()
-        time.sleep(0.4)
+    def reopen_game_from_home_screen(self, reason="selesai tonton iklan"):
+        """
+        Kembali ke game lewat Halaman Utama (Home Screen) sesuai instruksi user:
+        1. Tekan tombol HOME (keyevent 3) untuk menuju halaman utama HP.
+        2. Ambil screenshot halaman utama, cari ikon Bus Jam Parking dengan OCR lalu klik ikonnya.
+        3. Luncurkan via launcher intent / monkey agar aplikasi pasti aktif kembali ke halaman permainan.
+        """
+        print(f"{self.tag} [🏠] Kembali ke game via Halaman Utama (Home Screen) ({reason})...", flush=True)
 
-        img = self.get_screenshot()
-        if img is not None:
-            ocr_items = self.run_full_ocr(img)
+        # 1. Tekan tombol HOME (keyevent 3) untuk keluar dari webview/iklan yang macet
+        self.run_adb(["shell", "input", "keyevent", "3"])
+        time.sleep(0.6)
+
+        # 2. Ambil screenshot halaman utama, cari ikon Bus Jam Parking dengan OCR lalu klik
+        img_home = self.get_screenshot()
+        clicked_icon = False
+        if img_home is not None:
+            ocr_items = self.run_full_ocr(img_home)
             for it in ocr_items:
-                t = it["text"].lower()
-                if any(k in t for k in ["continue", "continui", "continu", "lanjutkan", "resume"]) and it["cy"] > int(200 * sy):
-                    print(f"{self.tag} [+] Terdeteksi dialog peringatan iklan. Mengeklik 'Continue' di ({it['cx']}, {it['cy']})...", flush=True)
+                t = it["text"].lower().strip()
+                norm = re.sub(r"[^a-z0-9]+", "", t)
+                if (
+                    "busjam" in norm
+                    or ("bus" in norm and "jam" in norm)
+                    or ("bus" in norm and "parking" in norm)
+                    or norm in ["busjam", "bus", "parking", "bus jam"]
+                ):
+                    print(f"{self.tag} [★] Menemukan ikon '{it['text']}' di halaman utama ({it['cx']}, {it['cy']})! Mengeklik aplikasi...", flush=True)
                     self.tap(it["cx"], it["cy"])
-                    time.sleep(1.2)
+                    clicked_icon = True
+                    time.sleep(1.0)
                     break
 
-        # Ketuk tombol X di header aman jika masih ada
-        img2 = self.get_screenshot()
-        self.detect_and_click_ad_x_button(img2)
+        # 3. Jika ikon belum diklik atau game belum di foreground, buka via launcher intent / monkey
+        focus = self.get_foreground_focus()
+        if not clicked_icon or PACKAGE_NAME not in focus:
+            print(f"{self.tag} [▶] Membuka aplikasi Bus Jam Parking dari launcher...", flush=True)
+            self.run_adb(["shell", "monkey", "-p", PACKAGE_NAME, "-c", "android.intent.category.LAUNCHER", "1"])
+            time.sleep(1.0)
 
-        time.sleep(0.4)
+        # 4. Bersihkan sisa tombol X / popup / dialog jika masih ada
+        time.sleep(0.5)
+        img_after = self.get_screenshot()
+        if img_after is not None:
+            found_x = self.find_ad_x_button(img_after)
+            if found_x:
+                fx, fy, desc = found_x
+                print(f"{self.tag} [★] Terdeteksi tombol {desc} di ({fx}, {fy}) setelah buka aplikasi. Mengeklik...", flush=True)
+                self.tap(fx, fy)
+                time.sleep(0.5)
+
+            ocr_after = self.run_full_ocr(img_after)
+            for it in ocr_after:
+                t = it["text"].lower()
+                if any(k in t for k in ["continue", "continui", "continu", "lanjutkan", "resume"]) and it["cy"] > int(200 * self.scale_y):
+                    print(f"{self.tag} [+] Terdeteksi dialog 'Continue' di ({it['cx']}, {it['cy']}). Mengeklik...", flush=True)
+                    self.tap(it["cx"], it["cy"])
+                    time.sleep(0.8)
+                    break
+
+        print(f"{self.tag} [✔] Sukses kembali ke aplikasi dari halaman utama!", flush=True)
+
+    def close_ad_screen_thoroughly(self):
+        """Menutup iklan secara menyeluruh: Tap X / >> / >| / > jika ada -> Buka game via Halaman Utama (Home Screen)."""
+        img0 = self.get_screenshot()
+        if img0 is not None:
+            found = self.find_ad_x_button(img0)
+            if found:
+                fx, fy, desc = found
+                print(f"{self.tag} [★] Menemukan tombol {desc} di ({fx}, {fy}) sebelum kembali ke game. Mengeklik...", flush=True)
+                self.tap(fx, fy)
+                time.sleep(0.5)
+
+        # Tutup Play Store / Chrome jika sempat terbuka
         focus = self.get_foreground_focus()
         if any(pkg in focus.lower() for pkg in ["com.android.vending", "com.android.chrome"]):
             self.run_adb(["shell", "am", "force-stop", "com.android.vending"])
             self.run_adb(["shell", "am", "force-stop", "com.android.chrome"])
-            self.press_back()
-            time.sleep(0.3)
-            self.bring_game_to_foreground()
-        elif PACKAGE_NAME not in focus:
-            self.press_back()
-            time.sleep(0.3)
-            self.bring_game_to_foreground()
-        time.sleep(0.4)
+
+        # Buka game lewat Halaman Utama (Home Screen) sesuai instruksi (tidak hanya bergantung pada BACK)
+        self.reopen_game_from_home_screen("waktu tunggu 30s & countdown selesai")
+        time.sleep(0.5)
 
     def wait_ad_and_close_ad(self, reason="Iklan Video Reward"):
         """Menunggu iklan dan kirim notifikasi ke Telegram"""
@@ -799,10 +925,11 @@ class BusParkingDashRunner:
                         self.bring_game_to_foreground()
 
                     focus_check = self.get_foreground_focus()
-                    if PACKAGE_NAME in focus_check and not any(k in focus_check.lower() for k in ["rewardvideo", "adactivity", "applovin", "mbridge", "mintegral", "unity3d", "vungle"]):
-                        print(f"{self.tag} [✔] Tombol X sukses menutup iklan dan kembali ke gameplay!", flush=True)
+                    if PACKAGE_NAME in focus_check and not any(k in focus_check.lower() for k in ["rewardvideo", "adactivity", "applovin", "mbridge", "mintegral", "unity3d", "vungle", "fullscreenwebviewdisplay"]):
+                        print(f"{self.tag} [✔] Tombol sukses menutup iklan dan kembali ke gameplay!", flush=True)
                         break
-                    print(f"{self.tag} [!] Tombol X telah diklik, menyelesaikan alur penutupan iklan...", flush=True)
+                    print(f"{self.tag} [!] Tombol telah diklik, menyelesaikan alur kembali ke game via halaman utama...", flush=True)
+                    self.reopen_game_from_home_screen("setelah klik tombol skip/close")
                     break
 
                 # 3. Jika di tengah proses tunggu muncul tombol reward seperti Koleksi/Klaim, klik dulu lalu lanjut tunggu.
@@ -842,7 +969,7 @@ class BusParkingDashRunner:
 
         if clicked_reward_during_wait:
             print(f"{self.tag} [✔] Tombol reward sempat diklik saat menunggu. Melanjutkan penutupan iklan...", flush=True)
-        print(f"{self.tag} [✔] Waktu tunggu iklan selesai! Menutup iklan (BACK + Tap X pojok)...", flush=True)
+        print(f"{self.tag} [✔] Waktu tunggu 30s & countdown selesai! Menutup iklan dan membuka aplikasi di halaman utama...", flush=True)
         self.close_ad_screen_thoroughly()
         if self.withdrawn_pending_ad:
             self.withdrawn_pending_ad = False
@@ -897,7 +1024,7 @@ class BusParkingDashRunner:
                 return False
 
         # 3. Iklan Video / Interstitial Ad (Khusus SDK Iklan Nyata)
-        ad_keywords = ["mbrewardvideoactivity", "applovinfullscreenactivity", "adactivity", "companionadactivity", "bigo", "bytedance", "pangle", "unity3d", "applovin", "adcolony", "kwad", "mbridge", "vungle", "ironsource", "mintegral", "rewardvideo"]
+        ad_keywords = ["mbrewardvideoactivity", "applovinfullscreenactivity", "adactivity", "companionadactivity", "bigo", "bytedance", "pangle", "unity3d", "applovin", "adcolony", "kwad", "mbridge", "vungle", "ironsource", "mintegral", "rewardvideo", "fullscreenwebviewdisplay"]
         is_ad_activity = any(k in focus.lower() for k in ad_keywords)
 
         if is_ad_activity:
