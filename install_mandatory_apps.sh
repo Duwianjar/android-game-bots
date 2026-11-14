@@ -77,6 +77,25 @@ else
 fi
 
 echo ""
+echo "--- 4. INSTALL BOT & CEK GAME COLOR POWER POP ---"
+CPP_BOT_APK="/Users/macbookair/android-game-bots/color-power-pop-android/app/build/outputs/apk/debug/app-debug.apk"
+if [ -f "$CPP_BOT_APK" ]; then
+  echo "[+] Menginstal Color Power Pop Bot ($CPP_BOT_APK)..."
+  $ADB_CMD install -r -d "$CPP_BOT_APK"
+  echo "[✔] Color Power Pop Bot berhasil diinstal."
+  $ADB_CMD shell appops set com.openclaw.colorpowerpop SYSTEM_ALERT_WINDOW allow || true
+fi
+
+# Cek apakah game Color Power Pop terpasang
+if $ADB_CMD shell pm list packages | grep -q "com.giraffeeapp.power"; then
+  echo "[✔] Game Color Power Pop (com.giraffeeapp.power) sudah terpasang di HP."
+else
+  echo "[!] Game Color Power Pop belum terpasang di HP."
+  echo "[+] Membuka Google Play Store di HP untuk Color Power Pop..."
+  $ADB_CMD shell am start -a android.intent.action.VIEW -d "market://details?id=com.giraffeeapp.power" || true
+fi
+
+echo ""
 echo "=================================================="
 echo "  [✔] INSTALASI APLIKASI WAJIB SELESAI"
 echo "=================================================="
