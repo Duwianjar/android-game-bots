@@ -34,9 +34,8 @@ Game yang instalasi keduanya sudah aman dan instalasi ketiganya lumayan — perl
 | No. | Game | Package `com` | Instalasi Kedua | Instalasi Ketiga | Aksi |
 |---:|---|---|---|---|---|
 | 1 | Cut Fruit Winner | `com.starlightgame.cutfruitwinner` | DANA aman sekitar Rp1.000-an. | Penghasilan lumayan — **perlu cek tarik.** | [ ] Sudah tarik |
-| 2 | Cuan Maze *(Arrows Maze Out)* | `com.arrows.puzzle.maze.out.game` | DANA aman sekitar Rp300-an. | DANA masih aman 100. | [x] Sudah tarik |
-| 3 | Tangkap Tile Zoo *(Catch Zoo Tiles)* | `com.agmalik.CatchZooTiles` | DANA aman sekitar Rp300-an. | Belum ada catatan instalasi ketiga — **perlu cek tarik.** | [ ] Sudah tarik |
-| 4 | [Dragon Arrow Escape *(Naga Panah / Dragons Escape)*](dragon-arrow-escape/) | `com.arrows.dragon.escape.puzzle` | DANA aman sekitar Rp1.000-an (2 kali). | Belum ada catatan instalasi ketiga — **perlu cek tarik.** | [ ] Sudah tarik |
+| 2 | Tangkap Tile Zoo *(Catch Zoo Tiles)* | `com.agmalik.CatchZooTiles` | DANA aman sekitar Rp300-an. | Belum ada catatan instalasi ketiga — **perlu cek tarik.** | [ ] Sudah tarik |
+| 3 | [Dragon Arrow Escape *(Naga Panah / Dragons Escape)*](dragon-arrow-escape/) | `com.arrows.dragon.escape.puzzle` | DANA aman sekitar Rp1.000-an (2 kali). | Belum ada catatan instalasi ketiga — **perlu cek tarik.** | [ ] Sudah tarik |
 
 </div>
 
@@ -70,10 +69,9 @@ Urutan ini dibuat dari catatan penarikan yang sudah ada. **Tidak ada data yang m
 | 20 | [Dragon Arrow Escape *(Naga Panah / Dragons Escape)*](dragon-arrow-escape/) | `com.arrows.dragon.escape.puzzle` | Belum ada catatan awal. | DANA aman 1.000-an (2 kali). | Belum ada catatan instalasi ketiga — perlu cek tarik. | Dinaikkan; instalasi kedua aman 2 kali sekitar Rp1.000-an — perlu cek tarik segera. |
 | 21 | Cut Fruit Winner | `com.starlightgame.cutfruitwinner` | Tidak ada catatan awal. | DANA aman sekitar 1.000-an. | Penghasilan lumayan, perlu cek tarik. | Instalasi kedua aman; instalasi ketiga penghasilan lumayan — perlu cek tarik segera. |
 | 22 | Tangkap Tile Zoo *(Catch Zoo Tiles)* | `com.agmalik.CatchZooTiles` | Belum ada catatan (kosong). | DANA aman 300-an. | Belum ada catatan instalasi ketiga — perlu cek tarik. | Instalasi kedua aman sekitar Rp300-an; instalasi ketiga belum dicoba — perlu cek tarik segera. |
-| 23 | Cuan Maze *(Arrows Maze Out)* | `com.arrows.puzzle.maze.out.game` | Belum ada catatan (kosong). | DANA aman 300-an. | DANA masih aman 100. | Instalasi kedua aman Rp300-an; instalasi ketiga DANA masih aman 100. |
-| 24 | Panah Sentuh *(Arrow Tap)* | Belum dicatat | Belum ada catatan (kosong). | DANA aman 800-an. | Belum ada catatan. | Target kedua lumayan (sekitar Rp800-an aman DANA). |
-| 25 | Fortune Tile Mahjong | `com.NAMMUNIS.FortuneTileMahjong` | 3 kali penarikan (maks Rp212). | DANA masih aman 500-an. | Belum ada catatan. | Coba target penarikan kecil (sekitar Rp500-an). |
-| 26 | [Soda Pack Puzzle](soda-pack-puzzle/) | `com.soda.pack.puzzle` | Ada bot otomatis (belum dites botnya). | DANA masih aman 200-an. | DANA aman, nominal kecil sekitar Rp200-an. | Diturunkan ke posisi terakhir; instalasi ketiga DANA aman, nominal kecil sekitar Rp200-an; bot belum dites. |
+| 23 | Panah Sentuh *(Arrow Tap)* | Belum dicatat | Belum ada catatan (kosong). | DANA aman 800-an. | Belum ada catatan. | Target kedua lumayan (sekitar Rp800-an aman DANA). |
+| 24 | Fortune Tile Mahjong | `com.NAMMUNIS.FortuneTileMahjong` | 3 kali penarikan (maks Rp212). | DANA masih aman 500-an. | Belum ada catatan. | Coba target penarikan kecil (sekitar Rp500-an). |
+| 25 | [Soda Pack Puzzle](soda-pack-puzzle/) | `com.soda.pack.puzzle` | Ada bot otomatis (belum dites botnya). | DANA masih aman 200-an. | DANA aman, nominal kecil sekitar Rp200-an. | Diturunkan ke posisi terakhir; instalasi ketiga DANA aman, nominal kecil sekitar Rp200-an; bot belum dites. |
 
 </div>
 
@@ -217,9 +215,8 @@ Keterangan kategori: game-game ini **susah, tetapi tetap cair**. Data pencairan 
 | 4 | Bus Jam Rush | `putulive.app.bus` | StudyPort | Game bus jam penumpang warna. **Penarikan 200 aman.** | Belum dicatat | [ ] |
 | 5 | [Soda Jam Puzzle](soda-jam-puzzle/) | `com.armg.sodajam` | Muhammad Armghan Abbas | Game soda jam puzzle. Tersedia bot otomatis. Instalasi pertama tidak ikut tercatat. **Instalasi kedua penarikan 700 aman DANA.** | Belum dicatat | [x] |
 | 6 | Panah Penghasil Uang *(Panah Lepas)* | `com.pelangiarena.panahlepas` | Sub Akademi Game | Puzzle panah / arrow unblock penghasil saldo. Instalasi pertama tidak ada catatan. **Instalasi kedua DANA aman 200-an.** | Belum dicatat | [ ] |
-| 7 | Cuan Maze *(Arrows Maze Out)* | `com.arrows.puzzle.maze.out.game` | Financially Up | Game puzzle labirin/maze cuan. Instalasi pertama tidak ada catatan. **Instalasi kedua DANA aman 300-an. Instalasi ketiga DANA masih aman 100.** | Belum dicatat | [ ] |
-| 8 | Panah Sentuh *(Arrow Tap)* | Belum dicatat | Belum dicatat | Game ketuk panah / tap arrow puzzle. Instalasi pertama belum ada catatan. **Instalasi kedua DANA aman 800-an.** | Belum dicatat | [ ] |
-| 9 | [Dragon Arrow Escape *(Naga Panah / Dragons Escape)*](dragon-arrow-escape/) | `com.arrows.dragon.escape.puzzle` | Financially Up | Game panah putar / dragon arrow unblock. Tersedia bot otomatis. Instalasi pertama belum ada catatan. **Instalasi kedua DANA aman 1.000-an (2 kali). Instalasi ketiga belum ada catatan — perlu cek tarik.** | Belum dicatat | [x] |
+| 7 | Panah Sentuh *(Arrow Tap)* | Belum dicatat | Belum dicatat | Game ketuk panah / tap arrow puzzle. Instalasi pertama belum ada catatan. **Instalasi kedua DANA aman 800-an.** | Belum dicatat | [ ] |
+| 8 | [Dragon Arrow Escape *(Naga Panah / Dragons Escape)*](dragon-arrow-escape/) | `com.arrows.dragon.escape.puzzle` | Financially Up | Game panah putar / dragon arrow unblock. Tersedia bot otomatis. Instalasi pertama belum ada catatan. **Instalasi kedua DANA aman 1.000-an (2 kali). Instalasi ketiga belum ada catatan — perlu cek tarik.** | Belum dicatat | [x] |
 
 ## Kategori Tile, Match & Sort (Studio Tunggal)
 
@@ -343,7 +340,6 @@ Keterangan kategori: game-game ini **susah, tetapi tetap cair**. Data pencairan 
 ### Financially Up
 
 - [Dragon Arrow Escape *(Naga Panah / Dragons Escape)*](dragon-arrow-escape/) — `com.arrows.dragon.escape.puzzle`
-- Cuan Maze *(Arrows Maze Out Puzzle Game)* — `com.arrows.puzzle.maze.out.game`
 
 ### Belum terverifikasi
 
