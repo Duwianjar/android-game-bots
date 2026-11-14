@@ -21,6 +21,7 @@ import android.os.HandlerThread;
 import android.os.IBinder;
 import android.os.PowerManager;
 import android.os.SystemClock;
+import android.util.DisplayMetrics;
 import android.view.WindowManager;
 
 import java.nio.ByteBuffer;
@@ -49,7 +50,11 @@ public class BotForegroundService extends Service {
     private PowerManager.WakeLock wakeLock;
     private AdTimerReader adTimerReader;
     private long adStartedAt = 0;
-    private long lastActionAt = 0;
+    private boolean adWaitDone = false;
+
+    private int captureWidth = 0;
+    private int captureHeight = 0;
+    private int captureDensity = 0;
 
     public static boolean isBotRunning() {
         return runningInstance;
@@ -87,6 +92,11 @@ public class BotForegroundService extends Service {
         MediaProjectionManager manager =
                 (MediaProjectionManager) getSystemService(Context.MEDIA_PROJECTION_SERVICE);
         projection = manager.getMediaProjection(resultCode, data);
+
+        captureThread = new HandlerThread("cpp-capture");
+        captureThread.start();
+        captureHandler = new Handler(captureThread.getLooper());
+
         setupCapture();
 
         running = true;
@@ -98,16 +108,29 @@ public class BotForegroundService extends Service {
 
     private void setupCapture() {
         WindowManager wm = (WindowManager) getSystemService(WINDOW_SERVICE);
-        android.util.DisplayMetrics metrics = new android.util.DisplayMetrics();
-        wm.getDefaultDisplay().getRealMetrics(metrics);
-        int width = metrics.widthPixels;
-        int height = metrics.heightPixels;
-        int density = metrics.densityDpi;
+        DisplayMetrics metrics = new DisplayMetrics();
+        if (wm != null) {
+            wm.getDefaultDisplay().getRealMetrics(metrics);
+            updateCaptureDimensions(metrics.widthPixels, metrics.heightPixels, metrics.densityDpi);
+        }
+    }
 
-        captureThread = new HandlerThread("cpp-capture");
-        captureThread.start();
-        captureHandler = new Handler(captureThread.getLooper());
-        imageReader = ImageReader.newInstance(width, height, PixelFormat.RGBA_8888, 2);
+    private synchronized void updateCaptureDimensions(int newWidth, int newHeight, int newDensity) {
+        if (newWidth <= 0 || newHeight <= 0) return;
+        if (newWidth == captureWidth && newHeight == captureHeight && imageReader != null) return;
+
+        captureWidth = newWidth;
+        captureHeight = newHeight;
+        captureDensity = newDensity > 0 ? newDensity : 320;
+
+        if (imageReader != null) {
+            try {
+                imageReader.close();
+            } catch (Throwable ignored) {
+            }
+        }
+
+        imageReader = ImageReader.newInstance(captureWidth, captureHeight, PixelFormat.RGBA_8888, 2);
         imageReader.setOnImageAvailableListener(reader -> {
             Image image = null;
             try {
@@ -117,11 +140,11 @@ public class BotForegroundService extends Service {
                 ByteBuffer buffer = plane.getBuffer();
                 int pixelStride = plane.getPixelStride();
                 int rowStride = plane.getRowStride();
-                int rowPadding = rowStride - pixelStride * width;
+                int rowPadding = rowStride - pixelStride * captureWidth;
                 Bitmap padded = Bitmap.createBitmap(
-                        width + rowPadding / pixelStride, height, Bitmap.Config.ARGB_8888);
+                        captureWidth + rowPadding / pixelStride, captureHeight, Bitmap.Config.ARGB_8888);
                 padded.copyPixelsFromBuffer(buffer);
-                Bitmap cropped = Bitmap.createBitmap(padded, 0, 0, width, height);
+                Bitmap cropped = Bitmap.createBitmap(padded, 0, 0, captureWidth, captureHeight);
                 padded.recycle();
                 synchronized (bitmapLock) {
                     Bitmap old = latestBitmap;
@@ -134,21 +157,38 @@ public class BotForegroundService extends Service {
             }
         }, captureHandler);
 
-        virtualDisplay = projection.createVirtualDisplay(
-                "ColorPowerPopCapture",
-                width,
-                height,
-                density,
-                DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
-                imageReader.getSurface(),
-                null,
-                captureHandler
-        );
+        if (virtualDisplay == null) {
+            virtualDisplay = projection.createVirtualDisplay(
+                    "ColorPowerPopCapture",
+                    captureWidth,
+                    captureHeight,
+                    captureDensity,
+                    DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
+                    imageReader.getSurface(),
+                    null,
+                    captureHandler
+            );
+        } else {
+            virtualDisplay.resize(captureWidth, captureHeight, captureDensity);
+            virtualDisplay.setSurface(imageReader.getSurface());
+        }
     }
 
     private void botLoop() {
         sleep(1000);
         while (running) {
+            // Periksa apakah orientasi layar berubah (misal iklan landscape)
+            WindowManager wm = (WindowManager) getSystemService(WINDOW_SERVICE);
+            if (wm != null) {
+                DisplayMetrics metrics = new DisplayMetrics();
+                wm.getDefaultDisplay().getRealMetrics(metrics);
+                if (metrics.widthPixels != captureWidth || metrics.heightPixels != captureHeight) {
+                    updateCaptureDimensions(metrics.widthPixels, metrics.heightPixels, metrics.densityDpi);
+                    sleep(200);
+                    continue;
+                }
+            }
+
             Bitmap screenshot = null;
             synchronized (bitmapLock) {
                 if (latestBitmap != null && !latestBitmap.isRecycled()) {
@@ -158,33 +198,36 @@ public class BotForegroundService extends Service {
 
             if (screenshot != null && !screenshot.isRecycled()) {
                 try {
-                    // Jalankan pembaca OCR untuk mendeteksi ad timer, report ads, dan popup reward
+                    // Jalankan pembaca OCR untuk mendeteksi countdown iklan, tombol skip/close, report ads, dan popup reward
                     adTimerReader.readIfDue(screenshot);
                     ScreenAnalyzer.Result result = ScreenAnalyzer.analyze(screenshot);
 
-                    runOneStep(result, screenshot);
+                    runOneStep(result);
                 } catch (Throwable ignored) {
                 } finally {
                     screenshot.recycle();
                 }
             }
 
-            sleep(400);
+            sleep(380);
         }
     }
 
-    private void runOneStep(ScreenAnalyzer.Result result, Bitmap screenshot) {
+    private void runOneStep(ScreenAnalyzer.Result result) {
         BotAccessibilityService service = BotAccessibilityService.getInstance();
         if (service == null) return;
 
         String fgPkg = BotAccessibilityService.getForegroundPackage();
 
-        // 1. Tangani Play Store / Chrome yang terbuka oleh iklan
+        // 1. Tangani jika terlempar ke Play Store atau Chrome
         if (fgPkg.contains("vending") || fgPkg.contains("chrome")) {
             BotAccessibilityService.showBotLog("Redirect ke " + fgPkg + "\nMenekan Back...");
             service.pressBack();
-            sleep(400);
-            bringGameToFront();
+            sleep(350);
+            if (BotAccessibilityService.getForegroundPackage().contains("vending")
+                    || BotAccessibilityService.getForegroundPackage().contains("chrome")) {
+                resumeGameWithoutRestart(result.width, result.height);
+            }
             return;
         }
 
@@ -213,89 +256,178 @@ public class BotForegroundService extends Service {
         }
 
         // 4. Tangani tombol modal reward (Klaim / Koleksi / Bebas Klik / Menarik)
-        if (adTimerReader.hasRecentRewardModal()) {
+        //    Setelah klaim reward jangan klik slot kartu apa pun (karena iklan biasanya langsung terbuka).
+        if (adTimerReader.hasRecentRewardModal() && !result.isLandscape) {
             float rewX = adTimerReader.getRewardButtonX();
             float rewY = adTimerReader.getRewardButtonY();
             BotAccessibilityService.showBotLog("[★] Klaim / Koleksi Hadiah di (" + (int)rewX + ", " + (int)rewY + ")");
             service.tap(rewX, rewY);
-            sleep(300);
-            // Tap kartu slot 1 sekali cepat pasca-klaim agar flow game berlanjut
-            float sx = result.width / 720f;
-            float sy = result.height / 1640f;
-            service.tap(188 * sx, 764 * sy);
-            sleep(500);
+            sleep(400);
             adTimerReader.reset();
             return;
         }
 
-        // 5. Cek apakah sedang di layar iklan
+        // Cek apakah aplikasi berada di luar game Color Power Pop (aplikasi lain selain bot dan bukan activity iklan)
         boolean isAdActivity = fgPkg.toLowerCase().contains("reward")
                 || fgPkg.toLowerCase().contains("adactivity")
                 || fgPkg.toLowerCase().contains("mbridge")
                 || fgPkg.toLowerCase().contains("applovin")
-                || fgPkg.toLowerCase().contains("mintegral");
+                || fgPkg.toLowerCase().contains("mintegral")
+                || fgPkg.toLowerCase().contains("unity3d")
+                || fgPkg.toLowerCase().contains("adcolony")
+                || fgPkg.toLowerCase().contains("vungle")
+                || fgPkg.toLowerCase().contains("ironsource")
+                || fgPkg.toLowerCase().contains("pangle")
+                || fgPkg.toLowerCase().contains("bytedance");
 
-        if (isAdActivity || result.adScreenLikely || !result.boardVisible) {
+        boolean isGamePackage = fgPkg.equals(GAME_PACKAGE);
+        boolean isBotPackage = fgPkg.equals(getPackageName());
+        if (!isGamePackage && !isBotPackage && !isAdActivity && !result.isLandscape) {
+            BotAccessibilityService.showBotLog("Di aplikasi lain: " + fgPkg + "\nBuka riwayat aplikasi (Recents) untuk kembali tanpa reload game...");
+            resumeGameWithoutRestart(result.width, result.height);
+            sleep(600);
+            return;
+        }
+
+        // 5. Cek apakah sedang di layar iklan (activity iklan, landscape ad, atau board game tertutup)
+        boolean isAd = isAdActivity || result.isLandscape || result.adScreenLikely || !result.boardVisible;
+
+        if (isAd) {
             long now = SystemClock.elapsedRealtime();
             if (adStartedAt == 0) {
                 adStartedAt = now;
+                adWaitDone = false;
             }
             long adElapsedSec = (now - adStartedAt) / 1000;
             int remTimer = adTimerReader.recentRemainingSeconds();
 
-            String status = "Iklan (" + adElapsedSec + "s)" + (remTimer >= 0 ? " Sisa: " + remTimer + "s" : "");
-            BotAccessibilityService.showBotLog(status);
+            boolean hasSkip = adTimerReader.hasRecentSkipButton();
+            boolean hasClose = adTimerReader.hasRecentCloseButton() || result.adCloseButtonVisible;
+            boolean hasActionBtn = hasSkip || hasClose;
 
-            // Jika masih ada countdown timer dan belum ada tombol skip/close, jangan sentuh layar
-            boolean hasActionBtn = adTimerReader.hasRecentSkipButton()
-                    || adTimerReader.hasRecentCloseButton()
-                    || result.adCloseButtonVisible;
-
-            if (remTimer > 0 && !hasActionBtn) {
-                return; // Menunggu countdown selesai tanpa klik
+            // ATURAN WAJIB (INSTRUKSI USER): Tunggu penuh 30 detik sebelum klik apa pun!
+            if (adElapsedSec < 30 && !adWaitDone) {
+                long sisaWajib = 30 - adElapsedSec;
+                String status = "Iklan: wajib tunggu " + sisaWajib + "s lagi (total 30s)"
+                        + (remTimer > 0 ? " | Timer: " + remTimer + "s" : "")
+                        + (result.isLandscape ? " [Landscape]" : " [Portrait]");
+                BotAccessibilityService.showBotLog(status);
+                return; // DIAM MUTLAK, TIDAK KLIK APAPUN!
             }
 
-            // Waktu tunggu minimal 15 detik sebelum menutup iklan
-            if (adElapsedSec >= 15 || (remTimer == 0 && adElapsedSec >= 8) || (hasActionBtn && adElapsedSec >= 15)) {
-                // 1. Klik skip jika ada (>>, >|, dll)
-                if (adTimerReader.hasRecentSkipButton()) {
-                    BotAccessibilityService.showBotLog("[★] Klik tombol Skip (>>)");
-                    service.tap(adTimerReader.getSkipButtonX(), adTimerReader.getSkipButtonY());
-                    sleep(300);
-                }
-                // 2. Klik tombol close X yang terdeteksi OCR
-                if (adTimerReader.hasRecentCloseButton()) {
-                    BotAccessibilityService.showBotLog("[★] Klik tombol Close (X)");
-                    service.tap(adTimerReader.getCloseButtonX(), adTimerReader.getCloseButtonY());
-                    sleep(300);
-                } else if (result.adCloseButtonVisible) {
-                    BotAccessibilityService.showBotLog("[★] Klik tombol Close (X Visual)");
-                    service.tap(result.adCloseButtonX, result.adCloseButtonY);
-                    sleep(300);
-                } else {
-                    // Fallback multi-tap posisi tombol X umum (kanan atas, kiri atas, kanan bawah)
-                    float sx = result.width / 720f;
-                    float sy = result.height / 1640f;
-                    service.tap(665 * sx, 75 * sy);
-                    sleep(50);
-                    service.tap(635 * sx, 80 * sy);
-                    sleep(50);
-                    service.tap(55 * sx, 75 * sy);
-                    sleep(50);
-                    service.tap(665 * sx, 1550 * sy);
-                    sleep(150);
-                    service.pressBack();
-                }
+            // Setelah 30 detik selesai: jika masih ada countdown timer valid dan belum ada tombol aksi, tunggu countdown
+            if (remTimer > 0 && !hasActionBtn && adElapsedSec < 45) {
+                String status = "Iklan: 30s selesai, menunggu countdown " + remTimer + "s...";
+                BotAccessibilityService.showBotLog(status);
+                return;
+            }
+
+            adWaitDone = true;
+
+            // EKSEKUSI PENUTUPAN IKLAN: Cari tombol x, >>, >, >>|, >| di:
+            // 1. Pojok kanan atas
+            // 2. Kiri atas
+            // 3. Kanan bawah
+            int w = result.width;
+            int h = result.height;
+
+            // Prioritas 1: Tombol Skip (>>, >, >>|, >|, skip, dll) via OCR
+            if (hasSkip) {
+                float sx = adTimerReader.getSkipButtonX();
+                float sy = adTimerReader.getSkipButtonY();
+                String txt = adTimerReader.getSkipButtonText();
+                String corner = adTimerReader.getSkipCorner();
+                BotAccessibilityService.showBotLog("[★] Tombol skip (" + txt + ") di " + corner + " diklik di (" + (int)sx + ", " + (int)sy + ")");
+                service.tap(sx, sy);
+                sleep(400);
+                adTimerReader.reset();
+                return;
+            }
+
+            // Prioritas 2: Tombol Close (X, close, tutup) via OCR
+            if (adTimerReader.hasRecentCloseButton()) {
+                float cx = adTimerReader.getCloseButtonX();
+                float cy = adTimerReader.getCloseButtonY();
+                String txt = adTimerReader.getCloseButtonText();
+                String corner = adTimerReader.getCloseCorner();
+                BotAccessibilityService.showBotLog("[★] Tombol close (" + txt + ") di " + corner + " diklik di (" + (int)cx + ", " + (int)cy + ")");
+                service.tap(cx, cy);
+                sleep(400);
+                adTimerReader.reset();
                 adStartedAt = 0;
-                sleep(600);
-                bringGameToFront();
+                return;
             }
+
+            // Prioritas 3: Tombol Close visual (X silang) via ScreenAnalyzer
+            if (result.adCloseButtonVisible) {
+                float cx = result.adCloseButtonX;
+                float cy = result.adCloseButtonY;
+                String corner = result.adCloseButtonCorner;
+                BotAccessibilityService.showBotLog("[★] Tombol close visual (X) di " + corner + " diklik di (" + (int)cx + ", " + (int)cy + ")");
+                service.tap(cx, cy);
+                sleep(400);
+                adTimerReader.reset();
+                adStartedAt = 0;
+                return;
+            }
+
+            // Prioritas 4: Fallback mengetuk 3 sudut target (kanan atas, kiri atas, kanan bawah) disesuaikan portrait/landscape
+            BotAccessibilityService.showBotLog("[★] Waktu 30s selesai. Mengetuk kandidat tombol di pojok kanan atas, kiri atas, & kanan bawah...");
+            if (result.isLandscape) {
+                // Landscape: w > h
+                service.tap(w - 65, 65);
+                sleep(60);
+                service.tap(w - 110, 65);
+                sleep(60);
+                service.tap(65, 65);
+                sleep(60);
+                service.tap(110, 65);
+                sleep(60);
+                service.tap(w - 65, h - 65);
+                sleep(60);
+                service.tap(w - 110, h - 65);
+                sleep(150);
+            } else {
+                // Portrait: w <= h
+                float sx = w / 720f;
+                float sy = h / 1640f;
+                service.tap(w - 55 * sx, 75 * sy);
+                sleep(60);
+                service.tap(w - 85 * sx, 80 * sy);
+                sleep(60);
+                service.tap(55 * sx, 75 * sy);
+                sleep(60);
+                service.tap(85 * sx, 80 * sy);
+                sleep(60);
+                service.tap(w - 55 * sx, h - 90 * sy);
+                sleep(60);
+                service.tap(w - 85 * sx, h - 110 * sy);
+                sleep(150);
+            }
+            service.pressBack();
+            adStartedAt = 0;
+            adTimerReader.reset();
+            sleep(600);
             return;
         }
 
-        // 6. Gameplay aktif: Layar kartu dan wadah terdeteksi
-        adStartedAt = 0;
-        if (result.boardVisible) {
+        // 6. Gameplay aktif di HALAMAN UTAMA game:
+        //    Jangan klik slot apapun saat di halaman iklan!
+        //    Hanya klik slot setelah dipastikan benar-benar kembali di halaman utama game Color Power Pop.
+        boolean isMainGameBoard = isGamePackage
+                && !isAdActivity
+                && !result.isLandscape
+                && !result.adScreenLikely
+                && !result.adCloseButtonVisible
+                && !adTimerReader.hasRecentSkipButton()
+                && !adTimerReader.hasRecentCloseButton()
+                && adTimerReader.recentRemainingSeconds() < 0
+                && !result.bottomBoxes.isEmpty()
+                && !result.topSlots.isEmpty();
+
+        if (isMainGameBoard) {
+            adStartedAt = 0;
+            adWaitDone = false;
             if (!result.matchingCardsToTap.isEmpty()) {
                 StringBuilder sb = new StringBuilder();
                 sb.append("Slot: ");
@@ -314,23 +446,41 @@ public class BotForegroundService extends Service {
                     sleep(160);
                 }
             } else {
-                BotAccessibilityService.showBotLog("Menunggu kartu cocok / reward...");
+                BotAccessibilityService.showBotLog("Halaman utama: Menunggu kartu cocok / reward...");
                 sleep(300);
             }
         } else {
-            // Pastikan game ada di layar depan
+            // Jika bukan di halaman utama game, JANGAN ketuk slot apa pun!
             if (!fgPkg.equals(GAME_PACKAGE)) {
-                bringGameToFront();
+                resumeGameWithoutRestart(result.width, result.height);
+            } else {
+                BotAccessibilityService.showBotLog("Menunggu halaman utama game kembali...");
+                sleep(300);
             }
         }
     }
 
-    private void bringGameToFront() {
+    private void resumeGameWithoutRestart(int width, int height) {
+        BotAccessibilityService service = BotAccessibilityService.getInstance();
+        if (service != null) {
+            boolean switched = service.switchToGameFromRecents(width, height);
+            if (switched) {
+                sleep(700);
+                String currentPkg = BotAccessibilityService.getForegroundPackage();
+                if (currentPkg.equals(GAME_PACKAGE)) {
+                    return;
+                }
+            }
+        }
+
+        // Fallback: panggil intent dengan FLAG_ACTIVITY_REORDER_TO_FRONT (agar kembali ke game tanpa mulai ulang)
         try {
             Intent launch = getPackageManager().getLaunchIntentForPackage(GAME_PACKAGE);
             if (launch != null) {
-                launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED);
+                launch.removeFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED);
+                launch.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT | Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
                 startActivity(launch);
+                sleep(700);
             }
         } catch (Throwable ignored) {
         }

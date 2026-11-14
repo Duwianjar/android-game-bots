@@ -13,7 +13,8 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * Membaca countdown iklan, skip button, close X, Report Ads, dan popup reward via on-device ML Kit OCR.
+ * Membaca countdown iklan, skip button (>>, >, >>|, >|), close X, Report Ads,
+ * dan popup reward via on-device ML Kit OCR pada posisi pojok kanan atas, kiri atas, dan kanan bawah.
  */
 public final class AdTimerReader {
     private static final Pattern TIMER = Pattern.compile(
@@ -21,9 +22,13 @@ public final class AdTimerReader {
                     + "|(?:skip|lewati|tutup)\\s*(?:in)?\\s*([0-9]{1,2})\\b");
     private static final Pattern STANDALONE_TIMER = Pattern.compile("^\\s*([0-9]{1,2})\\s*$");
     private static final Pattern SKIP_BTN = Pattern.compile(
-            "^\\s*(?:>{1,2}\\|?|\\|?>{1,2}|»|›|→|skip|next|lewati|lanjut)\\s*$", Pattern.CASE_INSENSITIVE);
+            "^\\s*(?:>{1,2}[|Il1]?|[|Il1]?>{1,2}|»|›|→|skip(?:\\s*(?:>{1,2}[|Il1]?|»|›|→|[0-9]{1,2}))?|next(?:\\s*(?:>{1,2}[|Il1]?|»|›|→|[0-9]{1,2}))?|lewati|lanjut)\\s*$",
+            Pattern.CASE_INSENSITIVE
+    );
     private static final Pattern CLOSE_BTN = Pattern.compile(
-            "^\\s*(?:[x×✕✖]|close|tutup)\\s*$", Pattern.CASE_INSENSITIVE);
+            "^\\s*(?:[x×✕✖+]|close|tutup)\\s*$",
+            Pattern.CASE_INSENSITIVE
+    );
 
     private static final long READ_INTERVAL_MS = 1_000L;
     private static final long FRESH_RESULT_MS = 3_500L;
@@ -36,9 +41,14 @@ public final class AdTimerReader {
     private volatile boolean skipButtonVisible;
     private volatile float skipButtonX = -1;
     private volatile float skipButtonY = -1;
+    private volatile String skipButtonText = "";
+    private volatile String skipCorner = "";
+
     private volatile boolean closeButtonVisible;
     private volatile float closeButtonX = -1;
     private volatile float closeButtonY = -1;
+    private volatile String closeButtonText = "";
+    private volatile String closeCorner = "";
 
     // Report Ads detection
     private volatile boolean reportAdsVisible;
@@ -60,23 +70,41 @@ public final class AdTimerReader {
 
     public void readIfDue(Bitmap fullScreen) {
         long now = SystemClock.elapsedRealtime();
-        if (reading || now - lastRequestAt < READ_INTERVAL_MS || fullScreen == null) {
+        if (reading || now - lastRequestAt < READ_INTERVAL_MS || fullScreen == null || fullScreen.isRecycled()) {
             return;
         }
         lastRequestAt = now;
         reading = true;
 
-        recognizer.process(InputImage.fromBitmap(fullScreen, 0))
-                .addOnSuccessListener(result -> parse(result, fullScreen.getWidth(), fullScreen.getHeight()))
-                .addOnCompleteListener(task -> reading = false);
+        final int width = fullScreen.getWidth();
+        final int height = fullScreen.getHeight();
+        final Bitmap copy = fullScreen.copy(Bitmap.Config.ARGB_8888, false);
+        if (copy == null) {
+            reading = false;
+            return;
+        }
+
+        recognizer.process(InputImage.fromBitmap(copy, 0))
+                .addOnSuccessListener(result -> parse(result, width, height))
+                .addOnCompleteListener(task -> {
+                    if (!copy.isRecycled()) {
+                        copy.recycle();
+                    }
+                    reading = false;
+                });
     }
 
     private void parse(Text result, int screenWidth, int screenHeight) {
         int foundTimer = -1;
         boolean foundSkip = false;
         float sX = -1, sY = -1;
+        String sText = "";
+        String sCorner = "";
+
         boolean foundClose = false;
         float cX = -1, cY = -1;
+        String cText = "";
+        String cCorner = "";
 
         boolean foundReport = false;
         float repX = -1, repY = -1;
@@ -93,66 +121,66 @@ public final class AdTimerReader {
             String text = block.getText().trim();
             String lower = text.toLowerCase();
 
-            // 1. Countdown timer di bagian atas
-            if (box.centerY() < screenHeight * 0.35f) {
+            // Tentukan posisi sudut layar: kanan atas, kiri atas, atau kanan bawah
+            boolean atTopRight = box.centerX() >= screenWidth * 0.58f && box.centerY() <= screenHeight * 0.35f;
+            boolean atTopLeft = box.centerX() <= screenWidth * 0.42f && box.centerY() <= screenHeight * 0.35f;
+            boolean atBottomRight = box.centerX() >= screenWidth * 0.55f && box.centerY() >= screenHeight * 0.65f;
+            boolean inTargetCorner = atTopRight || atTopLeft || atBottomRight;
+            String cornerLabel = atTopRight ? "kanan atas" : (atTopLeft ? "kiri atas" : (atBottomRight ? "kanan bawah" : ""));
+
+            // 1. Countdown timer di bagian atas atau kanan bawah
+            if (box.centerY() <= screenHeight * 0.35f || atBottomRight) {
                 Matcher matcher = TIMER.matcher(text);
                 if (matcher.find()) {
                     String group = matcher.group(1) != null ? matcher.group(1) : matcher.group(2);
-                    int value = Integer.parseInt(group);
-                    if (value >= 0 && value <= 90) {
-                        foundTimer = value;
+                    try {
+                        int value = Integer.parseInt(group);
+                        if (value >= 0 && value <= 90) {
+                            foundTimer = value;
+                        }
+                    } catch (Throwable ignored) {
                     }
                 }
-
-                boolean atTopCorner = box.centerX() <= screenWidth * 0.40f
-                        || box.centerX() >= screenWidth * 0.60f;
 
                 Matcher singleNumber = STANDALONE_TIMER.matcher(text);
-                if (atTopCorner && singleNumber.matches()) {
-                    int value = Integer.parseInt(singleNumber.group(1));
-                    if (value >= 0 && value <= 90) {
-                        foundTimer = value;
-                    }
-                }
-
-                if (atTopCorner) {
-                    if (SKIP_BTN.matcher(text).matches() || lower.startsWith("skip ") || lower.startsWith("next ")) {
-                        foundSkip = true;
-                        sX = box.centerX();
-                        sY = box.centerY();
-                    } else if (CLOSE_BTN.matcher(text).matches()) {
-                        foundClose = true;
-                        cX = box.centerX();
-                        cY = box.centerY();
+                if ((atTopRight || atTopLeft) && singleNumber.matches()) {
+                    try {
+                        int value = Integer.parseInt(singleNumber.group(1));
+                        if (value >= 0 && value <= 90) {
+                            foundTimer = value;
+                        }
+                    } catch (Throwable ignored) {
                     }
                 }
             }
 
-            // Skip atau Close di pojok kanan bawah (iklan landscape / bottom action)
-            boolean atBottomRight = box.centerY() >= screenHeight * 0.70f && box.centerX() >= screenWidth * 0.60f;
-            if (atBottomRight) {
-                if (SKIP_BTN.matcher(text).matches() || lower.startsWith("skip ") || lower.startsWith("next ")) {
+            // 2. Deteksi tombol skip (>>, >, >>|, >|, skip) & close (X, close) di:
+            //    Pojok kanan atas, kiri atas, atau kanan bawah
+            if (inTargetCorner) {
+                if (isSkipMatch(text)) {
                     foundSkip = true;
                     sX = box.centerX();
                     sY = box.centerY();
-                } else if (CLOSE_BTN.matcher(text).matches()) {
+                    sText = text;
+                    sCorner = cornerLabel;
+                } else if (isCloseMatch(text)) {
                     foundClose = true;
                     cX = box.centerX();
                     cY = box.centerY();
+                    cText = text;
+                    cCorner = cornerLabel;
                 }
             }
 
-            // 2. Report Ads / Feedback dialog detection
+            // 3. Report Ads / Feedback dialog detection
             if (lower.contains("report ad") || lower.contains("report ads") || lower.contains("feedback") || lower.contains("umpan balik")) {
                 foundReport = true;
-                // Tombol X ada di sebelah kanan teks Report Ads: sekitar box.right + 115 atau 579 di layar 720
                 float sxRatio = screenWidth / 720f;
-                float syRatio = screenHeight / 1640f;
                 repX = Math.min(screenWidth - 40 * sxRatio, box.centerX() + 218 * sxRatio);
                 repY = box.centerY();
             }
 
-            // 3. Confirm to close dialog -> Continue
+            // 4. Confirm to close dialog -> Continue
             if (lower.contains("confirm to close") || lower.contains("close it") || lower.contains("will not be rewarded")) {
                 hasConfirm = true;
             }
@@ -163,7 +191,7 @@ public final class AdTimerReader {
                 }
             }
 
-            // 4. Modal reward dialog (Klaim / Koleksi / Bebas Klik / Menarik)
+            // 5. Modal reward dialog (Klaim / Koleksi / Bebas Klik / Menarik)
             if (box.centerY() > screenHeight * 0.50f) {
                 if (lower.equals("klaim") || lower.equals("claim") || lower.equals("koleksi")
                         || lower.equals("collect") || lower.contains("bebas klik") || lower.equals("menarik")
@@ -182,11 +210,19 @@ public final class AdTimerReader {
             skipButtonVisible = true;
             skipButtonX = sX;
             skipButtonY = sY;
+            skipButtonText = sText;
+            skipCorner = sCorner;
+        } else {
+            skipButtonVisible = false;
         }
         if (foundClose) {
             closeButtonVisible = true;
             closeButtonX = cX;
             closeButtonY = cY;
+            closeButtonText = cText;
+            closeCorner = cCorner;
+        } else {
+            closeButtonVisible = false;
         }
         if (foundReport) {
             reportAdsVisible = true;
@@ -213,6 +249,28 @@ public final class AdTimerReader {
         updatedAt = SystemClock.elapsedRealtime();
     }
 
+    private static boolean isSkipMatch(String raw) {
+        if (raw == null) return false;
+        String clean = raw.trim();
+        if (SKIP_BTN.matcher(clean).matches()) return true;
+        String nospaces = clean.replaceAll("\\s+", "").toLowerCase();
+        return nospaces.equals(">") || nospaces.equals(">>") || nospaces.equals(">|") || nospaces.equals(">>|")
+                || nospaces.equals(">i") || nospaces.equals(">>i") || nospaces.equals(">l") || nospaces.equals(">>l")
+                || nospaces.equals(">1") || nospaces.equals(">>1") || nospaces.equals("|>") || nospaces.equals("|>>")
+                || nospaces.equals("»") || nospaces.equals("›") || nospaces.equals("→")
+                || nospaces.startsWith("skip") || nospaces.startsWith("next")
+                || nospaces.startsWith("lewati") || nospaces.startsWith("lanjut");
+    }
+
+    private static boolean isCloseMatch(String raw) {
+        if (raw == null) return false;
+        String clean = raw.trim();
+        if (CLOSE_BTN.matcher(clean).matches()) return true;
+        String nospaces = clean.replaceAll("\\s+", "").toLowerCase();
+        return nospaces.equals("x") || nospaces.equals("×") || nospaces.equals("✕") || nospaces.equals("✖")
+                || nospaces.equals("+") || nospaces.equals("close") || nospaces.equals("tutup");
+    }
+
     public int recentRemainingSeconds() {
         return SystemClock.elapsedRealtime() - updatedAt <= FRESH_RESULT_MS ? remainingSeconds : -1;
     }
@@ -229,6 +287,14 @@ public final class AdTimerReader {
         return skipButtonY;
     }
 
+    public String getSkipButtonText() {
+        return skipButtonText;
+    }
+
+    public String getSkipCorner() {
+        return skipCorner;
+    }
+
     public boolean hasRecentCloseButton() {
         return SystemClock.elapsedRealtime() - updatedAt <= FRESH_RESULT_MS && closeButtonVisible;
     }
@@ -239,6 +305,14 @@ public final class AdTimerReader {
 
     public float getCloseButtonY() {
         return closeButtonY;
+    }
+
+    public String getCloseButtonText() {
+        return closeButtonText;
+    }
+
+    public String getCloseCorner() {
+        return closeCorner;
     }
 
     public boolean hasRecentReportAds() {
@@ -282,9 +356,13 @@ public final class AdTimerReader {
         skipButtonVisible = false;
         skipButtonX = -1;
         skipButtonY = -1;
+        skipButtonText = "";
+        skipCorner = "";
         closeButtonVisible = false;
         closeButtonX = -1;
         closeButtonY = -1;
+        closeButtonText = "";
+        closeCorner = "";
         reportAdsVisible = false;
         reportAdsCloseX = -1;
         reportAdsCloseY = -1;

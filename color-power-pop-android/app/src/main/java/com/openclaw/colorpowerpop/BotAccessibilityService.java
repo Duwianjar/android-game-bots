@@ -21,6 +21,7 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.view.WindowManager;
 import android.view.accessibility.AccessibilityEvent;
+import android.view.accessibility.AccessibilityNodeInfo;
 import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.TextView;
@@ -315,5 +316,78 @@ public class BotAccessibilityService extends AccessibilityService {
 
     public boolean pressHome() {
         return performGlobalAction(GLOBAL_ACTION_HOME);
+    }
+
+    public boolean openRecents() {
+        return performGlobalAction(GLOBAL_ACTION_RECENTS);
+    }
+
+    public boolean switchToGameFromRecents(int screenWidth, int screenHeight) {
+        boolean opened = performGlobalAction(GLOBAL_ACTION_RECENTS);
+        if (!opened) return false;
+        SystemClock.sleep(650);
+
+        // Cari node Color Power Pop pada window aktif Recents
+        AccessibilityNodeInfo root = getRootInActiveWindow();
+        if (root != null) {
+            try {
+                if (clickNodeByTarget(root, BotForegroundService.GAME_PACKAGE, "color power pop", "color power", "power pop", "color")) {
+                    SystemClock.sleep(500);
+                    return true;
+                }
+            } catch (Throwable ignored) {
+            } finally {
+                root.recycle();
+            }
+        }
+
+        // Fallback: di tampilan Recents Android (Overview), kartu aplikasi sebelumnya berada di tengah layar
+        float cx = screenWidth > 0 ? screenWidth / 2f : 360f;
+        float cy = screenHeight > 0 ? screenHeight / 2f : 820f;
+        tap(cx, cy);
+        SystemClock.sleep(600);
+        return true;
+    }
+
+    private boolean clickNodeByTarget(AccessibilityNodeInfo node, String pkgTarget, String... textTargets) {
+        if (node == null) return false;
+        try {
+            CharSequence pkg = node.getPackageName();
+            CharSequence desc = node.getContentDescription();
+            CharSequence txt = node.getText();
+
+            if (pkg != null && pkg.toString().toLowerCase().contains(pkgTarget.toLowerCase())) {
+                if (performClickOnNodeOrParent(node)) return true;
+            }
+            for (String t : textTargets) {
+                if ((desc != null && desc.toString().toLowerCase().contains(t.toLowerCase()))
+                        || (txt != null && txt.toString().toLowerCase().contains(t.toLowerCase()))) {
+                    if (performClickOnNodeOrParent(node)) return true;
+                }
+            }
+
+            int count = node.getChildCount();
+            for (int i = 0; i < count; i++) {
+                AccessibilityNodeInfo child = node.getChild(i);
+                if (child != null) {
+                    boolean clicked = clickNodeByTarget(child, pkgTarget, textTargets);
+                    child.recycle();
+                    if (clicked) return true;
+                }
+            }
+        } catch (Throwable ignored) {
+        }
+        return false;
+    }
+
+    private boolean performClickOnNodeOrParent(AccessibilityNodeInfo node) {
+        AccessibilityNodeInfo cur = node;
+        while (cur != null) {
+            if (cur.isClickable()) {
+                return cur.performAction(AccessibilityNodeInfo.ACTION_CLICK);
+            }
+            cur = cur.getParent();
+        }
+        return false;
     }
 }

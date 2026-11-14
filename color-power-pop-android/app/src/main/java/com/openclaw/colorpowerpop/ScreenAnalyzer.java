@@ -13,7 +13,7 @@ import java.util.Set;
 
 /**
  * Deteksi presisi warna kartu Color Power Pop (HSV), pencocokan slot atas ke wadah bawah,
- * serta deteksi visual tombol iklan & reward.
+ * serta deteksi visual tombol iklan & reward pada orientasi portrait maupun landscape.
  */
 public final class ScreenAnalyzer {
     private ScreenAnalyzer() {
@@ -51,9 +51,22 @@ public final class ScreenAnalyzer {
         }
     }
 
+    public static final class CloseButtonResult {
+        public final float x;
+        public final float y;
+        public final String corner;
+
+        public CloseButtonResult(float x, float y, String corner) {
+            this.x = x;
+            this.y = y;
+            this.corner = corner;
+        }
+    }
+
     public static final class Result {
         public int width;
         public int height;
+        public boolean isLandscape;
         public final List<SlotCard> topSlots = new ArrayList<>();
         public final List<BottomBox> bottomBoxes = new ArrayList<>();
         public final List<SlotCard> matchingCardsToTap = new ArrayList<>();
@@ -62,27 +75,38 @@ public final class ScreenAnalyzer {
         public boolean adCloseButtonVisible;
         public float adCloseButtonX = -1;
         public float adCloseButtonY = -1;
+        public String adCloseButtonCorner = "";
         public boolean adSkipButtonVisible;
         public float adSkipButtonX = -1;
         public float adSkipButtonY = -1;
+        public String adSkipButtonCorner = "";
     }
 
     public static Result analyze(Bitmap bitmap) {
         Result result = new Result();
         result.width = bitmap.getWidth();
         result.height = bitmap.getHeight();
+        result.isLandscape = result.width > result.height;
         float sx = result.width / 720f;
         float sy = result.height / 1640f;
 
-        // 1. Periksa tombol close X iklan visual
-        float[] closeBtn = findAdCloseButton(bitmap, sx, sy);
+        // 1. Periksa tombol close X iklan visual di 3 pojok (kanan atas, kiri atas, kanan bawah)
+        CloseButtonResult closeBtn = findAdCloseButton(bitmap);
         if (closeBtn != null) {
             result.adCloseButtonVisible = true;
-            result.adCloseButtonX = closeBtn[0];
-            result.adCloseButtonY = closeBtn[1];
+            result.adCloseButtonX = closeBtn.x;
+            result.adCloseButtonY = closeBtn.y;
+            result.adCloseButtonCorner = closeBtn.corner;
         }
 
-        // 2. Deteksi warna 6 wadah/kotak bawah
+        // Jika layar sedang landscape, game Color Power Pop yang portrait pasti tertutup iklan landscape
+        if (result.isLandscape) {
+            result.boardVisible = false;
+            result.adScreenLikely = true;
+            return result;
+        }
+
+        // 2. Deteksi warna 6 wadah/kotak bawah (hanya pada orientasi portrait game)
         int[][] baseBottom = {
                 {160, 1235}, {360, 1235}, {560, 1235},
                 {160, 1380}, {360, 1380}, {560, 1380}
@@ -217,30 +241,31 @@ public final class ScreenAnalyzer {
         return (maxVotes >= validCount * 0.45f) ? bestColor : null;
     }
 
-    private static float[] findAdCloseButton(Bitmap bitmap, float sx, float sy) {
+    private static CloseButtonResult findAdCloseButton(Bitmap bitmap) {
         int w = bitmap.getWidth();
         int h = bitmap.getHeight();
 
-        // Pojok kanan atas
-        int rx1 = Math.max(0, w - (int) (120 * sx));
-        int ry2 = Math.min(h, (int) (140 * sy));
+        int cornerW = (int) (w * 0.22f);
+        int cornerH = (int) (h * 0.22f);
+
+        // 1. Pojok kanan atas
+        int rx1 = Math.max(0, w - cornerW);
+        int ry2 = Math.min(h, cornerH);
         if (hasXCrossShape(bitmap, rx1, 0, w, ry2)) {
-            return new float[]{(rx1 + w) / 2f, ry2 / 2f};
+            return new CloseButtonResult((rx1 + w) / 2f, ry2 / 2f, "kanan atas");
         }
 
-        // Pojok kiri atas
-        int lx2 = Math.min(w, (int) (120 * sx));
+        // 2. Pojok kiri atas
+        int lx2 = Math.min(w, cornerW);
         if (hasXCrossShape(bitmap, 0, 0, lx2, ry2)) {
-            return new float[]{lx2 / 2f, ry2 / 2f};
+            return new CloseButtonResult(lx2 / 2f, ry2 / 2f, "kiri atas");
         }
 
-        // Pojok kanan bawah (khusus landscape ad)
-        if (w > h) {
-            int brx1 = Math.max(0, w - (int) (140 * sx));
-            int bry1 = Math.max(0, h - (int) (140 * sy));
-            if (hasXCrossShape(bitmap, brx1, bry1, w, h)) {
-                return new float[]{(brx1 + w) / 2f, (bry1 + h) / 2f};
-            }
+        // 3. Pojok kanan bawah (berlaku di landscape maupun portrait)
+        int brx1 = Math.max(0, w - cornerW);
+        int bry1 = Math.max(0, h - cornerH);
+        if (hasXCrossShape(bitmap, brx1, bry1, w, h)) {
+            return new CloseButtonResult((brx1 + w) / 2f, (bry1 + h) / 2f, "kanan bawah");
         }
 
         return null;

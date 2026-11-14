@@ -25,10 +25,10 @@ PACKAGE_KEYWORDS = ["color", "colour", "power", "pop"]
 OCR_HELPER_PATH = "/Users/macbookair/ocr_helper"
 TAP_MARKER_PATH = "/Users/macbookair/scrcpy_tap_marker"
 CLICK_REWARD_DURING_AD_WAIT = False  # Nonaktif: jangan klik Koleksi/Klaim/Unduh saat menunggu iklan
-AD_WAIT_SECONDS = int(os.environ.get('AD_WAIT_SECONDS', '15'))  # Wajib diam penuh 15 detik sebelum bot boleh memberi input ke iklan
+AD_WAIT_SECONDS = int(os.environ.get('AD_WAIT_SECONDS', '30'))  # Wajib diam penuh 15 detik sebelum bot boleh memberi input ke iklan
 AD_TIMER_STUCK_REPEAT_LIMIT = 4  # Jika OCR timer sama terus, anggap bukan countdown valid
-MIN_WITHDRAWAL_RP = int(os.environ.get('MIN_WITHDRAWAL_RP', '5000'))  # Minimal saldo =Rp untuk penarikan (>= 5000)
-ENABLE_AUTO_WITHDRAWAL = True   # Aktif: lakukan penarikan hanya jika saldo >= 5000
+MIN_WITHDRAWAL_RP = int(os.environ.get('MIN_WITHDRAWAL_RP', '15000'))  # Minimal saldo =Rp untuk penarikan (>= 15000)
+ENABLE_AUTO_WITHDRAWAL = True   # Aktif: lakukan penarikan hanya jika saldo >= 15000
 ENABLE_SLOT_SEEDING_AFTER_AD = False  # Dinonaktifkan: jangan jalankan injeksi iklan slot
 INJECT_AD_INTERVAL_SECONDS = 10 * 60  # Satu siklus setiap 10 menit
 ENABLE_FLOATING_REWARD_DETECTION = False  # Color Power Pop tidak pakai reward/bubble melayang
@@ -586,12 +586,20 @@ class CanSortRunner:
         return ""
 
     def bring_game_to_foreground(self):
-        """Membawa aplikasi game kembali ke layar depan secara aman tanpa SecurityException."""
+        """Membawa aplikasi game kembali ke layar depan via riwayat aplikasi (Recents) tanpa reload game."""
         pkg = self.auto_detect_game_package()
         if not pkg:
             print(f"{self.tag} [!] Package {GAME_DISPLAY_NAME} belum diketahui. Tidak bisa membuka game.", flush=True)
             return
-        self.run_adb(["shell", "monkey", "-p", pkg, "-c", "android.intent.category.LAUNCHER", "1"])
+        # Coba buka riwayat aplikasi (Recents) dan ketuk kartu tengah agar tidak mulai ulang game
+        subprocess.run(["adb", "-s", self.serial, "shell", "input keyevent KEYCODE_APP_SWITCH"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        time.sleep(0.5)
+        self.tap(int(self.width // 2), int(self.height // 2))
+        time.sleep(0.6)
+        focus = self.get_foreground_focus().lower()
+        if pkg not in focus:
+            # Fallback jika belum di game: panggil activity tanpa me-reset task
+            self.run_adb(["shell", "monkey", "-p", pkg, "-c", "android.intent.category.LAUNCHER", "1"])
 
     def press_back(self):
         # Marker biru di area tombol BACK agar aksi BACK juga terlihat di scrcpy.
@@ -1155,19 +1163,25 @@ class CanSortRunner:
         sx, sy = self.scale_x, self.scale_y
         ocr_items = self.run_full_ocr(img)
 
-        # 1. Cek via OCR untuk karakter X / Tutup / Close / Skip di area atas.
-        # Prioritaskan kandidat kiri atas karena beberapa SDK menaruh X di sana.
+        # 1. Cek via OCR untuk karakter X / >> / > / >>| / >| di pojok kanan atas, kiri atas, atau kanan bawah.
         ocr_close_candidates = []
+        target_symbols = {"x", "✕", "✖", "×", "+", ">>", ">", ">>|", ">|", ">>i", ">i", ">>1", ">1", ">>l", ">l", "|>", "|>>", "»", "›", "skip", "close", "tutup"}
         for it in ocr_items:
-            if it["cy"] < int(220 * sy):
-                t = it["text"].strip().lower()
-                if t in ["x", "✕", "✖", "×", ">>", "skip", "close", "tutup"] or (len(t) == 1 and t in "xX+"):
-                    ocr_close_candidates.append(it)
+            cx, cy = it["cx"], it["cy"]
+            t = it["text"].strip().lower()
+            clean_t = "".join(t.split())
+            is_match = clean_t in target_symbols or (len(clean_t) == 1 and clean_t in "xX+") or clean_t.startswith("skip") or clean_t.startswith("next")
+            if is_match:
+                # Posisi sudut target: kanan atas, kiri atas, atau kanan bawah
+                at_top_right = (cx >= int(380 * sx) and cy <= int(350 * sy))
+                at_top_left = (cx <= int(340 * sx) and cy <= int(350 * sy))
+                at_bottom_right = (cx >= int(380 * sx) and cy >= int(self.height * 0.65))
+                if at_top_right or at_top_left or at_bottom_right:
+                    pos = "kanan atas" if at_top_right else ("kiri atas" if at_top_left else "kanan bawah")
+                    ocr_close_candidates.append((pos, it))
         if ocr_close_candidates:
-            ocr_close_candidates.sort(key=lambda item: (0 if item["cx"] < int(360 * sx) else 1, item["cy"]))
-            it = ocr_close_candidates[0]
-            side = "kiri atas" if it["cx"] < int(360 * sx) else "kanan atas"
-            print(f"{self.tag} [★] Menemukan tombol Tutup Iklan '{it['text']}' via OCR di {side} ({it['cx']}, {it['cy']})! Mengeklik...", flush=True)
+            pos, it = ocr_close_candidates[0]
+            print(f"{self.tag} [★] Menemukan tombol Tutup/Skip Iklan '{it['text']}' via OCR di {pos} ({it['cx']}, {it['cy']})! Mengeklik...", flush=True)
             self.tap(it["cx"], it["cy"])
             time.sleep(0.06)
             self.tap(it["cx"], max(int(45 * sy), it["cy"] - int(15 * sy)))
@@ -1290,6 +1304,8 @@ class CanSortRunner:
             (int(55 * sx), int(75 * sy)),
             (int(55 * sx), int(105 * sy)),
             (int(55 * sx), int(115 * sy)),
+            (int(665 * sx), int(self.height - 85 * sy)),
+            (int(635 * sx), int(self.height - 110 * sy)),
         ]
         self.detect_and_click_ad_x_button(img)
         # Close dipercepat: semua kandidat X diklik burst dan semua titik diberi marker biru.
@@ -2988,7 +3004,7 @@ class CanSortRunner:
                 time.sleep(0.3)
                 return
 
-        # 7. Periksa Saldo =Rp di Header (Minimal MIN_WITHDRAWAL_RP / 5000)
+        # 7. Periksa Saldo =Rp di Header (Minimal MIN_WITHDRAWAL_RP / 15000)
         if self.check_and_handle_top_rp(ocr_items):
             return
 
@@ -3010,15 +3026,9 @@ class CanSortRunner:
             if not clicked_reward:
                 time.sleep(0.08)
                 return
-            # Setelah popup Klaim/Koleksi hilang, tombol/kartu game bisa berada tepat
-            # di belakangnya. Tap slot 1 langsung di sini supaya tidak menunggu sampai
-            # loop iklan; hanya satu kali.
-            slot1_x = int(188 * self.scale_x)
-            slot1_y = int(TOP_SLOT_MARKER_Y * self.scale_y)
-            time.sleep(0.05)
-            print(f"{self.tag} [+] Setelah klik Klaim/Koleksi: tap kartu Slot 1 SATU KALI CEPAT di ({slot1_x}, {slot1_y}).", flush=True)
-            self.tap(slot1_x, slot1_y)
-            time.sleep(0.08)
+            # Setelah popup Klaim/Koleksi diklik, jangan ketuk slot apa pun karena iklan sering langsung terbuka.
+            # Tunggu dan periksa apakah layar berganti ke iklan.
+            time.sleep(0.35)
             img_after = self.get_screenshot()
             # Jangan klik ulang walaupun OCR masih melihat tombol. Tap kedua sering
             # jatuh ke iklan/endcard dan membuka Play Store.
