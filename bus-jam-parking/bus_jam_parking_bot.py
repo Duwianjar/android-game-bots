@@ -191,6 +191,67 @@ def is_ad_skip_or_close_symbol(raw_text):
             return True, f"kata '{w}'"
     return False, ""
 
+def parse_countdown_number(raw_text):
+    """Mendeteksi angka countdown timer iklan seperti 26s, 26 s, 26x, 26 x, x26, 0:26, 26 detik, dsb."""
+    t = (raw_text or "").strip().lower()
+    compact = re.sub(r"\s+", "", t)
+    if not compact or compact in ["x", "✕", ">>", ">|", ">", "close", "skip"]:
+        return None
+
+    # Pola 1: 26s, 26 s, 26s left, 26 detik, 26sec, sisa 26s
+    m = re.search(r'\b(\d{1,2})\s*(?:s|sec|detik|sisa)\b', t)
+    if m:
+        sec = int(m.group(1))
+        if 2 <= sec <= 90:
+            return sec, f"format detik '{m.group(0)}'"
+
+    # Pola 2: 26x, 26 x, 26X, x 26, x26 (sangat umum di pojok kanan/kiri iklan saat countdown)
+    m = re.search(r'\b(\d{1,2})\s*x\b', t)
+    if m:
+        sec = int(m.group(1))
+        if 2 <= sec <= 90:
+            return sec, f"format angka-X '{m.group(0)}'"
+
+    m = re.search(r'\bx\s*(\d{1,2})\b', t)
+    if m:
+        sec = int(m.group(1))
+        if 2 <= sec <= 90:
+            return sec, f"format X-angka '{m.group(0)}'"
+
+    m = re.match(r'^(\d{1,2})x$', compact)
+    if m:
+        sec = int(m.group(1))
+        if 2 <= sec <= 90:
+            return sec, f"format compact '{compact}'"
+
+    m = re.match(r'^x(\d{1,2})$', compact)
+    if m:
+        sec = int(m.group(1))
+        if 2 <= sec <= 90:
+            return sec, f"format compact '{compact}'"
+
+    # Pola 3: 0:26 atau 00:26
+    m = re.search(r'\b00?:(\d{2})\b', t)
+    if m:
+        sec = int(m.group(1))
+        if 2 <= sec <= 90:
+            return sec, f"format timer '{m.group(0)}'"
+
+    # Pola 4: reward in 26, hadiah dalam 26
+    m = re.search(r'(?:reward|hadiah|ganjaran)(?:\s+in|\s+dalam|:)?\s*(\d{1,2})', t)
+    if m:
+        sec = int(m.group(1))
+        if 2 <= sec <= 90:
+            return sec, f"format reward in '{m.group(0)}'"
+
+    # Pola 5: angka mandiri murni jika berada di sudut layar (misal OCR hanya membaca '26' atau '15')
+    if compact.isdigit():
+        sec = int(compact)
+        if 3 <= sec <= 60:
+            return sec, f"angka mandiri '{compact}'"
+
+    return None
+
 def is_right_chevron(cnt, bw, bh):
     pts = cnt[:, 0, :]
     by = pts[:, 1].min()
@@ -574,24 +635,66 @@ class BusParkingDashRunner:
         except Exception:
             return ""
 
-    def detect_ad_countdown_seconds(self, img=None):
-        """Mendeteksi countdown timer iklan di pojok atas (misal: '53s left to be rewarded' / '16s left')."""
+    def detect_ad_countdown(self, img=None):
+        """
+        Mendeteksi countdown timer iklan di pojok kiri atas, pojok kanan atas, atau pojok kanan bawah.
+        Mendukung format: '26s', '26 s', '26x', '26 x', 'x26', '0:26', 'reward in 26', dsb.
+        Mengembalikan (detik, lokasi_desc) jika ditemukan, atau (None, None).
+        """
         if img is None:
             img = self.get_screenshot()
         if img is None:
-            return None
-        h = img.shape[0]
+            return None, None
+
+        h, w = img.shape[:2]
+        is_landscape = w > h
+
+        if is_landscape:
+            top_max_y = max(180, int(h * 0.28))
+            bot_min_y = max(h - 180, int(h * 0.72))
+            left_max_x = max(260, int(w * 0.25))
+            right_min_x = min(w - 260, int(w * 0.75))
+        else:
+            top_max_y = max(220, int(h * 0.16))
+            bot_min_y = max(h - 220, int(h * 0.84))
+            left_max_x = max(240, int(w * 0.35))
+            right_min_x = min(w - 240, int(w * 0.65))
+
         ocr_items = self.run_full_ocr(img)
-        max_cy = max(180, int(h * 0.25))
         for it in ocr_items:
-            if it["cy"] < max_cy:
-                t = it["text"].lower()
-                m = re.search(r'(\d{1,2})\s*s\s*(?:left|to be rewarded|remaining|sisa|detik)?', t, re.IGNORECASE)
-                if m:
-                    sec = int(m.group(1))
-                    if 2 <= sec <= 90:
-                        return sec
-        return None
+            cx, cy = it["cx"], it["cy"]
+
+            # Tentukan posisi sudut (kiri atas, kanan atas, kanan bawah, atas tengah)
+            loc = None
+            if cy <= top_max_y:
+                if cx <= left_max_x:
+                    loc = "pojok kiri atas"
+                elif cx >= right_min_x:
+                    loc = "pojok kanan atas"
+                else:
+                    loc = "area atas tengah"
+            elif cy >= bot_min_y:
+                if cx >= right_min_x:
+                    loc = "pojok kanan bawah"
+                elif cx <= left_max_x:
+                    loc = "pojok kiri bawah"
+
+            # Periksa apakah teks merupakan angka countdown
+            res = parse_countdown_number(it["text"])
+            if res:
+                sec, desc = res
+                # Jika angka mandiri murni tanpa penanda s/x, hanya terima jika berada di sudut/header
+                if "angka mandiri" in desc and loc is None:
+                    continue
+                loc_txt = loc if loc else "layar atas"
+                return sec, f"{loc_txt} ({desc})"
+
+        return None, None
+
+    def detect_ad_countdown_seconds(self, img=None):
+        """Mendeteksi countdown timer iklan dan mengembalikan angka detiknya (int atau None)."""
+        sec, _ = self.detect_ad_countdown(img)
+        return sec
 
     def find_ad_x_button(self, img=None):
         """
@@ -897,13 +1000,12 @@ class BusParkingDashRunner:
         while remaining > 0:
             img_wait = self.get_screenshot()
 
-            # 1. Sinkronkan waktu tunggu dengan timer iklan di pojok kiri atas jika terlihat.
+            # 1. Sinkronkan waktu tunggu dengan countdown iklan di pojok kiri atas / kanan jika terlihat (misal 26s atau 26x).
             if img_wait is not None:
-                detected_timer = self.detect_ad_countdown_seconds(img_wait)
+                detected_timer, timer_loc = self.detect_ad_countdown(img_wait)
                 if detected_timer and 1 <= detected_timer <= 90:
-                    # Samakan dengan timer iklan yang tampil, terutama jika lebih lama dari default.
                     if last_timer_seen != detected_timer:
-                        print(f"{self.tag} [⏱] Timer iklan terdeteksi di pojok kiri atas: {detected_timer} detik. Menyamakan waktu tunggu...", flush=True)
+                        print(f"{self.tag} [⏱] Countdown iklan terdeteksi di {timer_loc}: {detected_timer} detik! Mengubah waktu tunggu mengikuti countdown...", flush=True)
                     remaining = detected_timer
                     last_timer_seen = detected_timer
 
@@ -1043,12 +1145,12 @@ class BusParkingDashRunner:
                 print(f"{self.tag} [!] Layar iklan masih aktif ({self.aggressive_ad_dismiss_count}x). Memeriksa timer & tombol X kanan atas...", flush=True)
 
                 img = self.get_screenshot()
-                # Cek apakah ada countdown timer di pojok atas
-                remaining_sec = self.detect_ad_countdown_seconds(img)
+                # Cek apakah ada countdown timer di pojok kiri atas / kanan atas / kanan bawah
+                remaining_sec, timer_loc = self.detect_ad_countdown(img)
                 if remaining_sec and remaining_sec > 1:
-                    print(f"{self.tag} [⏳] Terdeteksi timer iklan: '{remaining_sec}s' di pojok atas! Menunggu {remaining_sec} detik sampai selesai...", flush=True)
+                    print(f"{self.tag} [⏳] Terdeteksi countdown iklan di {timer_loc}: '{remaining_sec} detik'! Mengubah waktu tunggu mengikuti countdown...", flush=True)
                     for rem in range(remaining_sec, 0, -2):
-                        print(f"{self.tag}    -> Menunggu sisa timer iklan: {rem} detik...", flush=True)
+                        print(f"{self.tag}    -> Menunggu sisa countdown iklan: {rem} detik...", flush=True)
                         time.sleep(2)
                     time.sleep(1.0)
                     self.aggressive_ad_dismiss_count = 0
