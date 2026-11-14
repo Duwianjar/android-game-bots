@@ -816,11 +816,10 @@ class CanSortRunner:
         self.feedback_false_loop_count = 0
 
     def detect_and_close_feedback_modal(self, img=None, ocr_items=None):
-        """Tutup popup Feedback iklan Mintegral/SDK lain.
+        """Tutup popup Feedback / Report Ads iklan Mintegral/SDK lain.
 
-        Popup ini muncul saat bot menekan X iklan, tetapi activity masih terdeteksi
-        sebagai iklan. Karena itu harus dicek di jalur iklan juga, bukan hanya
-        play_step normal.
+        Popup ini muncul saat bot menekan X iklan atau iklan ter-pause oleh modal laporan.
+        Karena itu harus dicek di jalur iklan juga, bukan hanya play_step normal.
         """
         if img is None:
             img = self.get_screenshot()
@@ -830,13 +829,21 @@ class CanSortRunner:
             ocr_items = self.run_full_ocr(img)
 
         all_text = " ".join([it["text"].lower() for it in ocr_items])
-        has_feedback_title = any(k in all_text for k in ["feedback", "feed back", "feedbak", "umpan balik"])
-        option_hits = sum(1 for k in ["not playing", "sound problems", "misleading", "fraud", "pornography"] if k in all_text)
+        feedback_title_keys = [
+            "report ads", "report ad", "laporkan iklan", "laporkan",
+            "feedback", "feed back", "feedbak", "umpan balik"
+        ]
+        has_feedback_title = any(k in all_text for k in feedback_title_keys)
+        option_keys = [
+            "black screen", "video stack", "violence", "others",
+            "not playing", "sound problems", "misleading", "fraud", "pornography",
+            "layar hitam", "video macet", "kekerasan", "lainnya"
+        ]
+        option_hits = sum(1 for k in option_keys if k in all_text)
         has_submit = "submit" in all_text or "kirim" in all_text
         has_privacy = "privacy policy" in all_text or "mintegral" in all_text
 
-        # Jangan false-detect hanya karena ada "Mintegral Privacy Policy" di endcard iklan.
-        # Feedback valid harus ada judul Feedback, atau minimal 2 opsi laporan + tombol Submit/Privacy.
+        # Feedback/Report Ads valid harus ada judul Report Ads/Feedback, atau minimal 2 opsi laporan + tombol Submit/Privacy.
         if not (has_feedback_title or (option_hits >= 2 and (has_submit or has_privacy))):
             return False
 
@@ -844,18 +851,39 @@ class CanSortRunner:
         feedback_item = None
         for it in ocr_items:
             t = it["text"].lower()
-            if "feedback" in t or "feed back" in t or "feedbak" in t:
+            if any(k in t for k in feedback_title_keys):
                 feedback_item = it
                 break
 
+        target_x, target_y = None, None
         if feedback_item:
-            # Dari screenshot real: Feedback cx≈362 cy≈537, X di kanan teks ≈620,532.
-            target_x = min(self.width - int(70 * sx), feedback_item["cx"] + int(258 * sx))
-            target_y = max(int(45 * sy), feedback_item["cy"] - int(5 * sy))
+            fcx, fcy = feedback_item["cx"], feedback_item["cy"]
+            # Cari kontur piksel tombol X di sebelah kanan teks pada modal
+            try:
+                rx1 = min(self.width - 20, max(0, fcx + int(140 * sx)))
+                rx2 = min(self.width - 10, max(0, fcx + int(280 * sx)))
+                ry1 = max(0, fcy - int(30 * sy))
+                ry2 = min(self.height - 1, fcy + int(30 * sy))
+                if rx2 > rx1 and ry2 > ry1:
+                    roi = img[ry1:ry2, rx1:rx2]
+                    gray_roi = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
+                    pts = np.where(gray_roi < 200)
+                    if len(pts[0]) >= 15:
+                        target_x = int(np.mean(pts[1])) + rx1
+                        target_y = int(np.mean(pts[0])) + ry1
+            except Exception:
+                pass
+
+            if target_x is None:
+                if "report" in feedback_item["text"].lower():
+                    target_x = min(self.width - int(50 * sx), fcx + int(218 * sx))
+                    target_y = max(int(45 * sy), fcy - int(4 * sy))
+                else:
+                    target_x = min(self.width - int(70 * sx), fcx + int(258 * sx))
+                    target_y = max(int(45 * sy), fcy - int(5 * sy))
         else:
-            # Fallback kalau OCR hanya baca opsi seperti "Not playing".
-            target_x = int(620 * sx)
-            target_y = int(532 * sy)
+            target_x = int(579 * sx)
+            target_y = int(507 * sy)
 
         self.feedback_false_loop_count += 1
         if self.feedback_false_loop_count >= 6 and not has_feedback_title:
@@ -863,13 +891,14 @@ class CanSortRunner:
             self.aggressive_reset_to_game()
             return True
 
-        print(f"{self.tag} [★] Popup Feedback terdeteksi saat mode iklan. Klik X Feedback di ({target_x}, {target_y})...", flush=True)
-        # Klik kecil di sekitar X agar tidak meleset.
+        title_desc = "Report Ads" if (feedback_item and "report" in feedback_item["text"].lower()) else "Feedback"
+        print(f"{self.tag} [★] Popup {title_desc} terdeteksi! Mengeklik tombol X di kanan teks di ({target_x}, {target_y})...", flush=True)
+        # Klik kecil di sekitar X agar tidak meleset
         self.tap(target_x, target_y)
         time.sleep(0.10)
-        self.tap(target_x - int(18 * sx), target_y)
+        self.tap(target_x - int(10 * sx), target_y)
         time.sleep(0.10)
-        self.tap(target_x, target_y + int(18 * sy))
+        self.tap(target_x + int(10 * sx), target_y)
         time.sleep(0.35)
         return True
 
@@ -1350,6 +1379,16 @@ class CanSortRunner:
             # tanpa mengirim klik/BACK/input apa pun.
             img_during_wait = self.get_screenshot()
             if img_during_wait is not None:
+                # Periksa jika popup Report Ads / Feedback muncul di tengah iklan (agar iklan berlanjut)
+                if self.detect_and_close_feedback_modal(img_during_wait):
+                    print(
+                        f"{self.tag} [✔] Popup Report Ads / Feedback terdeteksi saat mode diam iklan. "
+                        "Tombol X berhasil diklik agar iklan berlanjut.",
+                        flush=True,
+                    )
+                    time.sleep(0.4)
+                    continue
+
                 still_ad, _ = self.is_confirmed_ad_screen(img_during_wait)
                 has_bottom, has_top = self.get_board_presence(img_during_wait)
                 if not still_ad and (has_bottom or has_top):
@@ -1491,6 +1530,10 @@ class CanSortRunner:
         timer = self.detect_ad_countdown_seconds(img) if img is not None else self.detect_ad_countdown_seconds()
         if timer and timer > 1:
             print(f"{self.tag} [⏳] Board kartu hilang dan timer iklan kiri atas terdeteksi: {timer}s. Menunggu sesuai timer...", flush=True)
+        elif img is not None and self.detect_and_close_feedback_modal(img):
+            print(f"{self.tag} [✔] Popup Report Ads / Feedback ditutup saat board hilang.", flush=True)
+            time.sleep(0.4)
+            return True
         else:
             print(f"{self.tag} [⏳] Board kartu/kotak tidak ada. Anggap iklan/interstitial, tunggu default {AD_WAIT_SECONDS}s lalu tutup...", flush=True)
         self.wait_ad_and_close_ad("Board Kartu Hilang / Kemungkinan Iklan", initial_remaining=timer)
