@@ -8,7 +8,7 @@ Urutan aplikasi dan bot yang **wajib dipasang & dijalankan** di HP setelah resta
 
 1. **Bot Blocked Game Detector (`blocked-game-detector/`)**:
    - **Wajib di-install pertama kali** sebagai sistem proteksi dini di HP Android.
-   - Database detector disinkronkan dengan **Daftar Blocked terbaru (46 game)**.
+   - Database detector disinkronkan dengan **Daftar Blocked terbaru (47 game)**.
    - Berjalan sebagai service watchdog untuk memantau package yang terpasang di HP. Jika ada game berbahaya/blocked terpasang, langsung memunculkan alert agar akun DANA/perangkat tidak ikut terblokir.
 
 2. **Inject Iklan (`inject-iklan/` & `inject-iklan-android/`)**:
@@ -35,7 +35,6 @@ Game yang instalasi keduanya sudah aman dan instalasi ketiganya lumayan — perl
 |---:|---|---|---|---|---|
 | 1 | Cut Fruit Winner | `com.starlightgame.cutfruitwinner` | DANA aman sekitar Rp1.000-an. | Penghasilan lumayan — **perlu cek tarik.** | [ ] Sudah tarik |
 | 2 | Tangkap Tile Zoo *(Catch Zoo Tiles)* | `com.agmalik.CatchZooTiles` | DANA aman sekitar Rp300-an. | Belum ada catatan instalasi ketiga — **perlu cek tarik.** | [ ] Sudah tarik |
-| 3 | [Dragon Arrow Escape *(Naga Panah / Dragons Escape)*](dragon-arrow-escape/) | `com.arrows.dragon.escape.puzzle` | DANA aman sekitar Rp1.000-an (2 kali). | Belum ada catatan instalasi ketiga — **perlu cek tarik.** | [ ] Sudah tarik |
 
 </div>
 
@@ -66,12 +65,11 @@ Urutan ini dibuat dari catatan penarikan yang sudah ada. **Tidak ada data yang m
 | 17 | [Soda Jam Puzzle](soda-jam-puzzle/) | `com.armg.sodajam` | Tidak ikut tercatat. | Penarikan 700 aman DANA. | Harus OVO, hanya sekitar Rp300-an. | Diturunkan 3 peringkat; instalasi kedua aman Rp700 DANA, instalasi ketiga harus OVO dan hanya sekitar Rp300-an. |
 | 18 | Mahjong Ajaib *(Magic Mahjong)* | `com.Lucinda.MagicMahjong` | Tidak ikut tercatat. | DANA masih aman 300-an. | DANA aman tapi tidak sampai Rp100. | Diturunkan 2 peringkat; instalasi ketiga DANA aman tapi tidak sampai Rp100. |
 | 19 | Panah Penghasil Uang *(Panah Lepas)* | `com.pelangiarena.panahlepas` | Tidak ada catatan awal. | DANA aman 200-an. | Belum ada catatan. | Coba target penarikan kecil (sekitar Rp200-an). |
-| 20 | [Dragon Arrow Escape *(Naga Panah / Dragons Escape)*](dragon-arrow-escape/) | `com.arrows.dragon.escape.puzzle` | Belum ada catatan awal. | DANA aman 1.000-an (2 kali). | Belum ada catatan instalasi ketiga — perlu cek tarik. | Dinaikkan; instalasi kedua aman 2 kali sekitar Rp1.000-an — perlu cek tarik segera. |
-| 21 | Cut Fruit Winner | `com.starlightgame.cutfruitwinner` | Tidak ada catatan awal. | DANA aman sekitar 1.000-an. | Penghasilan lumayan, perlu cek tarik. | Instalasi kedua aman; instalasi ketiga penghasilan lumayan — perlu cek tarik segera. |
-| 22 | Tangkap Tile Zoo *(Catch Zoo Tiles)* | `com.agmalik.CatchZooTiles` | Belum ada catatan (kosong). | DANA aman 300-an. | Belum ada catatan instalasi ketiga — perlu cek tarik. | Instalasi kedua aman sekitar Rp300-an; instalasi ketiga belum dicoba — perlu cek tarik segera. |
-| 23 | Panah Sentuh *(Arrow Tap)* | Belum dicatat | Belum ada catatan (kosong). | DANA aman 800-an. | Belum ada catatan. | Target kedua lumayan (sekitar Rp800-an aman DANA). |
-| 24 | Fortune Tile Mahjong | `com.NAMMUNIS.FortuneTileMahjong` | 3 kali penarikan (maks Rp212). | DANA masih aman 500-an. | Belum ada catatan. | Coba target penarikan kecil (sekitar Rp500-an). |
-| 25 | [Soda Pack Puzzle](soda-pack-puzzle/) | `com.soda.pack.puzzle` | Ada bot otomatis (belum dites botnya). | DANA masih aman 200-an. | DANA aman, nominal kecil sekitar Rp200-an. | Diturunkan ke posisi terakhir; instalasi ketiga DANA aman, nominal kecil sekitar Rp200-an; bot belum dites. |
+| 20 | Cut Fruit Winner | `com.starlightgame.cutfruitwinner` | Tidak ada catatan awal. | DANA aman sekitar 1.000-an. | Penghasilan lumayan, perlu cek tarik. | Instalasi kedua aman; instalasi ketiga penghasilan lumayan — perlu cek tarik segera. |
+| 21 | Tangkap Tile Zoo *(Catch Zoo Tiles)* | `com.agmalik.CatchZooTiles` | Belum ada catatan (kosong). | DANA aman 300-an. | Belum ada catatan instalasi ketiga — perlu cek tarik. | Instalasi kedua aman sekitar Rp300-an; instalasi ketiga belum dicoba — perlu cek tarik segera. |
+| 22 | Panah Sentuh *(Arrow Tap)* | Belum dicatat | Belum ada catatan (kosong). | DANA aman 800-an. | Belum ada catatan. | Target kedua lumayan (sekitar Rp800-an aman DANA). |
+| 23 | Fortune Tile Mahjong | `com.NAMMUNIS.FortuneTileMahjong` | 3 kali penarikan (maks Rp212). | DANA masih aman 500-an. | Belum ada catatan. | Coba target penarikan kecil (sekitar Rp500-an). |
+| 24 | [Soda Pack Puzzle](soda-pack-puzzle/) | `com.soda.pack.puzzle` | Ada bot otomatis (belum dites botnya). | DANA masih aman 200-an. | DANA aman, nominal kecil sekitar Rp200-an. | Diturunkan ke posisi terakhir; instalasi ketiga DANA aman, nominal kecil sekitar Rp200-an; bot belum dites. |
 
 </div>
 
@@ -216,7 +214,6 @@ Keterangan kategori: game-game ini **susah, tetapi tetap cair**. Data pencairan 
 | 5 | [Soda Jam Puzzle](soda-jam-puzzle/) | `com.armg.sodajam` | Muhammad Armghan Abbas | Game soda jam puzzle. Tersedia bot otomatis. Instalasi pertama tidak ikut tercatat. **Instalasi kedua penarikan 700 aman DANA.** | Belum dicatat | [x] |
 | 6 | Panah Penghasil Uang *(Panah Lepas)* | `com.pelangiarena.panahlepas` | Sub Akademi Game | Puzzle panah / arrow unblock penghasil saldo. Instalasi pertama tidak ada catatan. **Instalasi kedua DANA aman 200-an.** | Belum dicatat | [ ] |
 | 7 | Panah Sentuh *(Arrow Tap)* | Belum dicatat | Belum dicatat | Game ketuk panah / tap arrow puzzle. Instalasi pertama belum ada catatan. **Instalasi kedua DANA aman 800-an.** | Belum dicatat | [ ] |
-| 8 | [Dragon Arrow Escape *(Naga Panah / Dragons Escape)*](dragon-arrow-escape/) | `com.arrows.dragon.escape.puzzle` | Financially Up | Game panah putar / dragon arrow unblock. Tersedia bot otomatis. Instalasi pertama belum ada catatan. **Instalasi kedua DANA aman 1.000-an (2 kali). Instalasi ketiga belum ada catatan — perlu cek tarik.** | Belum dicatat | [x] |
 
 ## Kategori Tile, Match & Sort (Studio Tunggal)
 
@@ -293,6 +290,7 @@ Keterangan kategori: game-game ini **susah, tetapi tetap cair**. Data pencairan 
 | 44 | Soccer Tap Guard | `goal.soccertap.guardfrenzy` | MIC3 / Michael Jones | Developer sama dengan Soda Pack Sort (Daftar Blocked). Penarikan 1.000 aman di awal; sekarang dipindahkan ke daftar Blocked. |
 | 45 | Crazy Tile Match Winner | `com.moonshotcube.crazytilematchwinner` | Elias Galvin | Penarikan 500 cair DANA di awal; sekarang dipindahkan ke daftar Blocked. |
 | 46 | Cute Fairy Blast Tale | `com.msxcleargamer.cutefairyblasttale` | DEVVVS 0043 | Penarikan Rp100 tidak cair. |
+| 47 | Dragon Arrow Escape *(Naga Panah / Dragons Escape)* | `com.arrows.dragon.escape.puzzle` | Financially Up | Tidak ketemu game aslinya yang awal (instalasi kedua DANA aman sekitar Rp1.000-an 2 kali). |
 
 ## 🏢 Kategori Game Berdasarkan Pengembang
 
@@ -339,7 +337,7 @@ Keterangan kategori: game-game ini **susah, tetapi tetap cair**. Data pencairan 
 
 ### Financially Up
 
-- [Dragon Arrow Escape *(Naga Panah / Dragons Escape)*](dragon-arrow-escape/) — `com.arrows.dragon.escape.puzzle`
+- [Dragon Arrow Escape *(Naga Panah / Dragons Escape)*](dragon-arrow-escape/) **[BLOCKED]** — `com.arrows.dragon.escape.puzzle` — Tidak ketemu game aslinya yang awal.
 
 ### Belum terverifikasi
 
@@ -413,8 +411,8 @@ Bot otomatis untuk game Can Sort dengan sorting algorithm.
 ### 11. Jungle Animal Eliminate Bot (`jungle-animal-eliminate/`)
 Bot otomatis untuk game Jungle Animal Eliminate dengan pattern matching.
 
-### 12. Dragon Arrow Escape Bot (`dragon-arrow-escape/`)
-Bot otomatis untuk game Dragon Arrow Escape dengan obstacle detection.
+### 12. Dragon Arrow Escape Bot (`dragon-arrow-escape/`) — **[BLOCKED]**
+Bot otomatis untuk game Dragon Arrow Escape dengan obstacle detection. Game dipindahkan ke daftar Blocked karena tidak ditemukan game aslinya yang awal.
 
 ### 13. Candy Crush Bot (`candy-crush/`)
 Bot otomatis untuk game Candy Crush dengan advanced pattern recognition.
