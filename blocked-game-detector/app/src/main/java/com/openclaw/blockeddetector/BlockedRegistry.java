@@ -62,6 +62,7 @@ public class BlockedRegistry {
         list.add(new BlockedItem(47, "Dragon Arrow Escape (Naga Panah / Dragons Escape)", "com.arrows.dragon.escape.puzzle", "Financially Up", "Tidak ketemu game aslinya yang awal.", "arrows.dragon.escape", "dragon arrow escape"));
         list.add(new BlockedItem(48, "Cut Fruit Winner", "com.starlightgame.cutfruitwinner", "Starlight Game", "Penarikan Rp1.200 tidak cair; tidak usah dicari lagi.", "starlightgame.cutfruitwinner", "cut fruit winner"));
         list.add(new BlockedItem(49, "MasterFlipKnifePro", "com.qieqiefruits.masterflipknifepro", "Belum diketahui", "Penarikan Rp200 saja tidak cair.", "masterflipknifepro", "master flip knife pro"));
+        list.add(new BlockedItem(50, "Cute Path", "com.cute.path.star.animal.jungle.fast", "Belum diketahui", "Penarikan Rp200 saja tidak cair.", "cute.path.star.animal", "cute path"));
         ITEMS = Collections.unmodifiableList(list);
     }
 
