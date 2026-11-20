@@ -65,7 +65,7 @@ Urutan ini dibuat dari catatan penarikan yang sudah ada. **Tidak ada data yang m
 | 18 | Mahjong Ajaib *(Magic Mahjong)* | `com.Lucinda.MagicMahjong` | Tidak ikut tercatat. | DANA masih aman 300-an. | DANA aman tapi tidak sampai Rp100. | Diturunkan 2 peringkat; instalasi ketiga DANA aman tapi tidak sampai Rp100. |
 | 19 | Panah Penghasil Uang *(Panah Lepas)* | `com.pelangiarena.panahlepas` | Tidak ada catatan awal. | DANA aman 200-an. | Belum ada catatan. | Coba target penarikan kecil (sekitar Rp200-an). |
 | 20 | Cut Fruit Winner | `com.starlightgame.cutfruitwinner` | Tidak ada catatan awal. | DANA aman sekitar 1.000-an. | Penghasilan lumayan, perlu cek tarik. | Instalasi kedua aman; instalasi ketiga penghasilan lumayan — perlu cek tarik segera. |
-| 21 | Panah Sentuh *(Arrow Tap)* | Belum dicatat | Belum ada catatan (kosong). | DANA aman 800-an. | Belum ada catatan. | Target kedua lumayan (sekitar Rp800-an aman DANA). |
+| 21 | Panah Sentuh *(Arrow Tap)* | `jingranmei.top.arrowpuzzle` | Belum ada catatan (kosong). | DANA aman 1.000. | Belum ada catatan. | Target kedua lumayan (sekitar Rp1.000 aman DANA). |
 | 22 | Fortune Tile Mahjong | `com.NAMMUNIS.FortuneTileMahjong` | 3 kali penarikan (maks Rp212). | DANA masih aman 500-an. | Belum ada catatan. | Coba target penarikan kecil (sekitar Rp500-an). |
 | 23 | [Soda Pack Puzzle](soda-pack-puzzle/) | `com.soda.pack.puzzle` | Ada bot otomatis (belum dites botnya). | DANA masih aman 200-an. | DANA aman, nominal kecil sekitar Rp200-an. | Diturunkan ke posisi terakhir; instalasi ketiga DANA aman, nominal kecil sekitar Rp200-an; bot belum dites. |
 
@@ -179,7 +179,8 @@ Keterangan kategori: game-game ini **susah, tetapi tetap cair**. Data pencairan 
 
 | No. | Game | Package `com` | Developer / perusahaan | Keterangan | Iklan Slot | Bot |
 |---:|---|---|---|---|---|:---:|
-| 1 | Bus Parking Frenzy | `com.arlonstudio.bus` | arlon studio | Game parkir bus. **Penarikan 500 DANA aman.** | Belum dicatat | [ ] |
+| 1 | Panah Sentuh *(Arrow Tap Puzzle)* | `jingranmei.top.arrowpuzzle` | arlon studio | Game ketuk panah / tap arrow puzzle. **Penarikan 1.000 DANA aman.** | Belum dicatat | [ ] |
+| 2 | Bus Parking Frenzy | `com.arlonstudio.bus` | arlon studio | Game parkir bus. **Penarikan 500 DANA aman.** | Belum dicatat | [ ] |
 
 ### nazer gaming studio
 
@@ -211,7 +212,6 @@ Keterangan kategori: game-game ini **susah, tetapi tetap cair**. Data pencairan 
 | 4 | Bus Jam Rush | `putulive.app.bus` | StudyPort | Game bus jam penumpang warna. **Penarikan 200 aman.** | Belum dicatat | [ ] |
 | 5 | [Soda Jam Puzzle](soda-jam-puzzle/) | `com.armg.sodajam` | Muhammad Armghan Abbas | Game soda jam puzzle. Tersedia bot otomatis. Instalasi pertama tidak ikut tercatat. **Instalasi kedua penarikan 700 aman DANA.** | Belum dicatat | [x] |
 | 6 | Panah Penghasil Uang *(Panah Lepas)* | `com.pelangiarena.panahlepas` | Sub Akademi Game | Puzzle panah / arrow unblock penghasil saldo. Instalasi pertama tidak ada catatan. **Instalasi kedua DANA aman 200-an.** | Belum dicatat | [ ] |
-| 7 | Panah Sentuh *(Arrow Tap)* | Belum dicatat | Belum dicatat | Game ketuk panah / tap arrow puzzle. Instalasi pertama belum ada catatan. **Instalasi kedua DANA aman 800-an.** | Belum dicatat | [ ] |
 
 ## Kategori Tile, Match & Sort (Studio Tunggal)
 
@@ -332,6 +332,8 @@ Keterangan kategori: game-game ini **susah, tetapi tetap cair**. Data pencairan 
 - Mahjong Ajaib — ALEXANDER DEJARNETTE — `com.Lucinda.MagicMahjong`
 - Panah Penghasil Uang *(Panah Lepas)* — Sub Akademi Game — `com.pelangiarena.panahlepas`
 - Fruit Block Sort — Bejodev — `com.fruitblocksort.sortpack.gp`
+- Panah Sentuh — arlon studio — `jingranmei.top.arrowpuzzle`
+- Bus Parking Frenzy — arlon studio — `com.arlonstudio.bus`
 
 ### Financially Up
 
@@ -340,7 +342,6 @@ Keterangan kategori: game-game ini **susah, tetapi tetap cair**. Data pencairan 
 ### Belum terverifikasi
 
 - [Candy Crush](candy-crush/) — package dan pengembang belum teridentifikasi dari file bot yang ada.
-- Panah Sentuh — package dan pengembang belum dicatat di listing publik.
 
 ## 🏆 Peringkat Game Rekomendasi
 
