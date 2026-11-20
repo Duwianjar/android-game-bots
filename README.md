@@ -57,19 +57,20 @@ Urutan ini dibuat dari catatan penarikan yang sudah ada. **Tidak ada data yang m
 | 9 | [Color Power Pop](color-power-pop/) | `com.giraffeeapp.power` | 19 kali penarikan; Rp1.000 sebanyak 4 kali dan Rp4.000 sekali. | DANA aman tapi cuma sedikit karena kemungkinan instalnya di akhir. | DANA sudah tidak bisa lagi, harus pakai OVO; penarikan OVO masih aman (nominal Rp5.000 dan Rp2.000). | Rekomendasi menengah; bila DANA sudah tidak bisa lagi, gunakan OVO (masih aman Rp5.000 dan Rp2.000). |
 | 10 | Magic Merge | `com.xteleremobilecompanyltd.MagicMerge` | Belum ada catatan awal. | DANA masih aman 300-an. | DANA aman, malah lumayan bisa 1.200-an. | Dinaikkan; instalasi ketiga DANA aman dan malah lumayan bisa sekitar Rp1.200-an. |
 | 11 | Planet Slice Master | `com.smartgames.planetslicemaster` | Belum pernah dicoba. | DANA aman, penarikan kecil sekitar 5.900-an sebanyak 3 kali. | DANA tetap aman, tapi cuma dapat sedikit karena kemungkinan di akhir. | Dinaikkan 4 peringkat; rekomendasi setelah prioritas utama; coba target penarikan kecil dulu (Rp5.900-an). |
-| 12 | [Coin Sort Dash](coin-dash-shot/) | `com.coin.sortdash.remove` | 3 kali penarikan; ada Rp1.017. **Rawan terblokir iklan.** | DANA normal tapi sedikit kemungkinan karena terakhir. | DANA aman, perolehan kecil seperti biasa. | Instal setelah prioritas utama; pencairan DANA aman walaupun nominal kecil. |
-| 13 | [Magical Gems Match 3](magic-gems-match/) | `com.glow.magical.match3` | 13 kali penarikan; ada nominal Rp1.050. | DANA normal tapi sedikit kemungkinan karena terakhir. | Pencairan aman, tetapi cuma dapat sedikit. | Instal dengan target kecil; aman tetapi perolehan sedikit. |
-| 14 | Veg Cup Blast | `com.xteleremobilecompanyltd.VegCupBlast` | 5 kali penarikan; maksimum Rp2.191. | DANA tetap aman, tapi cuma dapat sedikit karena kemungkinan di akhir. | DANA aman, perolehan kecil seperti biasa. | Rekomendasi setelah prioritas utama; pencairan DANA aman walaupun nominal kecil. |
-| 15 | Toy Drop | `com.NAMMUNIS.ToyDrop` | 4 kali penarikan; maksimum Rp1.670. | DANA aman, paling banyak Rp1.300. | DANA aman, perolehan kecil seperti biasa. | Rekomendasi setelah prioritas utama; instalasi ketiga DANA aman, perolehan kecil seperti biasa. |
-| 16 | Harvest Block Crush | `com.harvest.block.crush` | Tidak ikut tercatat. | DANA aman tapi cuma 400. | DANA aman tapi cuma 200-an. | Instalasi kedua aman nominal kecil (Rp400); instalasi ketiga DANA aman tapi cuma sekitar Rp200-an. |
-| 17 | [Soda Jam Puzzle](soda-jam-puzzle/) | `com.armg.sodajam` | Tidak ikut tercatat. | Penarikan 700 aman DANA. | Harus OVO, hanya sekitar Rp300-an. | Diturunkan 3 peringkat; instalasi kedua aman Rp700 DANA, instalasi ketiga harus OVO dan hanya sekitar Rp300-an. |
-| 18 | Mahjong Ajaib *(Magic Mahjong)* | `com.Lucinda.MagicMahjong` | Tidak ikut tercatat. | DANA masih aman 300-an. | DANA aman tapi tidak sampai Rp100. | Diturunkan 2 peringkat; instalasi ketiga DANA aman tapi tidak sampai Rp100. |
-| 19 | Panah Penghasil Uang *(Panah Lepas)* | `com.pelangiarena.panahlepas` | Tidak ada catatan awal. | DANA aman 200-an. | Belum ada catatan. | Coba target penarikan kecil (sekitar Rp200-an). |
-| 20 | Cut Fruit Winner | `com.starlightgame.cutfruitwinner` | Tidak ada catatan awal. | DANA aman sekitar 1.000-an. | Penghasilan lumayan, perlu cek tarik. | Instalasi kedua aman; instalasi ketiga penghasilan lumayan — perlu cek tarik segera. |
-| 21 | Tangkap Tile Zoo *(Catch Zoo Tiles)* | `com.agmalik.CatchZooTiles` | Belum ada catatan (kosong). | DANA aman 300-an. | Belum ada catatan instalasi ketiga — perlu cek tarik. | Instalasi kedua aman sekitar Rp300-an; instalasi ketiga belum dicoba — perlu cek tarik segera. |
-| 22 | Panah Sentuh *(Arrow Tap)* | Belum dicatat | Belum ada catatan (kosong). | DANA aman 800-an. | Belum ada catatan. | Target kedua lumayan (sekitar Rp800-an aman DANA). |
-| 23 | Fortune Tile Mahjong | `com.NAMMUNIS.FortuneTileMahjong` | 3 kali penarikan (maks Rp212). | DANA masih aman 500-an. | Belum ada catatan. | Coba target penarikan kecil (sekitar Rp500-an). |
-| 24 | [Soda Pack Puzzle](soda-pack-puzzle/) | `com.soda.pack.puzzle` | Ada bot otomatis (belum dites botnya). | DANA masih aman 200-an. | DANA aman, nominal kecil sekitar Rp200-an. | Diturunkan ke posisi terakhir; instalasi ketiga DANA aman, nominal kecil sekitar Rp200-an; bot belum dites. |
+| 12 | Fruit Blade Mojo | `com.smartgames.fruitblademojo` | Belum pernah dicoba. | Penarikan Rp3.000-an aman DANA, lumayan cepat juga. | Belum ada catatan. | Developer sama dengan Planet Slice Master (Go Bananas Studio); penarikan Rp3.000-an aman DANA. |
+| 13 | [Coin Sort Dash](coin-dash-shot/) | `com.coin.sortdash.remove` | 3 kali penarikan; ada Rp1.017. **Rawan terblokir iklan.** | DANA normal tapi sedikit kemungkinan karena terakhir. | DANA aman, perolehan kecil seperti biasa. | Instal setelah prioritas utama; pencairan DANA aman walaupun nominal kecil. |
+| 14 | [Magical Gems Match 3](magic-gems-match/) | `com.glow.magical.match3` | 13 kali penarikan; ada nominal Rp1.050. | DANA normal tapi sedikit kemungkinan karena terakhir. | Pencairan aman, tetapi cuma dapat sedikit. | Instal dengan target kecil; aman tetapi perolehan sedikit. |
+| 15 | Veg Cup Blast | `com.xteleremobilecompanyltd.VegCupBlast` | 5 kali penarikan; maksimum Rp2.191. | DANA tetap aman, tapi cuma dapat sedikit karena kemungkinan di akhir. | DANA aman, perolehan kecil seperti biasa. | Rekomendasi setelah prioritas utama; pencairan DANA aman walaupun nominal kecil. |
+| 16 | Toy Drop | `com.NAMMUNIS.ToyDrop` | 4 kali penarikan; maksimum Rp1.670. | DANA aman, paling banyak Rp1.300. | DANA aman, perolehan kecil seperti biasa. | Rekomendasi setelah prioritas utama; instalasi ketiga DANA aman, perolehan kecil seperti biasa. |
+| 17 | Harvest Block Crush | `com.harvest.block.crush` | Tidak ikut tercatat. | DANA aman tapi cuma 400. | DANA aman tapi cuma 200-an. | Instalasi kedua aman nominal kecil (Rp400); instalasi ketiga DANA aman tapi cuma sekitar Rp200-an. |
+| 18 | [Soda Jam Puzzle](soda-jam-puzzle/) | `com.armg.sodajam` | Tidak ikut tercatat. | Penarikan 700 aman DANA. | Harus OVO, hanya sekitar Rp300-an. | Diturunkan 3 peringkat; instalasi kedua aman Rp700 DANA, instalasi ketiga harus OVO dan hanya sekitar Rp300-an. |
+| 19 | Mahjong Ajaib *(Magic Mahjong)* | `com.Lucinda.MagicMahjong` | Tidak ikut tercatat. | DANA masih aman 300-an. | DANA aman tapi tidak sampai Rp100. | Diturunkan 2 peringkat; instalasi ketiga DANA aman tapi tidak sampai Rp100. |
+| 20 | Panah Penghasil Uang *(Panah Lepas)* | `com.pelangiarena.panahlepas` | Tidak ada catatan awal. | DANA aman 200-an. | Belum ada catatan. | Coba target penarikan kecil (sekitar Rp200-an). |
+| 21 | Cut Fruit Winner | `com.starlightgame.cutfruitwinner` | Tidak ada catatan awal. | DANA aman sekitar 1.000-an. | Penghasilan lumayan, perlu cek tarik. | Instalasi kedua aman; instalasi ketiga penghasilan lumayan — perlu cek tarik segera. |
+| 22 | Tangkap Tile Zoo *(Catch Zoo Tiles)* | `com.agmalik.CatchZooTiles` | Belum ada catatan (kosong). | DANA aman 300-an. | Belum ada catatan instalasi ketiga — perlu cek tarik. | Instalasi kedua aman sekitar Rp300-an; instalasi ketiga belum dicoba — perlu cek tarik segera. |
+| 23 | Panah Sentuh *(Arrow Tap)* | Belum dicatat | Belum ada catatan (kosong). | DANA aman 800-an. | Belum ada catatan. | Target kedua lumayan (sekitar Rp800-an aman DANA). |
+| 24 | Fortune Tile Mahjong | `com.NAMMUNIS.FortuneTileMahjong` | 3 kali penarikan (maks Rp212). | DANA masih aman 500-an. | Belum ada catatan. | Coba target penarikan kecil (sekitar Rp500-an). |
+| 25 | [Soda Pack Puzzle](soda-pack-puzzle/) | `com.soda.pack.puzzle` | Ada bot otomatis (belum dites botnya). | DANA masih aman 200-an. | DANA aman, nominal kecil sekitar Rp200-an. | Diturunkan ke posisi terakhir; instalasi ketiga DANA aman, nominal kecil sekitar Rp200-an; bot belum dites. |
 
 </div>
 
@@ -124,8 +125,8 @@ Keterangan kategori: game-game ini **cukup cepat setelah Lucky Match, tetapi jar
 | 9 | Fortune Tile Mahjong | `com.NAMMUNIS.FortuneTileMahjong` | Tidak tercantum / Ekanayake Mudiyanselage Prasanna Dilshan Ekanayake | Developer sama dengan Toy Drop. **3 kali penarikan:** Rp212, Rp60, dan Rp20 (Maks Rp212). **Instalasi kedua DANA masih aman 500-an.** | Belum dicatat | [ ] |
 | 10 | Mahjong Master: Win Real Cash! | `com.mahong.master.tours.blossom.mingle` | Faisal Developers / Salman Khan | Developer sama dengan Zoo Tile. **1 kali penarikan:** Rp105. | Belum dicatat | [ ] |
 | 11 | Fruit Block-More Gifts | `com.xteleremobilecompanyltd.FruitBlock` | Sporting 2024 / محمد السيد عبدالرحيم محمود | Data penarikan belum tercatat valid/error, tetapi performanya sepertinya lumayan. | Lumayan | [ ] |
-| 12 | Magic Merge | `com.xteleremobilecompanyltd.MagicMerge` | Sporting 2024 / محمد السيد عبدالرحيم محمود | **Kemungkinan Lucky Food.** Cukup cepat setelah Lucky Match, tetapi jarang terdeteksi. **Instalasi kedua DANA masih aman 300-an.** | Belum dicatat | [ ] |
-| 13 | Animal Blast: Win Prize Game | `com.jungle.bear.tiger.wild.animal.eliminate` | Faisal Developers / Salman Khan | Developer sama dengan Zoo Tile. **1 kali penarikan:** Rp397. Keblokir koneksi, tetapi awalnya aman. | Belum dicatat | [x] |
+| 13 | Magic Merge | `com.xteleremobilecompanyltd.MagicMerge` | Sporting 2024 / محمد السيد عبدالرحيم محمود | **Kemungkinan Lucky Food.** Cukup cepat setelah Lucky Match, tetapi jarang terdeteksi. **Instalasi kedua DANA masih aman 300-an.** | Belum dicatat | [ ] |
+| 14 | Animal Blast: Win Prize Game | `com.jungle.bear.tiger.wild.animal.eliminate` | Faisal Developers / Salman Khan | Developer sama dengan Zoo Tile. **1 kali penarikan:** Rp397. Keblokir koneksi, tetapi awalnya aman. | Belum dicatat | [x] |
 
 ## Spider Rope
 
@@ -144,7 +145,7 @@ Keterangan kategori: game-game ini **susah, tetapi tetap cair**. Data pencairan 
 | 9 | Bottle Jam Solver | `com.bottle.jam.solver` | Tidak tercantum / UNJIBBED LTD | Game susah, penarikan sedikit. **4 kali penarikan:** Rp206, Rp108, Rp200, dan Rp202 (Maks Rp206). | Belum dicatat | [ ] |
 | 10 | Gold Gems Journey | `com.gems.adventure.journey` | DKSHUBDeveloper / Ghulam Yaseen | Developer sama dengan Magical Gems Match 3. Tema match gems. **Penarikan 200 aman DANA.** **Instalasi ketiga DANA masih aman 200.** | Belum dicatat | [ ] |
 | 11 | Bus Escape: Traffic Puzzle | `sb.ad.hyper.busflow` | MIC3 / Michael Jones | Perlu waspada; developer sama dengan Soda Pack Sort (di Daftar Blocked). Tema bus escape/traffic. **Penarikan 200 aman.** | Belum dicatat | [ ] |
-| 12 | [Bus Parking Dash](bus-parking-dash/) | `com.bus.parking.dash` | Freelancer Jibon | Tema bus parking. Tersedia bot otomatis. Instalasi kedua cuma bisa selain rekening yang sudah (seperti Bus Jam Parking), atau bisa OVO. | Lumayan | [x] |
+| 13 | [Bus Parking Dash](bus-parking-dash/) | `com.bus.parking.dash` | Freelancer Jibon | Tema bus parking. Tersedia bot otomatis. Instalasi kedua cuma bisa selain rekening yang sudah (seperti Bus Jam Parking), atau bisa OVO. | Lumayan | [x] |
 
 ## Bubble Crush
 
@@ -255,19 +256,19 @@ Keterangan kategori: game-game ini **susah, tetapi tetap cair**. Data pencairan 
 | 9 | Bubble Crush | `com.bubble.crush.stick.magicgames` | YounEXE / YOUNES MOUMENE | Dipindahkan ke daftar Blocked; data penarikan belum dicatat. |
 | 10 | Gem Mine: Jewel Puzzle | `com.gem.mine.stick.magicgames` | YounEXE / YOUNES MOUMENE | **Pernah cair 2 kali:** Rp200 dan Rp50; setelah itu tidak cair lagi. |
 | 11 | Dessert Crush | `com.magicgames.dessert.crush.stick` | YounEXE / YOUNES MOUMENE | **Penarikan Rp50 tidak cair.** |
-| 12 | Happy Blocks | `com.xteleremobilecompanyltd.HappyBlocks` | Sporting 2024 / محمد السيد عبدالرحيم محمود | Kemungkinan cair, tetapi status tidak berubah setelah 2 kali penarikan sekitar Rp20-an. |
-| 13 | Pet Plush Link | `com.NAMMUNIS.PetPlushLink` | Tidak tercantum / Ekanayake Mudiyanselage Prasanna Dilshan Ekanayake | Dipindahkan ke daftar Blocked; data penarikan belum dicatat. |
-| 14 | Candy Tile: Sweet Puzzle | `org.beastcoast.major.tilegame.candy` | Cano YH / Fouad Andaloussi | Dipindahkan ke daftar Blocked; data penarikan belum dicatat. |
-| 15 | Tasty Tile | Belum diketahui | CLEMMIE INDUSTRY LIMITED | **Pernah menarik Rp10 dan Rp50; setelah itu pengajuan Rp50 tidak cair/lama.** |
-| 16 | Fruit Blast | Belum diketahui | Funny Video Collections | Dipindahkan ke daftar Blocked; data penarikan belum dicatat. |
-| 17 | Treasure Elimination | Belum diketahui | Funny Video Collections | Dipindahkan ke daftar Blocked; data penarikan belum dicatat. |
-| 18 | Orb Quest | Belum diketahui | Belum diketahui | Tidak ditemukan di HP saat pengecekan; dimasukkan ke daftar Blocked sesuai permintaan. |
-| 19 | Patch Panic | `com.match3.game.patch.panic.terraform` | Belum diketahui | Ditemukan di HP; dimasukkan ke daftar Blocked sesuai permintaan. |
-| 20 | Sea Synth | `com.waterworld.games.tap.seasynth` | Belum diketahui | Ditemukan di HP; dimasukkan ke daftar Blocked sesuai permintaan. |
-| 21 | Garden Badges | `com.paldev.production.game.garden` | Belum diketahui | Ditemukan di HP; dimasukkan ke daftar Blocked sesuai permintaan. |
-| 22 | Soda Pack Sort | `com.mobiroller.soda.pack` | MIC3 / Michael Jones | Tidak bisa tonton iklan. |
-| 23 | MagicDreamStarCrush | `com.luckystarter.magicdreamstarcrush` | DEVVVS 0043 | Penarikan 600 tidak cair. |
-| 24 | SliceBladeSplash | `com.suncollecter.slicebladesplash` | DEVVVS 0043 | Penarikan 2rb tidak cair dan rawan terblokir iklannya. |
+| 13 | Happy Blocks | `com.xteleremobilecompanyltd.HappyBlocks` | Sporting 2024 / محمد السيد عبدالرحيم محمود | Kemungkinan cair, tetapi status tidak berubah setelah 2 kali penarikan sekitar Rp20-an. |
+| 14 | Pet Plush Link | `com.NAMMUNIS.PetPlushLink` | Tidak tercantum / Ekanayake Mudiyanselage Prasanna Dilshan Ekanayake | Dipindahkan ke daftar Blocked; data penarikan belum dicatat. |
+| 15 | Candy Tile: Sweet Puzzle | `org.beastcoast.major.tilegame.candy` | Cano YH / Fouad Andaloussi | Dipindahkan ke daftar Blocked; data penarikan belum dicatat. |
+| 16 | Tasty Tile | Belum diketahui | CLEMMIE INDUSTRY LIMITED | **Pernah menarik Rp10 dan Rp50; setelah itu pengajuan Rp50 tidak cair/lama.** |
+| 17 | Fruit Blast | Belum diketahui | Funny Video Collections | Dipindahkan ke daftar Blocked; data penarikan belum dicatat. |
+| 18 | Treasure Elimination | Belum diketahui | Funny Video Collections | Dipindahkan ke daftar Blocked; data penarikan belum dicatat. |
+| 19 | Orb Quest | Belum diketahui | Belum diketahui | Tidak ditemukan di HP saat pengecekan; dimasukkan ke daftar Blocked sesuai permintaan. |
+| 20 | Patch Panic | `com.match3.game.patch.panic.terraform` | Belum diketahui | Ditemukan di HP; dimasukkan ke daftar Blocked sesuai permintaan. |
+| 21 | Sea Synth | `com.waterworld.games.tap.seasynth` | Belum diketahui | Ditemukan di HP; dimasukkan ke daftar Blocked sesuai permintaan. |
+| 22 | Garden Badges | `com.paldev.production.game.garden` | Belum diketahui | Ditemukan di HP; dimasukkan ke daftar Blocked sesuai permintaan. |
+| 23 | Soda Pack Sort | `com.mobiroller.soda.pack` | MIC3 / Michael Jones | Tidak bisa tonton iklan. |
+| 24 | MagicDreamStarCrush | `com.luckystarter.magicdreamstarcrush` | DEVVVS 0043 | Penarikan 600 tidak cair. |
+| 25 | SliceBladeSplash | `com.suncollecter.slicebladesplash` | DEVVVS 0043 | Penarikan 2rb tidak cair dan rawan terblokir iklannya. |
 | 25 | Arrow Soccer Beauty | `com.xteleremobilecompanyltd.ArrowSoccerBeauty` | Sporting 2024 / محمد السيد عبدالرحيم محمود | Aplikasi tidak bisa dibuka, terdeteksi jaringan. Satu developer dengan Veg Cup Blast & Color Sand Blast; belum ada catatan penarikan. |
 | 26 | Greenfield Merge | `com.xteleremobilecompanyltd.GreenfieldMerge` | Sporting 2024 / محمد السيد عبدالرحيم محمود | Terdeteksi jaringan. Satu developer dengan Color Sand Blast; belum ada catatan penarikan. |
 | 27 | Crystal Blast | `com.shadowgames.dev.crystal.blast` | VPLibros Group / ayo hanafi | Tarik cuma 100 tidak cair. Satu developer dengan Ocean Tile dan Universe Match. |
@@ -329,6 +330,7 @@ Keterangan kategori: game-game ini **susah, tetapi tetap cair**. Data pencairan 
 - [Magical Gems Match 3](magic-gems-match/) — DKSHUBDeveloper — `com.glow.magical.match3`
 - Gold Gems Journey — DKSHUBDeveloper / Ghulam Yaseen — `com.gems.adventure.journey`
 - Planet Slice Master — Go Bananas Studio — `com.smartgames.planetslicemaster`
+- Fruit Blade Mojo — Go Bananas Studio — `com.smartgames.fruitblademojo`
 - Harvest Block Crush — Muhammad Shabbir Hussain — `com.harvest.block.crush`
 - Mahjong Ajaib — ALEXANDER DEJARNETTE — `com.Lucinda.MagicMahjong`
 - Panah Penghasil Uang *(Panah Lepas)* — Sub Akademi Game — `com.pelangiarena.panahlepas`
