@@ -174,8 +174,8 @@ Keterangan kategori: game-game ini **susah, tetapi tetap cair**. Data pencairan 
 | No. | Game | Package `com` | Developer / perusahaan | Keterangan | Iklan Slot | Bot |
 |---:|---|---|---|---|---|:---:|
 | 1 | Global Carnival Arrow | `com.Lucinda.GlobalCarnivalArrow` | ALEXANDER DEJARNETTE | Tema panah karnaval. **Penarikan 1.000 dua kali DANA aman.** | Belum dicatat | [ ] |
-| 2 | Mahjong Ajaib *(Magic Mahjong)* | `com.Lucinda.MagicMahjong` | ALEXANDER DEJARNETTE | Tema mahjong tile match. Instalasi pertama tidak ikut tercatat. **Instalasi kedua DANA masih aman 300-an.** | Belum dicatat | [ ] |
-
+| 2 | Dream Fall | `com.Lucinda.DreamFall` | ALEXANDER DEJARNETTE | Tema puzzle. **Penarikan aman tapi hanya 300-an.** | Belum dicatat | [ ] |
+| 3 | Mahjong Ajaib *(Magic Mahjong)* | `com.Lucinda.MagicMahjong` | ALEXANDER DEJARNETTE | Tema mahjong tile match. Instalasi pertama tidak ikut tercatat. **Instalasi kedua DANA masih aman 300-an.** | Belum dicatat | [ ] |
 ### arlon studio
 
 | No. | Game | Package `com` | Developer / perusahaan | Keterangan | Iklan Slot | Bot |
