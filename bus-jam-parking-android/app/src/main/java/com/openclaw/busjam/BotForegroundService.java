@@ -60,6 +60,7 @@ public class BotForegroundService extends Service {
     private long fullscreenAdSeenAt;
     private long adClosingStartedAt;
     private long lastAdBackAt;
+    private long firstAdBackAt;
     private long lastAdCloseButtonTapAt;
     private long lastAdNavigationTapAt;
     private int lastLoggedAdSeconds = -1;
@@ -391,6 +392,7 @@ public class BotForegroundService extends Service {
             if (adDetected && skipVisible && skipTapX > 0 && skipTapY > 0 && now - lastAdNavigationTapAt >= 2_000) {
                 accessibility.tap(skipTapX, skipTapY);
                 lastAdNavigationTapAt = now;
+                firstAdBackAt = 0;
                 String corner = skipTapX < (result.width / 2f) ? "kiri atas" : "kanan atas";
                 log("Tombol skip (>, >>, >|) terdeteksi di " + corner + " (" + (int)skipTapX + "," + (int)skipTapY + "). Mengetuk tombol.");
                 return;
@@ -400,6 +402,7 @@ public class BotForegroundService extends Service {
             if (adDetected && closeVisible && closeTapX > 0 && closeTapY > 0 && now - lastAdCloseButtonTapAt >= 2_000) {
                 accessibility.tap(closeTapX, closeTapY);
                 lastAdCloseButtonTapAt = now;
+                firstAdBackAt = 0;
                 String corner = closeTapX < (result.width / 2f) ? "kiri atas" : "kanan atas";
                 log("Tombol X (close) terdeteksi di " + corner + " (" + (int)closeTapX + "," + (int)closeTapY + "). Mengetuk tombol.");
                 return;
@@ -410,12 +413,24 @@ public class BotForegroundService extends Service {
                 float seeNextY = result.adSeeNextY > 0 ? result.adSeeNextY : (1105f * sy);
                 accessibility.tap(360f * sx, seeNextY);
                 lastAdNavigationTapAt = now;
+                firstAdBackAt = 0;
                 restartAdWait(now);
                 log("Tombol 'See Next' terdeteksi di (" + (int)(360f * sx) + "," + (int)seeNextY + "). Mengetuk tombol See Next.");
                 return;
             }
 
             // 4. Fallback: Hanya jika tidak ada tombol > / >> / >| / X / See Next setelah waktu 30s + countdown selesai, gunakan BACK
+            if (firstAdBackAt == 0) {
+                firstAdBackAt = now;
+            } else if (now - firstAdBackAt >= 5_000L) {
+                log("Log tombol BACK sudah berjalan 5 detik tanpa respon. Membuka ulang aplikasi Bus Jam.");
+                resetAdState();
+                reopenGameApp();
+                lastGameBringToFrontAt = now;
+                nextActionAt = now + 3_000L;
+                return;
+            }
+
             if (now - lastAdBackAt >= 1_200) {
                 accessibility.pressBack();
                 lastAdBackAt = now;
@@ -701,6 +716,28 @@ public class BotForegroundService extends Service {
         lastAdNavigationTapAt = now;
         countdownWasSeen = false;
         adTimerReader.reset();
+    }
+
+    private void resetAdState() {
+        fullscreenAdSeenAt = 0;
+        adClosingStartedAt = 0;
+        lastAdBackAt = 0;
+        firstAdBackAt = 0;
+        lastAdCloseButtonTapAt = 0;
+        lastAdNavigationTapAt = 0;
+        countdownWasSeen = false;
+        if (adTimerReader != null) {
+            adTimerReader.reset();
+        }
+    }
+
+    private void reopenGameApp() {
+        BotAccessibilityService accessibility = BotAccessibilityService.getInstance();
+        if (accessibility != null) {
+            accessibility.pressHome();
+        }
+        sleep(600);
+        bringGameToForeground();
     }
 
     private void bringGameToForeground() {
