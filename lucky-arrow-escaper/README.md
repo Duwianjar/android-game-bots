@@ -16,6 +16,8 @@ Panduan teknis dan catatan monetisasi untuk game **Lucky Arrow Escape**.
 |---|---|
 | **Instalasi Pertama** | Tersedia bot guardian otomatis (deteksi DOBEL, bubble reward, auto-close iklan, anti-stuck). |
 | **Instalasi Kedua** | **Penarikan 25 dan 27 aman DANA.** |
+| **Instalasi Ketiga** | Berhasil tarik DANA Rp6.000 (tarikan kedua Rp12.000 error karena penarikan dilakukan malam hari). |
+| **Instalasi Keempat** | **DANA masih aman dan penarikan 300-an (4 kali)**, seperti biasa hanya awal-awal dapat cepat uangnya. |
 | **Rekomendasi Instalasi** | **Prioritas 1 (paling pertama).** Coba tunggu gede dulu atau 25k baru tarik. |
 | **Metode Pencairan** | DANA / Saldo e-wallet. |
 
