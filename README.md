@@ -8,7 +8,7 @@ Urutan aplikasi dan bot yang **wajib dipasang & dijalankan** di HP setelah resta
 
 1. **Bot Blocked Game Detector (`blocked-game-detector/`)**:
    - **Wajib di-install pertama kali** sebagai sistem proteksi dini di HP Android.
-   - Database detector disinkronkan dengan **Daftar Blocked terbaru (52 game)**.
+   - Database detector disinkronkan dengan **Daftar Blocked terbaru (53 game)**.
    - Berjalan sebagai service watchdog untuk memantau package yang terpasang di HP. Jika ada game berbahaya/blocked terpasang, langsung memunculkan alert agar akun DANA/perangkat tidak ikut terblokir.
 
 2. **Inject Iklan (`inject-iklan/` & `inject-iklan-android/`)**:
@@ -300,6 +300,7 @@ Keterangan kategori: game-game ini **susah, tetapi tetap cair**. Data pencairan 
 | 50 | Cute Path | `com.cute.path.star.animal.jungle.fast` | Belum diketahui | Penarikan Rp200 saja tidak cair. |
 | 51 | Fun Drop *(Fun Drop: Treasure Ball)* | `com.dropf19unp.plba.treba` | Sher Gaming Studio | Penarikan susah dan aneh, buang-buang waktu. |
 | 52 | Juicy Blade: Fruit Slash *(Lucky Juicy Blade)* | `com.lucky.juicyBlasde` | DongYing SmartEnergy | Satu developer dengan Gem Pet Blast & Fruit Quest Master (Daftar Blocked #38 & #39); penarikan bermasalah/tidak cair. |
+| 53 | Magic Knife Blast | `com.starlightcube.magicknifeblast` | ACM PROJECTS & AUTOMATION LTD / Elias Galvin | Kemungkinan sama karena terhubung dengan Woodland & Magic Ocean (satu developer Elias Galvin / Starlight). |
 
 ## 🏢 Kategori Game Berdasarkan Pengembang
 
@@ -313,6 +314,7 @@ Keterangan kategori: game-game ini **susah, tetapi tetap cair**. Data pencairan 
 - [Fruit Blade Pop Crush](fruit-blade-pop-crush/) — `com.starlightgame.fruitbladepopcrush`
 - [Lucky Arrow Escape](lucky-arrow-escaper/) — `com.starlightgame.luckyarrowescaper`
 - Cut Fruit Winner — `com.starlightgame.cutfruitwinner`
+- Magic Knife Blast **[BLOCKED]** — `com.starlightcube.magicknifeblast` — Kemungkinan sama karena terhubung dengan Woodland & Magic Ocean.
 
 ### DEVVVS 0043 — SUKRIATI
 
