@@ -19,7 +19,7 @@ Panduan teknis dan catatan analisis penarikan saldo untuk game **Color Power Pop
 | **Instalasi Ketiga** | DANA sudah tidak bisa lagi, harus pakai OVO; penarikan OVO masih aman (nominal Rp5.000 dan Rp2.000). |
 | **Instalasi Keempat** | **Penarikan aman via OVO nomor baru:** tertinggi bisa mencapai Rp13.000, ada nominal Rp5.000 dan Rp3.000 (wajib pakai nomor OVO baru). |
 | **Iklan Slot** | Lumayan (tersedia iklan slot untuk boost perolehan koin). |
-| **Rekomendasi Instalasi** | **Prioritas 6 (tepat di bawah Magic Ocean).** Pasang target OVO nomor baru. |
+| **Rekomendasi Instalasi** | **Prioritas 4 (di atas Woodland Tile Match).** Pasang target OVO nomor baru. |
 | **Metode Pencairan** | DANA / Saldo e-wallet. |
 
 ---
