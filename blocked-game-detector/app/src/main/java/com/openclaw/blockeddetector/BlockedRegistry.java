@@ -63,6 +63,8 @@ public class BlockedRegistry {
         list.add(new BlockedItem(48, "Cut Fruit Winner", "com.starlightgame.cutfruitwinner", "Starlight Game", "Penarikan Rp1.200 tidak cair; tidak usah dicari lagi.", "starlightgame.cutfruitwinner", "cut fruit winner"));
         list.add(new BlockedItem(49, "MasterFlipKnifePro", "com.qieqiefruits.masterflipknifepro", "Belum diketahui", "Penarikan Rp200 saja tidak cair.", "masterflipknifepro", "master flip knife pro"));
         list.add(new BlockedItem(50, "Cute Path", "com.cute.path.star.animal.jungle.fast", "Belum diketahui", "Penarikan Rp200 saja tidak cair.", "cute.path.star.animal", "cute path"));
+        list.add(new BlockedItem(51, "Fun Drop (Fun Drop: Treasure Ball)", "com.dropf19unp.plba.treba", "Sher Gaming Studio", "Penarikan susah dan aneh, buang-buang waktu.", "dropf19unp.plba.treba", "fun drop"));
+        list.add(new BlockedItem(52, "Juicy Blade: Fruit Slash (Lucky Juicy Blade)", "com.lucky.juicyBlasde", "DongYing SmartEnergy", "Satu developer dengan Gem Pet Blast & Fruit Quest Master; penarikan bermasalah/tidak cair.", "lucky.juicyBlasde", "juicy blade"));
         ITEMS = Collections.unmodifiableList(list);
     }
 

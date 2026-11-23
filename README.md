@@ -8,7 +8,7 @@ Urutan aplikasi dan bot yang **wajib dipasang & dijalankan** di HP setelah resta
 
 1. **Bot Blocked Game Detector (`blocked-game-detector/`)**:
    - **Wajib di-install pertama kali** sebagai sistem proteksi dini di HP Android.
-   - Database detector disinkronkan dengan **Daftar Blocked terbaru (47 game)**.
+   - Database detector disinkronkan dengan **Daftar Blocked terbaru (52 game)**.
    - Berjalan sebagai service watchdog untuk memantau package yang terpasang di HP. Jika ada game berbahaya/blocked terpasang, langsung memunculkan alert agar akun DANA/perangkat tidak ikut terblokir.
 
 2. **Inject Iklan (`inject-iklan/` & `inject-iklan-android/`)**:
@@ -69,6 +69,8 @@ Urutan ini dibuat dari catatan penarikan yang sudah ada. **Tidak ada data yang m
 | 21 | Panah Sentuh *(Arrow Tap)* | `jingranmei.top.arrowpuzzle` | Belum ada catatan (kosong). | DANA aman 1.000. | Belum ada catatan. | Target kedua lumayan (sekitar Rp1.000 aman DANA). |
 | 22 | Fortune Tile Mahjong | `com.NAMMUNIS.FortuneTileMahjong` | 3 kali penarikan (maks Rp212). | DANA masih aman 500-an. | Belum ada catatan. | Coba target penarikan kecil (sekitar Rp500-an). |
 | 23 | [Soda Pack Puzzle](soda-pack-puzzle/) | `com.soda.pack.puzzle` | Ada bot otomatis (belum dites botnya). | DANA masih aman 200-an. | DANA aman, nominal kecil sekitar Rp200-an. | Diturunkan ke posisi terakhir; instalasi ketiga DANA aman, nominal kecil sekitar Rp200-an; bot belum dites. |
+| 24 | Sweet Fruit Slice | `com.sweet.fruitslice` | Per iklan Rp100-an di awal. | Pencairan menggunakan OVO nomor baru biar aman. | Update status lama: riwayat pengembang sama dengan Sweet Woodland Match (pantau ketat). | Rekomendasi paling terakhir; reward per iklan Rp100-an awal, pencairan wajib menggunakan OVO nomor baru biar aman. |
+| 25 | Fortuna Cut Fruit *(Cut Fruit)* | `com.fortuna.cutfruit` | Per iklan Rp100-an di awal. | Pencairan menggunakan OVO nomor baru biar aman. **Penarikan 1.000 aman dan cepat.** | Satu developer dengan Fortuna Bubble Shooter (UniteGrand Auto). | Samakan catatan Sweet Fruit Slice; per iklan Rp100-an awal, penarikan 1.000 aman dan cepat, gunakan OVO nomor baru biar aman. |
 
 </div>
 
@@ -293,6 +295,11 @@ Keterangan kategori: game-game ini **susah, tetapi tetap cair**. Data pencairan 
 | 45 | Crazy Tile Match Winner | `com.moonshotcube.crazytilematchwinner` | Elias Galvin | Penarikan 500 cair DANA di awal; sekarang dipindahkan ke daftar Blocked. |
 | 46 | Cute Fairy Blast Tale | `com.msxcleargamer.cutefairyblasttale` | DEVVVS 0043 | Penarikan Rp100 tidak cair. |
 | 47 | Dragon Arrow Escape *(Naga Panah / Dragons Escape)* | `com.arrows.dragon.escape.puzzle` | Financially Up | Tidak ketemu game aslinya yang awal (instalasi kedua DANA aman sekitar Rp1.000-an 2 kali). |
+| 48 | Cut Fruit Winner | `com.starlightgame.cutfruitwinner` | Starlight Game | Penarikan Rp1.200 tidak cair; tidak usah dicari lagi. |
+| 49 | MasterFlipKnifePro | `com.qieqiefruits.masterflipknifepro` | Belum diketahui | Penarikan Rp200 saja tidak cair. |
+| 50 | Cute Path | `com.cute.path.star.animal.jungle.fast` | Belum diketahui | Penarikan Rp200 saja tidak cair. |
+| 51 | Fun Drop *(Fun Drop: Treasure Ball)* | `com.dropf19unp.plba.treba` | Sher Gaming Studio | Penarikan susah dan aneh, buang-buang waktu. |
+| 52 | Juicy Blade: Fruit Slash *(Lucky Juicy Blade)* | `com.lucky.juicyBlasde` | DongYing SmartEnergy | Satu developer dengan Gem Pet Blast & Fruit Quest Master (Daftar Blocked #38 & #39); penarikan bermasalah/tidak cair. |
 
 ## 🏢 Kategori Game Berdasarkan Pengembang
 
