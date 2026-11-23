@@ -16,8 +16,10 @@ Panduan teknis dan catatan analisis penarikan saldo untuk game **Color Power Pop
 |---|---|
 | **Instalasi Pertama** | **19 kali penarikan:** Rp1.000 sebanyak 4 kali dan Rp4.000 sekali (nominal lainnya bertahap). |
 | **Instalasi Kedua** | **DANA aman tapi cuma sedikit karena kemungkinan instalnya di akhir.** |
+| **Instalasi Ketiga** | DANA sudah tidak bisa lagi, harus pakai OVO; penarikan OVO masih aman (nominal Rp5.000 dan Rp2.000). |
+| **Instalasi Keempat** | **Penarikan aman via OVO nomor baru:** tertinggi bisa mencapai Rp13.000, ada nominal Rp5.000 dan Rp3.000 (wajib pakai nomor OVO baru). |
 | **Iklan Slot** | Lumayan (tersedia iklan slot untuk boost perolehan koin). |
-| **Rekomendasi Instalasi** | **Rekomendasi menengah.** Posisi prioritas 7 (di atas Snake Out Jam). Pasang target kecil-menengah terlebih dahulu. |
+| **Rekomendasi Instalasi** | **Prioritas 6 (tepat di bawah Magic Ocean).** Pasang target OVO nomor baru. |
 | **Metode Pencairan** | DANA / Saldo e-wallet. |
 
 ---
