@@ -16,6 +16,8 @@ Panduan teknis dan catatan monetisasi untuk game **Crazy Fruit Blade Winner**.
 |---|---|
 | **Instalasi Pertama** | Sekitar Rp200 per hari di awal, tetapi langsung turun setelahnya; lumayan, tetapi rawan block iklan. |
 | **Instalasi Kedua** | **Tetap DANA dan awalnya bisa capai Rp15.000.** |
+| **Instalasi Ketiga** | Penarikan aman, tetapi cuma dapat sekitar Rp1.500. |
+| **Instalasi Keempat** | **Terblokir gara-gara bot juga.** |
 | **Iklan Slot** | Lumayan, tetapi rawan blokir iklan. |
 | **Rekomendasi Instalasi** | **Rekomendasi menengah.** Posisi prioritas 6 (di atas Color Power Pop). |
 | **Metode Pencairan** | DANA / Saldo e-wallet. |
